@@ -1,0 +1,192 @@
+"use client";
+
+import { useState, useRef, ReactNode, useEffect } from "react";
+import { createPortal } from "react-dom";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { Play, Plus, Star, Crown, Clock, Globe } from "lucide-react";
+
+interface HoverCardProps {
+  children: ReactNode;
+  content: any; // The movie/series content
+}
+
+function ExpandedCard({ content, rect, onMouseLeave, onMouseEnter }: { content: any, rect: DOMRect, onMouseLeave: () => void, onMouseEnter: () => void }) {
+  const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+  const expandedWidth = 340;
+  
+  useEffect(() => {
+    // trigger animation frame for scale-in effect
+    requestAnimationFrame(() => setMounted(true));
+  }, []);
+
+  // Calculate position to center the larger card over the original card
+  let left = rect.left + window.scrollX - (expandedWidth - rect.width) / 2;
+  let top = rect.top + window.scrollY - 40; // slightly lift it up
+
+  // clamp to viewport so it doesn't overflow screen edges
+  if (left < 20) left = 20;
+  if (left + expandedWidth > window.innerWidth - 20) left = window.innerWidth - expandedWidth - 20;
+
+  // Media fallback
+  const videoUrl = content.trailer_url || content.video_url; 
+  const coverUrl = content.cover_image_url || content.thumbnail_url || content.poster_url || `https://via.placeholder.com/640x360/1f2937/e50914?text=${encodeURIComponent(content.title || '')}`;
+
+  const navUrl = `/${content.type === 'movie' || !content.type ? 'movies' : 'series'}/${content.id}`;
+
+  return (
+    <div 
+      className={`absolute z-[9999] bg-[#1a1a1a] rounded-xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.8)] border border-gray-800 flex flex-col transition-all duration-300 origin-center ${mounted ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}
+      style={{
+        left: `${left}px`,
+        top: `${top}px`,
+        width: `${expandedWidth}px`,
+      }}
+      onMouseLeave={onMouseLeave}
+      onMouseEnter={onMouseEnter}
+    >
+      {/* Top half: Media */}
+      <div className="relative w-full aspect-video bg-black group cursor-pointer" onClick={() => router.push(navUrl)}>
+        {videoUrl ? (
+          <video 
+            src={videoUrl}
+            autoPlay 
+            muted 
+            loop 
+            playsInline
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <Image src={coverUrl} alt={content.title || "Cover"} fill className="object-cover" />
+        )}
+        
+        {/* Unmute text (top right) */}
+        <div className="absolute top-3 right-3 text-white/80 text-[10px] font-semibold tracking-widest uppercase hover:text-[#E50914] transition-colors bg-black/40 px-2 py-1 rounded">
+          Unmute
+        </div>
+
+        {/* Rating & Premium Badges (bottom) */}
+        <div className="absolute bottom-3 left-3 flex items-center gap-2 w-[calc(100%-24px)] justify-between">
+          <div className="bg-yellow-500 px-2 py-0.5 rounded text-[10px] font-bold text-black flex items-center gap-1 shadow-md">
+             <Star className="w-3 h-3 fill-black" />
+             {(Math.random() * 2 + 7).toFixed(1)} {/* Placeholder rating since not in DB schema natively */}
+          </div>
+          {(content.premium || content.is_premium) && (
+             <div className="bg-[#E50914] p-1 rounded-full text-white shadow-md">
+                <Crown className="w-3 h-3 fill-current" />
+             </div>
+          )}
+        </div>
+      </div>
+
+      {/* Bottom half: Metadata */}
+      <div className="p-4 flex flex-col gap-2.5">
+        {/* Genres */}
+        <div className="text-[10px] text-gray-400 font-bold uppercase tracking-wider flex items-center gap-2 line-clamp-1">
+           {content.vjs?.name ? (
+              <>
+                 <span className="text-[#E50914]">{content.vjs.name}</span>
+                 <span className="w-1 h-1 rounded-full bg-gray-500"></span>
+              </>
+           ) : null}
+           Horror <span className="w-1 h-1 rounded-full bg-gray-500"></span> Thriller
+        </div>
+
+        {/* Title */}
+        <h3 className="text-white font-bold text-lg leading-tight line-clamp-1" title={content.title}>
+          {content.title}
+        </h3>
+
+        {/* Meta row */}
+        <div className="flex items-center gap-4 text-xs text-gray-300 font-medium">
+          <div className="flex items-center gap-1.5">
+             <Clock className="w-3 h-3 text-gray-400" />
+             {content.duration ? `${Math.floor(content.duration / 60)}h ${content.duration % 60}m` : '02h 15m'}
+          </div>
+          <div className="flex items-center gap-1.5">
+             <Globe className="w-3 h-3 text-gray-400" />
+             English
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex items-center gap-3 mt-1.5">
+           <button className="w-10 h-10 flex-shrink-0 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors shadow-inner border border-white/5">
+              <Plus className="w-5 h-5 text-white" />
+           </button>
+           <button 
+             onClick={() => router.push(navUrl)}
+             className="flex-1 bg-[#E50914] hover:bg-[#b80710] text-white py-2.5 rounded-md font-bold text-sm transition-colors shadow-[0_4px_10px_rgba(229,9,20,0.4)]"
+           >
+              Watch now
+           </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function StreamitHoverCard({ children, content }: HoverCardProps) {
+  const [isHovered, setIsHovered] = useState(false);
+  const [rect, setRect] = useState<DOMRect | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleMouseEnter = () => {
+    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+    hoverTimeoutRef.current = setTimeout(() => {
+      if (containerRef.current) {
+        setRect(containerRef.current.getBoundingClientRect());
+        setIsHovered(true);
+      }
+    }, 500); // 500ms delay mimics standard streaming platforms
+  };
+
+  const handleMouseLeave = () => {
+    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+    // Add a tiny delay before closing so user can move mouse into the popup
+    hoverTimeoutRef.current = setTimeout(() => {
+       setIsHovered(false);
+    }, 150);
+  };
+
+  // Close overlay on scroll to prevent detached rendering
+  useEffect(() => {
+    const handleScroll = () => {
+      if (isHovered) {
+        setIsHovered(false);
+        if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+      }
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [isHovered]);
+
+  return (
+    <div 
+      className="relative w-full h-full group" 
+      ref={containerRef}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
+      {/* Base Card - Fade out slightly if overlay is active to avoid visual double-rendering behind it */}
+      <div className={`transition-opacity duration-300 w-full h-full ${isHovered ? "opacity-0" : "opacity-100"}`}>
+        {children}
+      </div>
+
+      {/* Portal ensures overlay breaks completely out of Swiper's overflow: hidden containers */}
+      {isHovered && rect && createPortal(
+        <ExpandedCard 
+           content={content} 
+           rect={rect} 
+           onMouseEnter={() => {
+              if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+           }}
+           onMouseLeave={handleMouseLeave} 
+        />,
+        document.body
+      )}
+    </div>
+  );
+}

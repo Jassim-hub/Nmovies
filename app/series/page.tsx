@@ -1,0 +1,430 @@
+"use client";
+import { Search, Filter, ChevronDown } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { InlineSpinner } from "@/components/LoadingSpinner";
+import { useEffect, useState, useCallback } from "react";
+import { Series } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
+
+type SeriesWithVJ = Series & {
+  vjs: { id: string; name: string } | null;
+  season_count?: number;
+};
+
+type VJ = {
+  id: string;
+  name: string;
+};
+
+export default function SeriesPage() {
+  const [series, setSeries] = useState<SeriesWithVJ[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedVJ, setSelectedVJ] = useState<string>("");
+  const [availableVJs, setAvailableVJs] = useState<VJ[]>([]);
+  const [showVJDropdown, setShowVJDropdown] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalSeries, setTotalSeries] = useState(0);
+
+  const seriesPerPage = 48; // More items per page for compact design
+
+  // Fetch functions with useCallback to prevent recreation
+  const fetchAvailableVJs = useCallback(async () => {
+    try {
+      const { data: vjData, error } = await supabase
+        .from('vjs')
+        .select('id, name')
+        .order('name');
+
+      if (error) throw error;
+      setAvailableVJs(vjData || []);
+    } catch (error) {
+      console.error('Error fetching VJs:', error);
+    }
+  }, []);
+
+  const fetchSeries = useCallback(async (page: number) => {
+    setLoading(true);
+    try {
+      const from = (page - 1) * seriesPerPage;
+      const to = from + seriesPerPage - 1;
+
+      // Get total count
+      const { count } = await supabase
+        .from('series')
+        .select('*', { count: 'exact', head: true })
+        .eq('published', true);
+
+      // Get series for current page with VJ info
+      const { data: seriesData, error } = await supabase
+        .from('series')
+        .select(`*, vjs (id, name)`)
+        .eq('published', true)
+        .range(from, to)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Get season counts for each series
+      const seriesWithSeasons = await Promise.all(
+        (seriesData || []).map(async (show) => {
+          const { data: seasonsData } = await supabase
+            .from('seasons')
+            .select('id')
+            .eq('series_id', show.id)
+            .eq('published', true);
+
+          return {
+            ...show,
+            season_count: seasonsData?.length || 0
+          };
+        })
+      );
+
+      setSeries(seriesWithSeasons);
+      setTotalSeries(count || 0);
+    } catch (error) {
+      console.error('Error fetching series:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const handleVJFilter = useCallback(async (vjId: string) => {
+    setCurrentPage(1);
+    setLoading(true);
+    try {
+      const { data: filteredSeries, error } = await supabase
+        .from('series')
+        .select(`*, vjs (id, name)`)
+        .eq('published', true)
+        .eq('vj_id', vjId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const seriesWithSeasons = await Promise.all(
+        (filteredSeries || []).map(async (show) => {
+          const { data: seasonsData } = await supabase
+            .from('seasons')
+            .select('id')
+            .eq('series_id', show.id)
+            .eq('published', true);
+          return {
+            ...show,
+            season_count: seasonsData?.length || 0
+          };
+        })
+      );
+
+      setTotalSeries(seriesWithSeasons.length);
+    } catch (error) {
+      console.error('Error filtering series by VJ:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const performSearch = useCallback(async (query: string) => {
+    if (query.trim()) {
+      setLoading(true);
+      try {
+        const { data: searchResults, error } = await supabase
+          .from('series')
+          .select(`*, vjs (id, name)`)
+          .eq('published', true)
+          .ilike('title', `%${query}%`)
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        const seriesWithSeasons = await Promise.all(
+          (searchResults || []).map(async (show) => {
+            const { data: seasonsData } = await supabase
+              .from('seasons')
+              .select('id')
+              .eq('series_id', show.id)
+              .eq('published', true);
+            return {
+              ...show,
+              season_count: seasonsData?.length || 0
+            };
+          })
+        );
+
+        setSeries(seriesWithSeasons);
+        setTotalSeries(seriesWithSeasons.length);
+      } catch (error) {
+        console.error('Error searching series:', error);
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      // Reset to paginated view
+      fetchSeries(1);
+    }
+  }, [fetchSeries]);
+
+  // Initial load
+  useEffect(() => {
+    fetchSeries(1);
+    fetchAvailableVJs();
+  }, [fetchSeries, fetchAvailableVJs]);
+
+  // Handle pagination changes (only when not filtering)
+  useEffect(() => {
+    if (!searchQuery && !selectedVJ && currentPage > 1) {
+      fetchSeries(currentPage);
+    }
+  }, [currentPage, searchQuery, selectedVJ, fetchSeries]);
+
+  // Handle search with debounce
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      if (searchQuery.trim()) {
+        setCurrentPage(1);
+        setSelectedVJ(""); // Reset VJ filter when searching
+        performSearch(searchQuery);
+      } else if (!selectedVJ) {
+        setCurrentPage(1);
+        fetchSeries(1);
+      }
+    }, 400);
+    return () => clearTimeout(handler);
+  }, [searchQuery, selectedVJ, performSearch, fetchSeries]);
+
+  // Handle VJ filter
+  useEffect(() => {
+    if (selectedVJ) {
+      handleVJFilter(selectedVJ);
+    } else if (!searchQuery) {
+      setCurrentPage(1);
+      fetchSeries(1);
+    }
+  }, [selectedVJ, searchQuery, handleVJFilter, fetchSeries]);
+
+
+  const clearFilters = () => {
+    setSelectedVJ("");
+    setSearchQuery("");
+    setCurrentPage(1);
+  };
+  const totalPages = Math.ceil(totalSeries / seriesPerPage);
+  const isFiltering = searchQuery.trim().length > 0 || selectedVJ;
+
+  return (
+    <div className="min-h-screen bg-black text-white py-8 flex flex-col items-center">
+      <div className="container mx-auto px-4 sm:px-6">
+        <h1 className="text-3xl md:text-4xl font-bold mb-8 flex items-center">
+          Series
+        </h1>
+
+        {/* Search and Filter */}
+        <div className="mb-8 flex flex-col md:flex-row gap-4">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <input
+              type="text"
+              placeholder="Search series..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-[#E50914]"
+            />
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            {/* VJ Filter Dropdown */}
+            <div className="relative">
+              <Button
+                variant="outline"
+                className={`border-gray-600 text-gray-300 hover:bg-gray-800 ${selectedVJ ? 'bg-[#E50914] border-[#E50914] text-white hover:bg-[#b80710]' : ''}`}
+                onClick={() => setShowVJDropdown(!showVJDropdown)}
+              >
+                <Filter className="w-4 h-4 mr-2" />
+                {selectedVJ ? availableVJs.find(vj => vj.id === selectedVJ)?.name : 'VJ Filter'}
+                <ChevronDown className="w-4 h-4 ml-2" />
+              </Button>
+
+              {showVJDropdown && (
+                <div className="absolute top-full left-0 mt-1 w-48 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto">
+                  <div className="p-2">
+                    <button
+                      onClick={() => {
+                        setSelectedVJ("");
+                        setShowVJDropdown(false);
+                      }}
+                      className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 rounded"
+                    >
+                      All VJs
+                    </button>
+                    {availableVJs.map((vj) => (
+                      <button
+                        key={vj.id}
+                        onClick={() => {
+                          setSelectedVJ(vj.id);
+                          setShowVJDropdown(false);
+                        }}
+                        className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 rounded"
+                      >
+                        {vj.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {(selectedVJ || searchQuery) && (
+              <Button
+                variant="outline"
+                className="border-red-600 text-red-400 hover:bg-red-600 hover:text-white"
+                onClick={clearFilters}
+              >
+                Clear Filters
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Search Results Info */}
+        <div className="mb-6">
+          {(searchQuery || selectedVJ) && (
+            <p className="text-gray-400 mb-4">
+              {loading ? 'Searching...' : `${series.length} results`}
+              {searchQuery && ` for "${searchQuery}"`}
+              {selectedVJ && ` by ${availableVJs.find(vj => vj.id === selectedVJ)?.name}`}
+            </p>
+          )}
+        </div>
+
+        {/* Loading State */}
+        {loading && <InlineSpinner text="Loading series..." />}
+
+        {/* Series Grid - Compact Mobile Design */}
+        {!loading && (
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-x-2 gap-y-4">
+            {series.map((show) => (
+              <div key={show.id} className="group">
+                <Link href={`/series/${show.id}`}>
+                  <div className="cursor-pointer transition-transform duration-200 hover:scale-105">
+                    <div className="aspect-[2/3] relative rounded-lg overflow-hidden bg-gray-800 mb-2">
+                      <Image
+                        src={show.thumbnail_url || show.cover_image_url || `https://via.placeholder.com/240x360/1f2937/f97316?text=${encodeURIComponent(show.title)}`}
+                        alt={show.title}
+                        fill
+                        className="object-cover transition-opacity duration-300"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = `https://via.placeholder.com/240x360/1f2937/f97316?text=${encodeURIComponent(show.title)}`;
+                        }}
+                      />
+
+                      {/* Content type badge - smaller */}
+                      <div className="absolute top-1 left-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#1ABC9C]">
+                        Series
+                      </div>
+
+                      {/* Simple overlay on hover - compact */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center">
+                        <div className="text-white text-xs font-semibold">Watch Now</div>
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+
+                {/* Series info outside the card - more compact */}
+                <div className="space-y-0.5">
+                  <h3 className="font-medium text-white text-xs truncate leading-tight">{show.title}</h3>
+                  <div className="flex items-center gap-1 text-[10px] text-gray-400">
+                    {show.vjs && (
+                      <span className="text-[#E50914]">{show.vjs.name}</span>
+                    )}
+                    {show.vjs && show.release_date && (
+                      <span>•</span>
+                    )}
+                    {show.release_date && (
+                      <span>{new Date(show.release_date).getFullYear()}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* No Results */}
+        {!loading && (searchQuery || selectedVJ) && series.length === 0 && (
+          <div className="text-center py-12">
+            <Search className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-gray-400 mb-2">No series found</h3>
+            <p className="text-gray-500">
+              Try adjusting your search terms or filters
+            </p>
+          </div>
+        )}
+
+        {/* Pagination */}
+        {!isFiltering && totalPages > 1 && (
+          <div className="flex justify-center items-center mt-12 gap-2">
+            <Button
+              variant="outline"
+              className="border-gray-600 text-gray-300 hover:bg-gray-800"
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+            >
+              Previous
+            </Button>
+
+            <div className="flex gap-1">
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                let pageNum;
+                if (totalPages <= 5) {
+                  pageNum = i + 1;
+                } else if (currentPage <= 3) {
+                  pageNum = i + 1;
+                } else if (currentPage >= totalPages - 2) {
+                  pageNum = totalPages - 4 + i;
+                } else {
+                  pageNum = currentPage - 2 + i;
+                }
+
+                return (
+                  <Button
+                    key={pageNum}
+                    variant={currentPage === pageNum ? "default" : "outline"}
+                    className={currentPage === pageNum
+                      ? "bg-[#E50914] hover:bg-[#b80710]"
+                      : "border-gray-600 text-gray-300 hover:bg-gray-800"
+                    }
+                    onClick={() => setCurrentPage(pageNum)}
+                  >
+                    {pageNum}
+                  </Button>
+                );
+              })}
+            </div>
+
+            <Button
+              variant="outline"
+              className="border-gray-600 text-gray-300 hover:bg-gray-800"
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+            >
+              Next
+            </Button>
+          </div>
+        )}
+
+        {/* Filter results info */}
+        {isFiltering && (
+          <div className="text-center mt-8 text-gray-400">
+            Found {series.length} series
+            {searchQuery && ` matching "${searchQuery}"`}
+            {selectedVJ && ` by ${availableVJs.find(vj => vj.id === selectedVJ)?.name}`}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
