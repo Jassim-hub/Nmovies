@@ -15,44 +15,10 @@ import PremiumUpgradeModal from '@/components/PremiumUpgradeModal';
 import { isStandardPremium } from "@/lib/isStandardPremium";
 import { normalizeVideoUrl } from "@/lib/utils";
 import { MovieCast } from "@/components/MovieCast";
+import { StreamitHoverCard } from "@/components/StreamitHoverCard";
 import { supabase, Series, SeriesWithVJ, Season, Episode, EpisodeWithSeason, MovieWithVJ } from "@/lib/supabase";
 import { getRelatedMoviesByGenre } from '@/lib/api';
-
-const NetflixCard = ({ content, type }: { content: MovieWithVJ | SeriesWithVJ; type: 'movie' | 'series' }) => (
-  <div className="group">
-    <Link href={`/${type === 'movie' ? 'movies' : 'series'}/${content.id}`}>
-      <div className="cursor-pointer transition-transform duration-300 hover:scale-105">
-        <div className="aspect-[2/3] relative rounded-md overflow-hidden bg-gray-800 mb-3">
-          <Image
-            src={content.thumbnail_url || content.cover_image_url || `https://via.placeholder.com/300x450/1f2937/e50914?text=${encodeURIComponent(content.title)}`}
-            alt={content.title}
-            fill
-            className="object-cover transition-opacity duration-300"
-          />
-          <div className={`absolute top-2 left-2 px-2 py-1 rounded text-xs font-bold ${
-            type === 'movie' ? 'bg-[#FF7F50]' : 'bg-[#1ABC9C]'
-          }`}>
-            {type === 'movie' ? 'Movie' : 'Series'}
-          </div>
-          <div className="absolute inset-0 bg-gradient-to-t from-[#E50914]/80 via-[#E50914]/60 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col justify-end p-4">
-            <p className="text-xs text-gray-300 line-clamp-3 leading-relaxed">
-              {content.description || "An amazing piece of entertainment that will keep you on the edge of your seat."}
-            </p>
-          </div>
-        </div>
-      </div>
-    </Link>
-    <div className="mt-1">
-      <h3 className="font-semibold text-white text-sm truncate">{content.title}</h3>
-      <div className="flex items-center gap-1 text-xs text-gray-400 mt-0.5">
-        {content.release_date && <span>{new Date(content.release_date).getFullYear()}</span>}
-        {'duration' in content && content.duration && (
-          <><span>•</span><span>{content.duration}m</span></>
-        )}
-      </div>
-    </div>
-  </div>
-);
+import { NetflixCard } from "@/components/NetflixCard";
 
 export default function SeriesDetailsPage() {
   const params = useParams();
@@ -77,6 +43,7 @@ export default function SeriesDetailsPage() {
   // Video Player States
   const [streamUrl, setStreamUrl] = useState<string>('');
   const [isPlayingTrailer, setIsPlayingTrailer] = useState<boolean>(false);
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState<boolean>(false);
 
   // Pagination for Episodes Grid
   const [currentPage, setCurrentPage] = useState(1);
@@ -215,7 +182,10 @@ export default function SeriesDetailsPage() {
 
     // Play the episode directly in the hero player
     setIsPlayingTrailer(false);
-    setStreamUrl(normalizeVideoUrl(episode.video_url || episode.videolink_url));
+    const url = episode.video_url || episode.videolink_url;
+    if (url) {
+      setStreamUrl(normalizeVideoUrl(url));
+    }
     
     // Scroll to player
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -290,7 +260,7 @@ export default function SeriesDetailsPage() {
     <div className="min-h-screen bg-[#141414] text-white">
       
       {/* Massive Hero Video Player */}
-      <section className="relative w-full h-[50vh] md:h-[80vh] bg-black">
+      <section className="relative w-full aspect-video bg-black max-h-[85vh]">
          {streamUrl ? (
             <div className="w-full h-full relative group">
                <VideoPlayer 
@@ -349,10 +319,19 @@ export default function SeriesDetailsPage() {
             <p className="text-[#1ABC9C] font-bold text-sm md:text-base mb-8 uppercase tracking-widest drop-shadow-sm">PG (Parental Guidance Suggested)</p>
 
             {/* Description */}
-            <p className="text-gray-300 text-sm md:text-lg leading-relaxed mb-10 max-w-4xl font-medium">
-               {series.description || "No description provided."}
-               <span className="text-[#E50914] ml-2 cursor-pointer font-bold hover:underline inline-flex items-center">Read More</span>
-            </p>
+            <div className="mb-10 max-w-4xl">
+               <p className={`text-gray-300 text-sm md:text-lg leading-relaxed font-medium ${isDescriptionExpanded ? '' : 'line-clamp-3 md:line-clamp-4'}`}>
+                  {series.description || "No description provided."}
+               </p>
+               {series.description && series.description.length > 150 && (
+                  <button 
+                     onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                     className="text-[#E50914] mt-2 cursor-pointer font-bold hover:underline inline-flex items-center"
+                  >
+                     {isDescriptionExpanded ? "Show Less" : "Read More"}
+                  </button>
+               )}
+            </div>
 
             {/* Meta Details Row */}
             <div className="flex flex-wrap items-center gap-6 md:gap-10 text-sm md:text-base font-semibold text-gray-200 mb-12 bg-gray-900/40 p-4 rounded-xl border border-gray-800/50 backdrop-blur-sm w-fit">
@@ -507,7 +486,9 @@ export default function SeriesDetailsPage() {
         <div className="flex overflow-x-auto gap-4 md:gap-5 pb-6 scrollbar-hide">
           {relatedSeries.map((s) => (
             <div key={s.id} className="flex-shrink-0 w-[120px] md:w-[150px] lg:w-[160px]">
-              <NetflixCard content={s} type="series" />
+              <StreamitHoverCard content={{...s, type: 'series'}}>
+                <NetflixCard content={s} type="series" />
+              </StreamitHoverCard>
             </div>
           ))}
         </div>
@@ -519,7 +500,9 @@ export default function SeriesDetailsPage() {
         <div className="flex overflow-x-auto gap-4 md:gap-5 pb-6 scrollbar-hide">
           {relatedMovies.map((m) => (
             <div key={m.id} className="flex-shrink-0 w-[120px] md:w-[150px] lg:w-[160px]">
-              <NetflixCard content={m} type="movie" />
+              <StreamitHoverCard content={{...m, type: 'movie'}}>
+                <NetflixCard content={m} type="movie" />
+              </StreamitHoverCard>
             </div>
           ))}
         </div>

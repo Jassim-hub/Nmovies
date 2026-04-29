@@ -14,6 +14,7 @@ import { isStandardPremium } from "@/lib/isStandardPremium";
 import VideoPlayer from "@/components/VideoPlayer";
 import { normalizeVideoUrl } from "@/lib/utils";
 import { MovieCast } from "@/components/MovieCast";
+import { StreamitHoverCard } from "@/components/StreamitHoverCard";
 import { Calendar, Globe, Clock, Star, Share2, Heart, Plus, SkipForward, Play } from "lucide-react";
 
 export default function MovieDetailsPage() {
@@ -42,6 +43,7 @@ export default function MovieDetailsPage() {
   const [streamUrl, setStreamUrl] = useState<string>('');
   const [isPlayingTrailer, setIsPlayingTrailer] = useState<boolean>(false);
   const [hasRights, setHasRights] = useState<boolean>(false);
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState<boolean>(false);
 
   useEffect(() => {
     (async () => {
@@ -130,9 +132,12 @@ export default function MovieDetailsPage() {
   }, [params.id, user, isPremium]);
 
   const handleSkipTrailer = () => {
-     if (movie && (movie.video_url || movie.videolink_url)) {
-        setIsPlayingTrailer(false);
-        setStreamUrl(normalizeVideoUrl(movie.video_url || movie.videolink_url));
+     if (movie) {
+        const url = movie.video_url || movie.videolink_url;
+        if (url) {
+           setIsPlayingTrailer(false);
+           setStreamUrl(normalizeVideoUrl(url));
+        }
      }
   };
 
@@ -150,17 +155,16 @@ export default function MovieDetailsPage() {
   };
 
   const handleWatchButtonClick = () => {
-      // If user clicks the Watch Now button in overview while trailer is playing
-      if (isPlayingTrailer) {
-         if (!hasRights) {
-            setAuthAction('play');
-            setShowAuthModal(true);
-            return;
-         } else {
-            handleSkipTrailer();
-         }
+      if (!hasRights) {
+         setAuthAction('play');
+         setShowAuthModal(true);
+         return;
       }
-      // If already playing movie, maybe just scroll up to player
+      
+      if (isPlayingTrailer) {
+         handleSkipTrailer();
+      }
+      
       window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -182,7 +186,7 @@ export default function MovieDetailsPage() {
     <div className="min-h-screen bg-[#141414] text-white">
       
       {/* Massive Hero Video Player */}
-      <section className="relative w-full h-[50vh] md:h-[80vh] bg-black">
+      <section className="relative w-full aspect-video bg-black max-h-[85vh]">
          {streamUrl ? (
             <div className="w-full h-full relative group">
                <VideoPlayer 
@@ -252,10 +256,19 @@ export default function MovieDetailsPage() {
             <p className="text-[#1ABC9C] font-bold text-sm md:text-base mb-8 uppercase tracking-widest drop-shadow-sm">PG (Parental Guidance Suggested)</p>
 
             {/* Description */}
-            <p className="text-gray-300 text-sm md:text-lg leading-relaxed mb-10 max-w-4xl font-medium">
-               {movie.description || "No description provided."}
-               <span className="text-[#E50914] ml-2 cursor-pointer font-bold hover:underline inline-flex items-center">Read More</span>
-            </p>
+            <div className="mb-10 max-w-4xl">
+               <p className={`text-gray-300 text-sm md:text-lg leading-relaxed font-medium ${isDescriptionExpanded ? '' : 'line-clamp-3 md:line-clamp-4'}`}>
+                  {movie.description || "No description provided."}
+               </p>
+               {movie.description && movie.description.length > 150 && (
+                  <button 
+                     onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                     className="text-[#E50914] mt-2 cursor-pointer font-bold hover:underline inline-flex items-center"
+                  >
+                     {isDescriptionExpanded ? "Show Less" : "Read More"}
+                  </button>
+               )}
+            </div>
 
             {/* Meta Details Row */}
             <div className="flex flex-wrap items-center gap-6 md:gap-10 text-sm md:text-base font-semibold text-gray-200 mb-12 bg-gray-900/40 p-4 rounded-xl border border-gray-800/50 backdrop-blur-sm w-fit">
@@ -318,7 +331,9 @@ export default function MovieDetailsPage() {
           {related.length > 0 ? (
             related.map((r) => (
               <div key={r.id} className="flex-shrink-0 w-[120px] md:w-[150px] lg:w-[160px]">
-                <NetflixCard content={r} type="movie" />
+                <StreamitHoverCard content={{...r, type: 'movie'}}>
+                  <NetflixCard content={r} type="movie" />
+                </StreamitHoverCard>
               </div>
             ))
           ) : (
@@ -338,7 +353,9 @@ export default function MovieDetailsPage() {
           {relatedSeries.length > 0 ? (
             relatedSeries.map((s) => (
               <div key={s.id} className="flex-shrink-0 w-[120px] md:w-[150px] lg:w-[160px]">
-                <NetflixCard content={s} type="series" />
+                <StreamitHoverCard content={{...s, type: 'series'}}>
+                  <NetflixCard content={s} type="series" />
+                </StreamitHoverCard>
               </div>
             ))
           ) : (

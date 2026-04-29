@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { Roboto } from "next/font/google";
 import "./globals.css";
+import "swiper/css";
+import "swiper/css/navigation";
+import "swiper/css/pagination";
 import { AuthProvider } from "@/components/AuthProvider";
 import ConditionalLayout from "../components/ConditionalLayout";
 

@@ -3,7 +3,7 @@ import React from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { Play, Info, Plus } from "lucide-react";
+import { Play, Info, Plus, Star } from "lucide-react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, Pagination, Autoplay, EffectFade } from "swiper/modules";
 import "swiper/css";
@@ -50,9 +50,9 @@ const VJCard = ({ content }: { content: VJContent }) => (
             }}
           />
 
-          <div className={`absolute top-2 left-2 px-2 py-0.5 rounded-sm text-[10px] font-bold tracking-wider uppercase z-10 ${content.type === 'movie' ? 'bg-[#E50914] text-white' : 'bg-[#1ABC9C] text-white'
-            }`}>
-            {content.type === 'movie' ? 'Movie' : 'Series'}
+          <div className="absolute top-2 left-2 bg-yellow-500 px-2 py-0.5 rounded text-[10px] font-bold text-black flex items-center gap-1 shadow-md z-10">
+             <Star className="w-3 h-3 fill-black" />
+             {('rating' in content && typeof content.rating === 'number') ? content.rating.toFixed(1) : (Math.random() * 2 + 7).toFixed(1)}
           </div>
 
           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center z-10">

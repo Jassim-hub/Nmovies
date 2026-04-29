@@ -4,6 +4,12 @@ import React, { useCallback } from 'react';
 import { ArtPlayer } from './ArtPlayer';
 import { EpisodeWithSeason } from '@/lib/supabase';
 
+// Helper to extract YouTube video ID
+const getYouTubeId = (url: string) => {
+  const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&?]+)/);
+  return match ? match[1] : null;
+};
+
 interface VideoPlayerProps {
   src: string;
   title?: string;
@@ -40,6 +46,22 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       onEnded();
     }
   }, [onEnded]);
+
+  const youtubeId = src ? getYouTubeId(src) : null;
+
+  if (youtubeId) {
+    return (
+      <div className="w-full h-full relative">
+        <iframe
+          src={`https://www.youtube.com/embed/${youtubeId}?autoplay=0&rel=0`}
+          title={title || "YouTube video player"}
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+          className="absolute inset-0 w-full h-full border-0 rounded-lg"
+        />
+      </div>
+    );
+  }
 
   return (
     <ArtPlayer

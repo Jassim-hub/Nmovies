@@ -586,10 +586,10 @@ export function ArtPlayer({ url, poster, title, className, onEnded, episodes = [
   }
 
   return (
-    <div className="relative">
+    <div className={`relative w-full h-full ${className || ''}`}>
       <div
         ref={artRef}
-        className={`w-full aspect-video bg-black rounded-lg overflow-hidden ${className}`}
+        className="absolute inset-0 w-full h-full bg-black overflow-hidden"
       />
 
       {/* Episodes Overlay - Desktop/TV Style */}

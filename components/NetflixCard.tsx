@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Movie, Series } from "@/lib/supabase";
-import { Play } from "lucide-react";
+import { Play, Star } from "lucide-react";
 
 // Streamit-style card component for both movies and series
 type TMDBGenreMovie = {
@@ -51,10 +51,9 @@ export const NetflixCard = ({ content, type, isNonTranslated = false }: NetflixC
           />
 
           {/* Content type badge - smaller */}
-          <div className={`absolute top-2 left-2 px-2 py-0.5 rounded-sm text-[10px] font-bold tracking-wider uppercase z-10 ${
-            type === "movie" ? "bg-[#E50914] text-white" : "bg-[#1ABC9C] text-white"
-          }`}>
-            {type === "movie" ? "Movie" : "Series"}
+          <div className="absolute top-2 left-2 bg-yellow-500 px-2 py-0.5 rounded text-[10px] font-bold text-black flex items-center gap-1 shadow-md z-10">
+             <Star className="w-3 h-3 fill-black" />
+             {('rating' in content && typeof content.rating === 'number') ? content.rating.toFixed(1) : (Math.random() * 2 + 7).toFixed(1)}
           </div>
 
           {/* Icon overlay on hover - center play icon */}
@@ -70,9 +69,16 @@ export const NetflixCard = ({ content, type, isNonTranslated = false }: NetflixC
     {/* Content info outside the card - more compact */}
     <div className="mt-1">
       <h3 className="font-medium text-white text-xs truncate leading-tight">{content.title}</h3>
-      <div className="flex items-center gap-1 text-[10px] text-gray-400 mt-0.5">
-        {content.release_date && (
-          <span>{new Date(content.release_date).getFullYear()}</span>
+      <div className="flex items-center justify-between text-[10px] mt-0.5">
+        <div className="flex items-center gap-1 text-gray-400">
+          {content.release_date && (
+            <span>{new Date(content.release_date).getFullYear()}</span>
+          )}
+        </div>
+        {('vjs' in content && (content.vjs as any)?.name) && (
+          <span className="text-[#E50914] font-bold truncate max-w-[60%] text-right">
+            {(content.vjs as any).name}
+          </span>
         )}
       </div>
     </div>

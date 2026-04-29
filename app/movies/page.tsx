@@ -7,6 +7,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useEffect, useState, useCallback } from "react";
 import { Movie } from "@/lib/supabase";
 import { supabase } from "@/lib/supabase";
+import { StreamitHoverCard } from "@/components/StreamitHoverCard";
+import { NetflixCard } from "@/components/NetflixCard";
 
 type MovieWithVJ = Movie & {
   vjs: { id: string; name: string } | null;
@@ -282,51 +284,10 @@ export default function MoviesPage() {
         {!loading && (
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-x-2 gap-y-4">
             {movies.map((movie) => (
-              <div key={movie.id} className="group">
-              <Link href={`/movies/${movie.id}`}>
-                <div className="cursor-pointer transition-transform duration-200 hover:scale-105">
-                  <div className="aspect-[2/3] relative rounded-lg overflow-hidden bg-gray-800 mb-2">
-                    <Image
-                      src={movie.thumbnail_url || movie.cover_image_url || `https://via.placeholder.com/240x360/1f2937/f97316?text=${encodeURIComponent(movie.title)}`}
-                      alt={movie.title}
-                      fill
-                      className="object-cover transition-opacity duration-300"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.src = `https://via.placeholder.com/240x360/1f2937/f97316?text=${encodeURIComponent(movie.title)}`;
-                      }}
-                    />
-
-                    {/* Content type badge - smaller */}
-                    <div className="absolute top-1 left-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#FF7F50]">
-                      Movie
-                    </div>
-
-                    {/* Simple overlay on hover - compact */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center">
-                      <div className="text-white text-xs font-semibold">Watch Now</div>
-                    </div>
-                  </div>
-                </div>
-              </Link>
-
-              {/* Movie info outside the card - more compact */}
-              <div className="space-y-0.5">
-                <h3 className="font-medium text-white text-xs truncate leading-tight">{movie.title}</h3>
-                <div className="flex items-center gap-1 text-[10px] text-gray-400">
-                  {movie.vjs && (
-                    <span className="text-[#E50914]">{movie.vjs.name}</span>
-                  )}
-                  {movie.vjs && movie.release_date && (
-                    <span>•</span>
-                  )}
-                  {movie.release_date && (
-                    <span>{new Date(movie.release_date).getFullYear()}</span>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
+              <StreamitHoverCard key={movie.id} content={{...movie, type: 'movie'}}>
+                <NetflixCard content={movie} type="movie" />
+              </StreamitHoverCard>
+            ))}
           </div>
         )}
 
