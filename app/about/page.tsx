@@ -70,7 +70,7 @@ export default function AboutPage() {
             never miss the latest blockbuster releases and insights.
           </p>
           <div className="flex flex-wrap justify-center gap-6">
-            <a href="/subscribe" className="px-8 py-4 rounded-lg bg-[#E50914] hover:bg-[#b80710] text-white font-bold uppercase tracking-wider transition-colors shadow-[0_0_15px_rgba(229,9,20,0.2)]">
+            <a href="/payment" className="px-8 py-4 rounded-lg bg-[#E50914] hover:bg-[#b80710] text-white font-bold uppercase tracking-wider transition-colors shadow-[0_0_15px_rgba(229,9,20,0.2)]">
               Subscribe Now
             </a>
             <a href="/contact" className="px-8 py-4 rounded-lg border border-gray-600 text-white hover:border-[#E50914] hover:text-[#E50914] font-bold uppercase tracking-wider transition-colors bg-black">
