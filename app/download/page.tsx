@@ -7,7 +7,7 @@ export default function DownloadPage() {
   return (
     <main className="min-h-screen bg-black flex flex-col items-center justify-center px-4 py-16">
       <DownloadLogo />
-      <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2 text-center">Download Kilax App</h1>
+      <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2 text-center">Download NicholoMoviesUg App</h1>
       <p className="text-gray-300 text-center mb-6">
         Get the best Ugandan movies and series streaming experience on your Android device. Fast, secure, and offline-ready.
       </p>

@@ -14,8 +14,11 @@ const roboto = Roboto({
 });
 
 export const metadata: Metadata = {
-  title: 'Kilax Movies - Stream & Discover',
+  title: 'NicholoMoviesUg - Stream & Discover',
   description: 'Your ultimate destination for movies and series streaming',
+  icons: {
+    icon: '/logo.png',
+  },
 };
 
 export default function RootLayout({

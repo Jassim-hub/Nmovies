@@ -7,7 +7,7 @@ export default function SubscribePage() {
       <section className="py-20 bg-gradient-to-r from-orange-400 to-orange-600">
         <div className="container mx-auto px-4 text-center">
           <div className="h-16 w-16 text-white mx-auto mb-6 text-6xl">📧</div>
-          <h1 className="text-4xl font-bold text-white mb-4">Subscribe to Kilax Movies</h1>
+          <h1 className="text-4xl font-bold text-white mb-4">Subscribe to NicholoMoviesUg</h1>
           <p className="text-xl text-white/90 max-w-2xl mx-auto">
             Join thousands of movie lovers and get the latest reviews, recommendations,
             and cinema insights delivered straight to your inbox.
@@ -63,7 +63,7 @@ export default function SubscribePage() {
             <div className="text-center mb-8">
               <h2 className="text-2xl font-bold mb-2">Join Our Community</h2>
               <p className="text-gray-500">
-                Subscribe now and become part of the Kilax Movies family
+                Subscribe now and become part of the NicholoMoviesUg family
               </p>
             </div>
 

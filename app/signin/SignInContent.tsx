@@ -108,7 +108,7 @@ export default function SignInContent() {
             <div className="flex items-center justify-center mb-2">
               <img
                 src="/logo.png"
-                alt="Kilax Movies Logo"
+                alt="NicholoMoviesUg Logo"
                 width={48}
                 height={48}
                 className="w-12 h-12 object-contain rounded"
@@ -132,7 +132,7 @@ export default function SignInContent() {
           <div className="flex items-center justify-center mb-2">
             <img
               src="/logo.png"
-              alt="Kilax Movies Logo"
+              alt="NicholoMoviesUg Logo"
               width={48}
               height={48}
               className="w-12 h-12 object-contain rounded"

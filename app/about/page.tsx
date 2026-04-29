@@ -1,102 +1,58 @@
-
+import { Film, Heart, Users, Star, Award, Shield } from "lucide-react";
+import Image from "next/image";
 
 export default function AboutPage() {
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-[#141414] text-white pt-24 pb-16">
       {/* Hero Section */}
-      <section className="py-20 bg-gradient-to-r from-orange-400 to-orange-600">
-        <div className="container mx-auto px-4 text-center">
-          <h1 className="text-4xl font-bold text-white mb-6">About Kilax Movies</h1>
-          <p className="text-xl text-white/90 max-w-3xl mx-auto">
-            We&apos;re passionate movie enthusiasts dedicated to bringing you thoughtful reviews,
-            engaging discussions, and insights into the world of cinema.
-          </p>
-        </div>
+      <section className="container mx-auto px-4 text-center mb-20">
+        <h1 className="text-4xl md:text-5xl lg:text-6xl font-black mb-6 uppercase tracking-wider text-white">
+          About <span className="text-[#E50914]">NicholoMoviesUg</span>
+        </h1>
+        <p className="text-xl text-gray-300 max-w-3xl mx-auto leading-relaxed">
+          We are passionate movie enthusiasts dedicated to bringing you thoughtful reviews,
+          engaging discussions, and insights into the world of cinema. Your ultimate streaming destination.
+        </p>
       </section>
 
       {/* Mission Section */}
-      <section className="py-16 container mx-auto px-4">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4">
-              <span className="text-transparent bg-gradient-to-r from-[#E50914] via-orange-600 to-orange-700 bg-clip-text">
-                Our Mission
-              </span>
+      <section className="container mx-auto px-4 mb-20">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-bold mb-4 uppercase tracking-wide">
+              Our Mission
             </h2>
-            <p className="text-orange-600 text-lg">
+            <p className="text-gray-400 text-lg">
               To create a community where movie lovers can discover, discuss, and celebrate cinema
             </p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
-            <div className="p-6 text-center bg-white rounded-lg shadow hover:shadow-orange-400 transition-shadow">
-              <div className="h-12 w-12 text-[#E50914] mx-auto mb-4 text-4xl">🎬</div>
-              <h3 className="text-xl font-semibold mb-3 text-orange-700">Quality Reviews</h3>
-              <p className="text-orange-600">
-                In-depth, honest reviews that help you discover your next favorite film
-              </p>
-            </div>
-            <div className="p-6 text-center bg-white rounded-lg shadow hover:shadow-orange-400 transition-shadow">
-              <div className="h-12 w-12 text-[#E50914] mx-auto mb-4 text-4xl">❤️</div>
-              <h3 className="text-xl font-semibold mb-3 text-orange-700">Passion Driven</h3>
-              <p className="text-orange-600">
-                Our love for cinema drives everything we do, from reviews to recommendations
-              </p>
-            </div>
-            <div className="p-6 text-center bg-white rounded-lg shadow hover:shadow-orange-400 transition-shadow">
-              <div className="h-12 w-12 text-[#E50914] mx-auto mb-4 text-4xl">👥</div>
-              <h3 className="text-xl font-semibold mb-3 text-orange-700">Community Focus</h3>
-              <p className="text-orange-600">
-                Building a community of movie lovers who share insights and recommendations
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Team Section */}
-      <section className="py-16 bg-orange-50">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4">
-              <span className="text-transparent bg-gradient-to-r from-[#E50914] via-orange-600 to-orange-700 bg-clip-text">
-                Meet Our Team
-              </span>
-            </h2>
-            <p className="text-orange-600">
-              Passionate movie critics and cinema enthusiasts
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-            <div className="p-6 text-center bg-white rounded-lg shadow">
-              <div className="w-24 h-24 bg-gradient-to-r from-orange-400 to-orange-600 rounded-full mx-auto mb-4 flex items-center justify-center">
-                <span className="text-white text-2xl font-bold">AJ</span>
+            <div className="p-8 text-center bg-[#1a1c21] rounded-xl border border-gray-800 hover:border-[#E50914] transition-colors">
+              <div className="h-16 w-16 bg-black rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+                <Star className="w-8 h-8 text-[#E50914]" />
               </div>
-              <h3 className="text-xl font-semibold mb-2 text-orange-700">Alex Johnson</h3>
-              <p className="text-[#E50914] font-medium mb-3">Lead Critic</p>
-              <p className="text-orange-600">
-                Specializes in sci-fi and thriller movies with 10+ years of film criticism experience.
+              <h3 className="text-xl font-bold mb-4 text-white uppercase tracking-wider">Quality Content</h3>
+              <p className="text-gray-400">
+                In-depth, honest reviews and a meticulously curated collection that helps you discover your next favorite film.
               </p>
             </div>
-            <div className="p-6 text-center bg-white rounded-lg shadow">
-              <div className="w-24 h-24 bg-gradient-to-r from-orange-400 to-orange-600 rounded-full mx-auto mb-4 flex items-center justify-center">
-                <span className="text-white text-2xl font-bold">SW</span>
+            <div className="p-8 text-center bg-[#1a1c21] rounded-xl border border-gray-800 hover:border-[#E50914] transition-colors">
+              <div className="h-16 w-16 bg-black rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+                <Heart className="w-8 h-8 text-[#E50914]" />
               </div>
-              <h3 className="text-xl font-semibold mb-2 text-orange-700">Sarah Williams</h3>
-              <p className="text-[#E50914] font-medium mb-3">Romance & Drama Expert</p>
-              <p className="text-orange-600">
-                Expert in romantic films and character-driven dramas, bringing emotional depth to reviews.
+              <h3 className="text-xl font-bold mb-4 text-white uppercase tracking-wider">Passion Driven</h3>
+              <p className="text-gray-400">
+                Our love for cinema drives everything we do, from providing high-quality streaming to excellent recommendations.
               </p>
             </div>
-            <div className="p-6 text-center bg-white rounded-lg shadow">
-              <div className="w-24 h-24 bg-gradient-to-r from-orange-400 to-orange-600 rounded-full mx-auto mb-4 flex items-center justify-center">
-                <span className="text-white text-2xl font-bold">MC</span>
+            <div className="p-8 text-center bg-[#1a1c21] rounded-xl border border-gray-800 hover:border-[#E50914] transition-colors">
+              <div className="h-16 w-16 bg-black rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+                <Users className="w-8 h-8 text-[#E50914]" />
               </div>
-              <h3 className="text-xl font-semibold mb-2 text-orange-700">Mike Chen</h3>
-              <p className="text-[#E50914] font-medium mb-3">Action & Adventure</p>
-              <p className="text-orange-600">
-                Action movie enthusiast with deep knowledge of cinematography and visual effects.
+              <h3 className="text-xl font-bold mb-4 text-white uppercase tracking-wider">Community Focus</h3>
+              <p className="text-gray-400">
+                Building a premium community of entertainment lovers who share insights, reviews, and a passion for film.
               </p>
             </div>
           </div>
@@ -104,25 +60,25 @@ export default function AboutPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-16 container mx-auto px-4 text-center">
-        <h2 className="text-3xl font-bold mb-4">
-          <span className="text-transparent bg-gradient-to-r from-[#E50914] via-orange-600 to-orange-700 bg-clip-text">
+      <section className="container mx-auto px-4 text-center mt-24 mb-10">
+        <div className="bg-[#1a1c21] border border-gray-800 rounded-2xl p-12 max-w-4xl mx-auto">
+          <h2 className="text-3xl font-bold mb-6 uppercase tracking-wide">
             Join Our Community
-          </span>
-        </h2>
-        <p className="text-orange-600 mb-8 max-w-2xl mx-auto">
-          Ready to explore the world of cinema with us? Subscribe to our newsletter and
-          never miss our latest reviews and insights.
-        </p>
-        <div className="flex flex-wrap justify-center gap-4">
-          <a href="/subscribe" className="px-6 py-3 rounded bg-[#E50914] hover:bg-[#b80710] text-white font-semibold text-lg transition">
-            Subscribe Now
-          </a>
-          <a href="/contact" className="px-6 py-3 rounded border border-[#E50914] text-[#E50914] hover:bg-[#E50914] hover:text-white font-semibold text-lg transition">
-            Get in Touch
-          </a>
+          </h2>
+          <p className="text-gray-400 mb-10 max-w-2xl mx-auto text-lg">
+            Ready to explore the world of cinema with us? Subscribe to our premium plans and
+            never miss the latest blockbuster releases and insights.
+          </p>
+          <div className="flex flex-wrap justify-center gap-6">
+            <a href="/subscribe" className="px-8 py-4 rounded-lg bg-[#E50914] hover:bg-[#b80710] text-white font-bold uppercase tracking-wider transition-colors shadow-[0_0_15px_rgba(229,9,20,0.2)]">
+              Subscribe Now
+            </a>
+            <a href="/contact" className="px-8 py-4 rounded-lg border border-gray-600 text-white hover:border-[#E50914] hover:text-[#E50914] font-bold uppercase tracking-wider transition-colors bg-black">
+              Get in Touch
+            </a>
+          </div>
         </div>
       </section>
     </div>
   );
-} 
+}

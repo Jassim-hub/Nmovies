@@ -10,9 +10,10 @@ import { Search } from "lucide-react";
 import PremiumUpgradeModal from "@/components/PremiumUpgradeModal";
 
 const leftNavItems: { href: string; label: React.ReactNode }[] = [
+  { href: "/", label: "Home" },
   { href: "/movies", label: "Movies" },
   { href: "/series", label: "Series" },
-  { href: "/non-translated", label: "Non Translated" },
+  { href: "/coming-soon", label: "Coming Soon" },
 ];
 
 export default function Header() {
@@ -97,7 +98,7 @@ export default function Header() {
             >
               <Image
                 src="/logo.png"
-                alt="Kilax Movies Logo"
+                alt="NicholoMoviesUg Logo"
                 width={40}
                 height={40}
                 className="w-8 h-8 sm:w-10 sm:h-10 object-contain rounded"
@@ -237,23 +238,17 @@ export default function Header() {
             </div>
 
             {/* Desktop Navigation */}
-            <nav className="hidden lg:flex items-center space-x-1">
-              {leftNavItems.concat([{ href: "/download", label: <><Image src="/google_play.svg" alt="Download" width={20} height={20} className="w-5 h-5 mr-1 inline-block align-middle" /><span className="hidden xl:inline font-semibold align-middle">Download</span></> }]).map((item) => (
+            <nav className="hidden lg:flex items-center space-x-2">
+              {leftNavItems.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`relative px-4 py-2 rounded-lg transition-all duration-200 hover:bg-black group flex items-center ${isActive(item.href)
-                    ? "text-[#E50914] font-medium bg-black"
+                  className={`px-4 py-2 transition-colors duration-200 font-bold uppercase text-sm tracking-wider ${isActive(item.href)
+                    ? "text-[#E50914]"
                     : "text-gray-300 hover:text-[#E50914]"
                     }`}
                 >
                   {item.label}
-                  {/* Active indicator */}
-                  {isActive(item.href) && (
-                    <span className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-[#E50914] rounded-full transition-all duration-200"></span>
-                  )}
-                  {/* Hover indicator */}
-                  <span className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-0 h-0.5 bg-orange-400 rounded-full transition-all duration-200 group-hover:w-6"></span>
                 </Link>
               ))}
             </nav>
@@ -263,15 +258,34 @@ export default function Header() {
           <div className="flex-1"></div>
 
           {/* Desktop Right Navigation */}
-          <nav className="hidden lg:flex items-center space-x-3">
+          <nav className="hidden lg:flex items-center space-x-4">
             {/* Search Icon */}
             <Link
               href="/search"
-              className="p-3 rounded-lg hover:bg-gray-800 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#E50914]"
+              className="p-2 hover:text-[#E50914] text-gray-300 transition-colors focus:outline-none"
               aria-label="Search"
             >
-              <Search className="w-6 h-6 text-gray-300 hover:text-[#E50914] transition-colors duration-200" />
+              <Search className="w-5 h-5" />
             </Link>
+
+            {/* Download Icon Button */}
+            <Link
+              href="/download"
+              className="p-2.5 bg-gray-800 rounded hover:bg-gray-700 transition-colors focus:outline-none"
+              aria-label="Download App"
+            >
+              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+            </Link>
+
+            {/* Language Selector (Placeholder) */}
+            <button className="flex items-center space-x-2 bg-gray-800 px-3 py-2 rounded text-xs font-bold text-gray-300 hover:bg-gray-700 transition-colors">
+              <span className="w-4 h-3 bg-red-600 inline-block border border-white/20"></span>
+              <span>EN</span>
+              <svg className="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+            </button>
+
             {loading ? (
               <div className="w-8 h-8 border-2 border-[#E50914] border-t-transparent rounded-full animate-spin"></div>
             ) : user ? (
@@ -280,12 +294,12 @@ export default function Header() {
                 {!isPremium && (
                   <Link
                     href="/payment"
-                    className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-[#E50914] to-orange-600 hover:from-orange-600 hover:to-orange-700 rounded-full transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-[#E50914] shadow-lg"
+                    className="flex items-center space-x-2 px-5 py-2 bg-[#d9a029] hover:bg-[#c28f23] rounded transition-all focus:outline-none shadow-lg"
                   >
-                    <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M5 2a1 1 0 011 1v1h1a1 1 0 010 2H6v1a1 1 0 01-2 0V6H3a1 1 0 010-2h1V3a1 1 0 011-1zm0 10a1 1 0 011 1v1h1a1 1 0 110 2H6v1a1 1 0 11-2 0v-1H3a1 1 0 110-2h1v-1a1 1 0 011-1zM12 2a1 1 0 01.967.744L14.146 7.2 17.5 9.134a1 1 0 010 1.732L14.146 12.8l-1.179 4.456a1 1 0 01-1.934 0L9.854 12.8 6.5 10.866a1 1 0 010-1.732L9.854 7.2l1.179-4.456A1 1 0 0112 2z" clipRule="evenodd" />
+                    <svg className="w-4 h-4 text-black fill-current" viewBox="0 0 24 24">
+                       <path d="M3 17h18v2H3v-2zm18-9l-3.5 5.5L12 7l-5.5 6.5L3 8l3 11h12l3-11z" />
                     </svg>
-                    <span className="text-white font-semibold text-sm">Get Premium</span>
+                    <span className="text-black font-bold uppercase text-xs tracking-wider">Subscribe</span>
                   </Link>
                 )}
 
@@ -293,7 +307,7 @@ export default function Header() {
                 <div className="relative">
                   <button
                     onClick={() => setShowUserMenu(!showUserMenu)}
-                    className="flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-black transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#E50914]"
+                    className="flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-black transition-colors duration-200 focus:outline-none"
                   >
                     {user.user_metadata?.avatar_url ? (
                       <Image
@@ -301,24 +315,13 @@ export default function Header() {
                         alt="Profile"
                         width={32}
                         height={32}
-                        className={`w-8 h-8 rounded-full border-2 ${isPremium ? 'border-[#E50914]' : 'border-[#E50914]'}`}
+                        className={`w-8 h-8 rounded-full border-2 ${isPremium ? 'border-[#d9a029]' : 'border-gray-600'}`}
                       />
                     ) : (
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold ${isPremium ? 'bg-orange-400' : 'bg-[#E50914]'}`}>
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold ${isPremium ? 'bg-[#d9a029]' : 'bg-[#E50914]'}`}>
                         {user.email?.charAt(0).toUpperCase()}
                       </div>
                     )}
-                    <div className="flex flex-col items-start">
-                      <span className="text-gray-300 max-w-32 truncate text-sm">
-                        {user.user_metadata?.full_name || user.email}
-                      </span>
-                      {isPremium && (
-                        <span className="text-xs text-[#E50914] font-medium">Premium</span>
-                      )}
-                    </div>
-                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
                   </button>
 
                   {showUserMenu && (
@@ -326,37 +329,15 @@ export default function Header() {
                       <div className="px-4 py-3 border-b border-gray-700">
                         <p className="text-sm text-gray-400">Signed in as</p>
                         <p className="text-sm font-medium text-white truncate">{user.email}</p>
-                        {isPremium && (
-                          <div className="flex items-center space-x-1 mt-1">
-                            <svg className="w-3 h-3 text-[#E50914]" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M12 2a1 1 0 01.967.744L14.146 7.2 17.5 9.134a1 1 0 010 1.732L14.146 12.8l-1.179 4.456a1 1 0 01-1.934 0L9.854 12.8 6.5 10.866a1 1 0 010-1.732L9.854 7.2l1.179-4.456A1 1 0 0112 2z" clipRule="evenodd" />
-                            </svg>
-                            <span className="text-xs text-[#E50914] font-medium">Premium Member</span>
-                          </div>
-                        )}
                       </div>
                       <Link
                         href="/profile"
                         className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-black hover:text-[#E50914] transition-colors duration-200 flex items-center space-x-2"
                         onClick={() => setShowUserMenu(false)}
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A13.937 13.937 0 0112 15c2.21 0 4.305.534 6.121 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A13.937 13.937 0 0112 15c2.21 0 4.305.534 6.121 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                         <span>Profile</span>
                       </Link>
-                      <button
-                        onClick={() => {
-                          setShowUserMenu(false);
-                          setShowPremiumUpgradeModal(true);
-                        }}
-                        className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-black hover:text-[#E50914] transition-colors duration-200 flex items-center space-x-2"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-                        </svg>
-                        <span>Make Payment</span>
-                      </button>
                       <button
                         onClick={handleSignOut}
                         className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-black hover:text-[#E50914] transition-colors duration-200"
@@ -371,12 +352,9 @@ export default function Header() {
               <Link
                 href="/signin"
                 onClick={() => setRedirectCookie(pathname)}
-                className={`relative px-4 py-2 rounded-lg transition-all duration-200 group font-bold focus:outline-none focus:ring-2 focus:ring-[#E50914] focus:ring-offset-2 ${isActive("/signin")
-                  ? "text-white bg-[#E50914]"
-                  : "text-[#E50914] hover:bg-[#E50914] hover:text-white"
-                  }`}
+                className="px-6 py-2 bg-[#E50914] hover:bg-[#b80710] text-white font-bold rounded uppercase text-xs tracking-wider transition-colors"
               >
-                Sign In
+                Login
               </Link>
             )}
           </nav>
@@ -443,7 +421,7 @@ export default function Header() {
                 >
                   <Image
                     src="/logo.png"
-                    alt="Kilax Movies Logo"
+                    alt="NicholoMoviesUg Logo"
                     width={24}
                     height={24}
                     className="w-6 h-6 object-contain rounded mr-3"
@@ -481,7 +459,7 @@ export default function Header() {
                 <div className="mt-4 pt-4 border-t border-gray-700">
                   <div className="px-4 py-2">
                     <p className="text-xs text-gray-500 text-center">
-                      Kilax Movies - Your Entertainment Hub
+                      NicholoMoviesUg - Your Entertainment Hub
                     </p>
                   </div>
                 </div>

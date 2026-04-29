@@ -6,7 +6,7 @@ export default function DownloadLogo() {
   return (
     <img
       src={src}
-      alt="Kilax App Icon"
+      alt="NicholoMoviesUg App Icon"
       className="w-20 h-20 mb-4 rounded-2xl shadow-lg bg-[#232b3a] object-contain"
       onError={() => setSrc("/file.svg")}
     />

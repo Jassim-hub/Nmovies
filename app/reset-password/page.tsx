@@ -297,7 +297,7 @@ function ResetPasswordForm() {
                 Password Reset Successful
               </CardTitle>
               <CardDescription className="text-gray-600">
-                Password reset successfully. Open the Kilax app to sign in.
+                Password reset successfully. Open the NicholoMoviesUg app to sign in.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -312,7 +312,7 @@ function ResetPasswordForm() {
                 </h3>
                 <p className="text-orange-800 text-sm">
                   Your password has been successfully reset. Please open the
-                  Kilax mobile app and sign in with your new password.
+                  NicholoMoviesUg mobile app and sign in with your new password.
                 </p>
               </div>
 
