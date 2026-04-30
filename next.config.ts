@@ -21,6 +21,20 @@ const nextConfig: NextConfig = {
 
   // Add empty turbopack config to silence the warning
   turbopack: {},
+
+  // Proxy /panel to the secondary Next.js app running on port 3001
+  async rewrites() {
+    return [
+      {
+        source: '/panel',
+        destination: 'http://localhost:3001/panel',
+      },
+      {
+        source: '/panel/:path*',
+        destination: 'http://localhost:3001/panel/:path*',
+      },
+    ];
+  },
 };
 
 export default nextConfig;
