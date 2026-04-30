@@ -22,13 +22,13 @@ export default function SignInContent() {
     const errorParam = searchParams.get('error')
     const messageParam = searchParams.get('message')
     const redirectParam = searchParams.get('redirect')
-    
+
     if (errorParam === 'auth_failed') {
       setError('Authentication failed. Please try again.')
     } else if (errorParam === 'unexpected') {
       setError('An unexpected error occurred. Please try again.')
     }
-    
+
     if (messageParam === 'check_email') {
       setMessage('Please check your email and click the confirmation link to complete your registration.')
     }
@@ -43,13 +43,13 @@ export default function SignInContent() {
   useEffect(() => {
     if (user && !redirecting) {
       setRedirecting(true)
-      
+
       // Check for redirect cookie or URL parameter
       let redirectPath = getRedirectCookie()
       if (!redirectPath) {
         redirectPath = searchParams.get('redirect')
       }
-      
+
       // Small delay to ensure auth state is fully propagated
       setTimeout(() => {
         if (redirectPath) {
@@ -67,15 +67,15 @@ export default function SignInContent() {
   const handleGoogleSignIn = async () => {
     setLoading(true)
     setError('')
-    
+
     // Ensure redirect cookie is set for OAuth flow
     const redirectParam = searchParams.get('redirect')
     if (redirectParam && !getRedirectCookie()) {
       setRedirectCookie(redirectParam)
     }
-    
+
     const { error } = await signInWithGoogle()
-    
+
     if (error) {
       setError(error.message || 'Failed to sign in with Google')
       setLoading(false)
@@ -89,7 +89,7 @@ export default function SignInContent() {
     setError('')
 
     const { error } = await signIn(email, password)
-    
+
     if (error) {
       setError(error.message || 'Failed to sign in')
       setLoading(false)
@@ -108,7 +108,7 @@ export default function SignInContent() {
             <div className="flex items-center justify-center mb-2">
               <img
                 src="/logo.png"
-                alt="NicholoMoviesUg Logo"
+                alt="NicholMoviesUg Logo"
                 width={48}
                 height={48}
                 className="w-12 h-12 object-contain rounded"
@@ -132,7 +132,7 @@ export default function SignInContent() {
           <div className="flex items-center justify-center mb-2">
             <img
               src="/logo.png"
-              alt="NicholoMoviesUg Logo"
+              alt="NicholMoviesUg Logo"
               width={48}
               height={48}
               className="w-12 h-12 object-contain rounded"
@@ -159,12 +159,12 @@ export default function SignInContent() {
           )}
 
           {/* Google Button */}
-          <button 
+          <button
             onClick={handleGoogleSignIn}
             disabled={loading}
             className="flex items-center justify-center gap-2 w-full py-3 rounded-lg bg-white text-black text-base font-medium hover:bg-orange-100 transition mb-2 border border-[#E50914] focus:outline-none focus:ring-2 focus:ring-[#E50914] disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <svg className="w-5 h-5" viewBox="0 0 48 48"><g><path fill="#4285F4" d="M24 9.5c3.54 0 6.7 1.22 9.19 3.23l6.85-6.85C35.46 2.14 30.12 0 24 0 14.88 0 6.74 5.06 2.69 12.44l7.97 6.19C12.13 13.43 17.62 9.5 24 9.5z"/><path fill="#34A853" d="M46.1 24.55c0-1.64-.15-3.22-.44-4.74H24v9.04h12.44c-.54 2.92-2.17 5.39-4.63 7.07l7.19 5.6C43.97 37.14 46.1 31.33 46.1 24.55z"/><path fill="#FBBC05" d="M10.66 28.63A14.48 14.48 0 0 1 9.5 24c0-1.62.28-3.19.77-4.63l-7.97-6.19A23.91 23.91 0 0 0 0 24c0 3.85.92 7.48 2.54 10.69l8.12-6.06z"/><path fill="#EA4335" d="M24 48c6.12 0 11.26-2.03 15.01-5.53l-7.19-5.6c-2.01 1.35-4.59 2.16-7.82 2.16-6.38 0-11.87-3.93-13.34-9.44l-8.12 6.06C6.74 42.94 14.88 48 24 48z"/></g></svg>
+            <svg className="w-5 h-5" viewBox="0 0 48 48"><g><path fill="#4285F4" d="M24 9.5c3.54 0 6.7 1.22 9.19 3.23l6.85-6.85C35.46 2.14 30.12 0 24 0 14.88 0 6.74 5.06 2.69 12.44l7.97 6.19C12.13 13.43 17.62 9.5 24 9.5z" /><path fill="#34A853" d="M46.1 24.55c0-1.64-.15-3.22-.44-4.74H24v9.04h12.44c-.54 2.92-2.17 5.39-4.63 7.07l7.19 5.6C43.97 37.14 46.1 31.33 46.1 24.55z" /><path fill="#FBBC05" d="M10.66 28.63A14.48 14.48 0 0 1 9.5 24c0-1.62.28-3.19.77-4.63l-7.97-6.19A23.91 23.91 0 0 0 0 24c0 3.85.92 7.48 2.54 10.69l8.12-6.06z" /><path fill="#EA4335" d="M24 48c6.12 0 11.26-2.03 15.01-5.53l-7.19-5.6c-2.01 1.35-4.59 2.16-7.82 2.16-6.38 0-11.87-3.93-13.34-9.44l-8.12 6.06C6.74 42.94 14.88 48 24 48z" /></g></svg>
             {loading ? 'Signing in...' : 'Continue with Google'}
           </button>
 
@@ -175,28 +175,28 @@ export default function SignInContent() {
           </div>
 
           <form onSubmit={handleEmailSignIn} className="w-full flex flex-col gap-3">
-            <input 
-              type="email" 
-              placeholder="Email" 
+            <input
+              type="email"
+              placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
               disabled={loading}
-              className="w-full rounded bg-[#22283a] border border-gray-700 px-4 py-3 text-base text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#E50914] disabled:opacity-50" 
+              className="w-full rounded bg-[#22283a] border border-gray-700 px-4 py-3 text-base text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#E50914] disabled:opacity-50"
             />
-            <input 
-              type="password" 
-              placeholder="Password" 
+            <input
+              type="password"
+              placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
               disabled={loading}
-              className="w-full rounded bg-[#22283a] border border-gray-700 px-4 py-3 text-base text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#E50914] disabled:opacity-50" 
+              className="w-full rounded bg-[#22283a] border border-gray-700 px-4 py-3 text-base text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#E50914] disabled:opacity-50"
             />
 
-            <Button 
+            <Button
               type="submit"
-              size="lg" 
+              size="lg"
               disabled={loading}
               className="w-full bg-[#E50914] hover:bg-[#b80710] text-white font-semibold text-base py-3 rounded-lg mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >

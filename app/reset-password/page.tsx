@@ -63,9 +63,9 @@ function ResetPasswordForm() {
     // Valid if we have token_hash with recovery type, or other valid token combinations
     const hasValidToken = Boolean(
       (tokenHash && type === "recovery") ||
-        tokenParam ||
-        (accessToken && refreshToken && type === "recovery") ||
-        (hashAccessToken && hashRefreshToken && hashType === "recovery")
+      tokenParam ||
+      (accessToken && refreshToken && type === "recovery") ||
+      (hashAccessToken && hashRefreshToken && hashType === "recovery")
     );
 
     console.log("Reset password validation:", {
@@ -297,7 +297,7 @@ function ResetPasswordForm() {
                 Password Reset Successful
               </CardTitle>
               <CardDescription className="text-gray-600">
-                Password reset successfully. Open the NicholoMoviesUg app to sign in.
+                Password reset successfully. Open the NicholMoviesUg app to sign in.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -312,7 +312,7 @@ function ResetPasswordForm() {
                 </h3>
                 <p className="text-orange-800 text-sm">
                   Your password has been successfully reset. Please open the
-                  NicholoMoviesUg mobile app and sign in with your new password.
+                  NicholMoviesUg mobile app and sign in with your new password.
                 </p>
               </div>
 
@@ -442,51 +442,46 @@ function ResetPasswordForm() {
                       </p>
                       <div className="space-y-1 text-xs">
                         <div
-                          className={`flex items-center ${
-                            passwordValidation.minLength
-                              ? "text-green-600"
-                              : "text-gray-400"
-                          }`}
+                          className={`flex items-center ${passwordValidation.minLength
+                            ? "text-green-600"
+                            : "text-gray-400"
+                            }`}
                         >
                           <CheckCircle className="w-3 h-3 mr-2" />
                           At least 8 characters
                         </div>
                         <div
-                          className={`flex items-center ${
-                            passwordValidation.hasUpperCase
-                              ? "text-green-600"
-                              : "text-gray-400"
-                          }`}
+                          className={`flex items-center ${passwordValidation.hasUpperCase
+                            ? "text-green-600"
+                            : "text-gray-400"
+                            }`}
                         >
                           <CheckCircle className="w-3 h-3 mr-2" />
                           One uppercase letter
                         </div>
                         <div
-                          className={`flex items-center ${
-                            passwordValidation.hasLowerCase
-                              ? "text-green-600"
-                              : "text-gray-400"
-                          }`}
+                          className={`flex items-center ${passwordValidation.hasLowerCase
+                            ? "text-green-600"
+                            : "text-gray-400"
+                            }`}
                         >
                           <CheckCircle className="w-3 h-3 mr-2" />
                           One lowercase letter
                         </div>
                         <div
-                          className={`flex items-center ${
-                            passwordValidation.hasNumbers
-                              ? "text-green-600"
-                              : "text-gray-400"
-                          }`}
+                          className={`flex items-center ${passwordValidation.hasNumbers
+                            ? "text-green-600"
+                            : "text-gray-400"
+                            }`}
                         >
                           <CheckCircle className="w-3 h-3 mr-2" />
                           One number
                         </div>
                         <div
-                          className={`flex items-center ${
-                            passwordValidation.hasSpecialChar
-                              ? "text-green-600"
-                              : "text-gray-400"
-                          }`}
+                          className={`flex items-center ${passwordValidation.hasSpecialChar
+                            ? "text-green-600"
+                            : "text-gray-400"
+                            }`}
                         >
                           <CheckCircle className="w-3 h-3 mr-2" />
                           One special character

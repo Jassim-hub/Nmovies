@@ -97,7 +97,7 @@ export default function ContactPage() {
                         Send us an email anytime for support or inquiries.
                       </p>
                       <a
-                        href="mailto:hello@nicholomoviesug.com"
+                        href="mailto:hello@nicholmoviesug.com"
                         className="text-[#E50914] hover:text-white transition-colors font-medium"
                       >
                         hello@nicholomoviesug.com

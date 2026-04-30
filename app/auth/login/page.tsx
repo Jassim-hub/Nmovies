@@ -18,7 +18,7 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  
+
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, signIn, signUp, signInWithGoogle } = useAuth();
@@ -58,7 +58,7 @@ function LoginForm() {
         }
       }
 
-      const { error } = isLogin 
+      const { error } = isLogin
         ? await signIn(email, password)
         : await signUp(email, password);
 
@@ -89,7 +89,7 @@ function LoginForm() {
   const handleGoogleSignIn = async () => {
     setError('');
     setLoading(true);
-    
+
     try {
       // If no redirect cookie exists, check URL params and set one
       if (!getRedirectCookie()) {
@@ -98,7 +98,7 @@ function LoginForm() {
           setRedirectCookie(redirectParam)
         }
       }
-      
+
       const { error } = await signInWithGoogle();
       if (error) {
         setError(error.message || 'Google sign in failed');
@@ -140,7 +140,7 @@ function LoginForm() {
             <div className="flex items-center justify-center mb-4">
               <img
                 src="/logo.png"
-                alt="NicholoMoviesUg Logo"
+                alt="NicholMoviesUg Logo"
                 width={48}
                 height={48}
                 className="w-12 h-12 object-contain rounded-xl"
@@ -151,8 +151,8 @@ function LoginForm() {
               {isLogin ? 'Welcome Back' : 'Create Account'}
             </h1>
             <p className="text-gray-400 text-sm">
-              {isLogin 
-                ? 'Sign in to access premium content' 
+              {isLogin
+                ? 'Sign in to access premium content'
                 : 'Join us to enjoy unlimited streaming'
               }
             </p>
@@ -164,7 +164,7 @@ function LoginForm() {
               <p className="text-red-400 text-sm">{error}</p>
             </div>
           )}
-          
+
           {success && (
             <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3 mb-4">
               <p className="text-green-400 text-sm">{success}</p>

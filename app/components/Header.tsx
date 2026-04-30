@@ -98,7 +98,7 @@ export default function Header() {
             >
               <Image
                 src="/logo.png"
-                alt="NicholoMoviesUg Logo"
+                alt="NicholMoviesUg Logo"
                 width={40}
                 height={40}
                 className="w-8 h-8 sm:w-10 sm:h-10 object-contain rounded"
@@ -297,7 +297,7 @@ export default function Header() {
                     className="flex items-center space-x-2 px-5 py-2 bg-[#d9a029] hover:bg-[#c28f23] rounded transition-all focus:outline-none shadow-lg"
                   >
                     <svg className="w-4 h-4 text-black fill-current" viewBox="0 0 24 24">
-                       <path d="M3 17h18v2H3v-2zm18-9l-3.5 5.5L12 7l-5.5 6.5L3 8l3 11h12l3-11z" />
+                      <path d="M3 17h18v2H3v-2zm18-9l-3.5 5.5L12 7l-5.5 6.5L3 8l3 11h12l3-11z" />
                     </svg>
                     <span className="text-black font-bold uppercase text-xs tracking-wider">Subscribe</span>
                   </Link>
@@ -421,7 +421,7 @@ export default function Header() {
                 >
                   <Image
                     src="/logo.png"
-                    alt="NicholoMoviesUg Logo"
+                    alt="NichloMoviesUg Logo"
                     width={24}
                     height={24}
                     className="w-6 h-6 object-contain rounded mr-3"
@@ -459,7 +459,7 @@ export default function Header() {
                 <div className="mt-4 pt-4 border-t border-gray-700">
                   <div className="px-4 py-2">
                     <p className="text-xs text-gray-500 text-center">
-                      NicholoMoviesUg - Your Entertainment Hub
+                      NicholMoviesUg - Your Entertainment Hub
                     </p>
                   </div>
                 </div>

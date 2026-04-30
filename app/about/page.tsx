@@ -7,7 +7,7 @@ export default function AboutPage() {
       {/* Hero Section */}
       <section className="container mx-auto px-4 text-center mb-20">
         <h1 className="text-4xl md:text-5xl lg:text-6xl font-black mb-6 uppercase tracking-wider text-white">
-          About <span className="text-[#E50914]">NicholoMoviesUg</span>
+          About <span className="text-[#E50914]">NicholMoviesUg</span>
         </h1>
         <p className="text-xl text-gray-300 max-w-3xl mx-auto leading-relaxed">
           We are passionate movie enthusiasts dedicated to bringing you thoughtful reviews,
