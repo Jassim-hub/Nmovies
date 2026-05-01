@@ -6,7 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { FullPageSpinner } from "@/components/LoadingSpinner";
-import { Play, Download, ChevronLeft, ChevronRight, Calendar, Globe, Clock, Star, Plus, Share2, Heart } from "lucide-react";
+import { Play, Download, ChevronLeft, ChevronRight, Calendar, Globe, Clock, Star, Plus, Share2, Heart, LayoutList, Users, PlusCircle } from "lucide-react";
 import VideoPlayer from "@/components/VideoPlayer";
 import { useAuth } from "@/components/AuthProvider";
 import { getProfile, Profile } from '@/lib/profiles';
@@ -48,6 +48,8 @@ export default function SeriesDetailsPage() {
   // Pagination for Episodes Grid
   const [currentPage, setCurrentPage] = useState(1);
   const [episodesPerPage] = useState(12);
+  const [activeTab, setActiveTab] = useState<'episodes' | 'cast' | 'reviews' | 'related'>('episodes');
+  const [activeSeasonId, setActiveSeasonId] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) getProfile(user.id).then(setProfile);
@@ -85,6 +87,7 @@ export default function SeriesDetailsPage() {
 
         let loadedEpisodes: EpisodeWithSeason[] = [];
         if (!seasonsOnlyError && seasonsOnly && seasonsOnly.length > 0) {
+          setActiveSeasonId(seasonsOnly[0].id);
           const seasonsWithEpisodes = await Promise.all(
             seasonsOnly.map(async (season) => {
               const { data: episodes } = await supabase
@@ -378,107 +381,151 @@ export default function SeriesDetailsPage() {
       </section>
 
       {/* Casts & Directors Section pulled from TMDB */}
-      <MovieCast title={series.title} type="series" />
+      {/* Moving this inside the tabs system */}
 
-      {/* Episodes Grid */}
-      {allEpisodes.length > 0 && (
-        <section className="w-full px-4 md:px-8 lg:px-12 xl:px-16 mt-8 mb-16">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-xl md:text-2xl font-bold border-b border-gray-800 pb-3 tracking-wide">Episodes ({allEpisodes.length})</h2>
-            {selectedEpisode && (
-              <div className="text-sm font-semibold text-gray-400 bg-gray-900/50 px-4 py-2 rounded-full">
-                Watching: <span className="text-white">{selectedEpisode.seasonName} - E{selectedEpisode.episode_number}</span>
-              </div>
-            )}
-          </div>
+      {/* Tabs Navigation */}
+      <section className="w-full px-4 md:px-8 lg:px-12 xl:px-16 mt-8">
+        <div className="flex items-center gap-8 md:gap-12 border-b border-gray-800/50 pb-4 mb-8 overflow-x-auto scrollbar-hide">
+          {[
+            { id: 'episodes', label: 'Episodes', icon: LayoutList },
+            { id: 'cast', label: 'Casts & Directors', icon: Users },
+            { id: 'reviews', label: 'Reviews', icon: Star },
+            { id: 'related', label: 'More Like This', icon: PlusCircle },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`flex items-center gap-2 whitespace-nowrap pb-4 -mb-4 transition-all duration-300 relative group ${
+                activeTab === tab.id ? 'text-white' : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              <tab.icon className={`w-4 h-4 ${activeTab === tab.id ? 'text-[#E50914]' : 'text-gray-400 group-hover:text-[#E50914]'}`} />
+              <span className="text-sm md:text-base font-bold uppercase tracking-wider">{tab.label}</span>
+              {activeTab === tab.id && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#E50914] shadow-[0_0_10px_rgba(229,9,20,0.8)]" />
+              )}
+            </button>
+          ))}
+        </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 md:gap-5 mb-10">
-            {currentEpisodes.map((episode) => (
-              <div
-                key={episode.id}
-                className={`group relative bg-gray-800 rounded-lg overflow-hidden cursor-pointer transition-all duration-300 hover:scale-105 ${
-                  selectedEpisode?.id === episode.id ? 'ring-2 ring-[#E50914] bg-gray-700' : 'hover:bg-gray-700'
-                }`}
-                onClick={() => handleEpisodeSelect(episode)}
-              >
-                <div className="aspect-video bg-gray-900 relative">
-                  <Image
-                    src={episode.thumbnail_url || series.cover_image_url || `https://via.placeholder.com/300x169/141414/e50914?text=E${episode.episode_number}`}
-                    alt={episode.title}
-                    fill
-                    className="object-cover"
-                  />
-                  <div className="absolute inset-0 bg-black/40 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                    <div className="flex gap-2">
-                      <button className="bg-[#E50914] hover:bg-[#b80710] text-white p-3 rounded-full transition-colors shadow-lg">
-                        <Play size={16} fill="currentColor" />
-                      </button>
-                      <button 
-                         onClick={(e) => { e.stopPropagation(); handleDownload(episode); }}
-                         className="bg-gray-600 hover:bg-gray-500 text-white p-3 rounded-full transition-colors shadow-lg"
-                      >
-                         <Download size={16} />
-                      </button>
-                    </div>
-                  </div>
-                  <div className="absolute top-2 left-2 bg-black/70 text-white px-2 py-1 rounded text-xs font-bold">
-                    E{episode.episode_number}
-                  </div>
-                  {episode.premium && (
-                    <div className="absolute top-2 right-2 bg-[#E50914] text-white px-2 py-1 rounded text-xs font-bold shadow-md">
-                      PREMIUM
-                    </div>
-                  )}
-                  {episode.duration && (
-                    <div className="absolute bottom-2 right-2 bg-black/70 text-white px-2 py-1 rounded text-xs">
-                      {episode.duration}m
-                    </div>
-                  )}
-                </div>
-                <div className="p-3">
-                  <h4 className="font-semibold text-white text-sm mb-1 truncate">{episode.title}</h4>
-                  <p className="text-gray-400 text-xs mb-2">{episode.seasonName}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2">
-              <button
-                onClick={() => setCurrentPage(c => Math.max(1, c - 1))}
-                disabled={currentPage === 1}
-                className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 disabled:opacity-50 transition-colors"
-              >
-                <ChevronLeft size={20} />
-              </button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1)
-                .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
-                .map((page, i, arr) => (
-                  <div key={page} className="flex items-center">
-                    {i > 0 && arr[i - 1] !== page - 1 && <span className="px-2 text-gray-500">...</span>}
-                    <button
-                      onClick={() => setCurrentPage(page)}
-                      className={`px-3 py-2 rounded-lg transition-colors ${
-                        currentPage === page ? 'bg-[#E50914] text-white' : 'bg-gray-800 hover:bg-gray-700 text-gray-300'
-                      }`}
-                    >
-                      {page}
-                    </button>
-                  </div>
-                ))}
-              <button
-                onClick={() => setCurrentPage(c => Math.min(totalPages, c + 1))}
-                disabled={currentPage === totalPages}
-                className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 disabled:opacity-50 transition-colors"
-              >
-                <ChevronRight size={20} />
-              </button>
+        {/* Tab Content */}
+        {activeTab === 'episodes' && (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            {/* Season Selector */}
+            <div className="flex gap-4 mb-8 overflow-x-auto scrollbar-hide">
+              {seasons.map((season) => (
+                <button
+                  key={season.id}
+                  onClick={() => setActiveSeasonId(season.id)}
+                  className={`px-6 py-2 rounded font-bold text-sm transition-all duration-300 whitespace-nowrap ${
+                    activeSeasonId === season.id 
+                      ? 'bg-[#E50914] text-white shadow-lg shadow-[#E50914]/30' 
+                      : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
+                  }`}
+                >
+                  {season.name || `S${season.order}`}
+                </button>
+              ))}
             </div>
-          )}
-        </section>
-      )}
+
+            {/* Episodes Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+              {allEpisodes
+                .filter(ep => ep.season_id === activeSeasonId)
+                .map((episode) => (
+                <div
+                  key={episode.id}
+                  className="group flex flex-col bg-gray-900/30 rounded-xl overflow-hidden border border-white/5 hover:border-[#E50914]/30 transition-all duration-500"
+                >
+                  {/* Thumbnail Container */}
+                  <div className="aspect-video relative overflow-hidden">
+                    <Image
+                      src={episode.thumbnail_url || series.cover_image_url || "/placeholder-episode.jpg"}
+                      alt={episode.title}
+                      fill
+                      className="object-cover group-hover:scale-110 transition-transform duration-700"
+                    />
+                    
+                    {/* Watch Now Overlay */}
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-center justify-center">
+                      <button 
+                        onClick={() => handleEpisodeSelect(episode)}
+                        className="bg-[#E50914] text-white px-5 py-2 rounded font-bold text-xs flex items-center gap-2 transform translate-y-4 group-hover:translate-y-0 transition-all duration-500"
+                      >
+                        <Play className="w-3 h-3 fill-current" />
+                        Watch now
+                      </button>
+                    </div>
+
+                    {/* Quick Watch button (bottom right) */}
+                    <button 
+                      onClick={() => handleEpisodeSelect(episode)}
+                      className="absolute bottom-4 right-4 bg-black/60 backdrop-blur-md border border-white/10 hover:bg-[#E50914] transition-colors text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2 opacity-100 group-hover:opacity-0 transition-opacity duration-300"
+                    >
+                      <Play className="w-3 h-3 fill-current" />
+                      Watch now
+                    </button>
+
+                    {/* Premium/Crown Icon */}
+                    {episode.premium && (
+                      <div className="absolute top-4 right-4 w-6 h-6 bg-orange-500 rounded-full flex items-center justify-center shadow-lg">
+                        <Star className="w-3 h-3 text-white fill-current" />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Content Container */}
+                  <div className="p-5 flex flex-col flex-1">
+                    <span className="text-gray-500 text-xs font-bold mb-2">
+                      {series.release_date || "2024-04-13"}
+                    </span>
+                    <h3 className="text-white font-bold text-lg mb-3 group-hover:text-[#E50914] transition-colors line-clamp-1">
+                      S{episode.seasonOrder} E{episode.episode_number} {episode.title}
+                    </h3>
+                    <p className="text-gray-400 text-sm leading-relaxed mb-4 line-clamp-2">
+                      {episode.description || "A thrilling expedition into the story unfolds as new worlds are discovered in this action-packed adventure."}
+                    </p>
+                    <div className="mt-auto flex items-center justify-between">
+                      <button className="text-[#E50914] text-xs font-bold hover:underline">Read More</button>
+                      <span className="text-gray-500 text-xs font-bold uppercase tracking-widest">{episode.duration || "03h 10m"}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'cast' && (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <MovieCast title={series.title} type="series" hideTitle />
+          </div>
+        )}
+
+        {activeTab === 'reviews' && (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 py-12 text-center bg-gray-900/20 rounded-2xl border border-dashed border-gray-800">
+            <Star className="w-12 h-12 text-gray-700 mx-auto mb-4" />
+            <h3 className="text-xl font-bold text-gray-400 mb-2">No Reviews Yet</h3>
+            <p className="text-gray-500 max-w-md mx-auto">Be the first to share your thoughts about {series.title}!</p>
+            <Button variant="outline" className="mt-6 border-gray-700 hover:bg-white/5">Write a Review</Button>
+          </div>
+        )}
+
+        {activeTab === 'related' && (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
+              {relatedSeries.map((s) => (
+                <div key={s.id} className="transition-transform duration-300 hover:scale-105">
+                  <StreamitHoverCard content={{...s, type: 'series'}}>
+                    <NetflixCard content={s} type="series" />
+                  </StreamitHoverCard>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </section>
+
 
       {/* Related Series */}
       <div className="w-full px-4 md:px-8 lg:px-12 xl:px-16 mt-16 bg-[#141414]">

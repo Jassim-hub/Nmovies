@@ -5,7 +5,7 @@ import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation } from "swiper/modules";
 import { InlineSpinner } from "./LoadingSpinner";
 
-export function MovieCast({ title, type = 'movie' }: { title: string, type?: 'movie' | 'series' }) {
+export function MovieCast({ title, type = 'movie', hideTitle = false }: { title: string, type?: 'movie' | 'series', hideTitle?: boolean }) {
   const [cast, setCast] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -55,14 +55,15 @@ export function MovieCast({ title, type = 'movie' }: { title: string, type?: 'mo
   if (cast.length === 0) return null;
 
   return (
-    <section className="mb-12 mt-10 bg-[#141414]">
-      <div className="w-full px-4 md:px-8 lg:px-12 xl:px-16">
-        <div className="flex items-center justify-start mb-8 border-b border-gray-800 pb-0">
-          <div className="flex gap-8">
-             <h2 className="text-base md:text-lg font-bold text-white tracking-widest border-b-[3px] border-[#E50914] pb-4 mb-[-2px] uppercase">Casts & Directors</h2>
-             <h2 className="text-base md:text-lg font-bold text-gray-500 tracking-widest pb-4 hover:text-gray-300 cursor-pointer transition-colors uppercase">More Like This</h2>
+    <section className={`mb-12 mt-10 ${hideTitle ? 'bg-transparent' : 'bg-[#141414]'}`}>
+      <div className={`w-full ${hideTitle ? '' : 'px-4 md:px-8 lg:px-12 xl:px-16'}`}>
+        {!hideTitle && (
+          <div className="flex items-center justify-start mb-8 border-b border-gray-800 pb-0">
+            <div className="flex gap-8">
+               <h2 className="text-base md:text-lg font-bold text-white tracking-widest border-b-[3px] border-[#E50914] pb-4 mb-[-2px] uppercase">Casts & Directors</h2>
+            </div>
           </div>
-        </div>
+        )}
         
         <div className="flex items-center justify-between mb-8">
            <h3 className="text-xl md:text-2xl font-bold text-white tracking-wide">Top Cast</h3>
