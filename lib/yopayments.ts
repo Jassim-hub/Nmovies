@@ -12,9 +12,9 @@ export class YoPaymentsService {
   private static readonly PRODUCTION_BASE_URL =
     'https://paymentsapi1.yo.co.ug/ybs/task.php';
 
-  // Production YoPayments API credentials
-  private static readonly API_USERNAME = '100155781214';
-  private static readonly API_PASSWORD = '28kq-eIoX-o4DE-sRmE-UgXG-iyzm-Hwtr-y7ml';
+  // Production YoPayments API credentials (read from environment variables)
+  private static readonly API_USERNAME = process.env.YOPAYMENTS_API_USERNAME || '';
+  private static readonly API_PASSWORD = process.env.YOPAYMENTS_API_PASSWORD || '';
 
   // Set to false for production
   private static readonly USE_SANDBOX = false;

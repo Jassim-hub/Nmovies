@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
-import { MakyPayService } from '@/lib/makypay';
+import { getProviderFromPhone, getProviderDisplayName } from '@/lib/phone-utils';
 import { getSubscriptionPlans } from '@/lib/subscriptions';
 import { SubscriptionPlan } from '@/lib/supabase';
 import { PaymentProviders } from '@/lib/payment-config';
@@ -63,14 +63,9 @@ function PaymentPageContent() {
     if (phoneNumber.length >= 10) {
       try {
         // Use MakyPay if enabled, otherwise fallback to YoPayments
-        let provider = '';
         if (PaymentProviders.isMakyPayEnabled()) {
-          provider = MakyPayService.getProviderFromPhone(phoneNumber);
-          const mnoNames: Record<string, string> = {
-            'mtn': 'MTN Mobile Money',
-            'airtel': 'Airtel Money',
-          };
-          setDetectedMNO(mnoNames[provider] || 'Unknown Network');
+          const provider = getProviderFromPhone(phoneNumber);
+          setDetectedMNO(getProviderDisplayName(provider));
         } else if (PaymentProviders.isYoPaymentsEnabled()) {
           const mno = YoPaymentsService.getAccountProviderCode(phoneNumber);
           const mnoNames: Record<string, string> = {
@@ -100,12 +95,8 @@ function PaymentPageContent() {
       try {
         // Use MakyPay if enabled, otherwise fallback to YoPayments
         if (PaymentProviders.isMakyPayEnabled()) {
-          const provider = MakyPayService.getProviderFromPhone(cleanedValue);
-          const mnoNames: Record<string, string> = {
-            'mtn': 'MTN Mobile Money',
-            'airtel': 'Airtel Money',
-          };
-          setModalDetectedMNO(mnoNames[provider] || 'Unknown Network');
+          const provider = getProviderFromPhone(cleanedValue);
+          setModalDetectedMNO(getProviderDisplayName(provider));
         } else if (PaymentProviders.isYoPaymentsEnabled()) {
           const mno = YoPaymentsService.getAccountProviderCode(cleanedValue);
           const mnoNames: Record<string, string> = {
@@ -136,19 +127,22 @@ function PaymentPageContent() {
   };
 
   const proceedWithPayment = () => {
+    // Capture modal values before closing
+    const payPhone = modalPhoneNumber;
+    const payMNO = modalDetectedMNO;
+
     // Transfer modal values to main state
-    setPhoneNumber(modalPhoneNumber);
-    setDetectedMNO(modalDetectedMNO);
+    setPhoneNumber(payPhone);
+    setDetectedMNO(payMNO);
     setShowPaymentModal(false);
 
-    // Trigger payment after a short delay to allow state updates
-    setTimeout(() => {
-      handlePayment();
-    }, 100);
+    // Pass the captured phone number directly to avoid stale state
+    handlePayment(payPhone);
   };
 
-  const handlePayment = async () => {
-    if (!selectedPlan || !phoneNumber || !user) return;
+  const handlePayment = async (overridePhone?: string) => {
+    const payPhone = overridePhone || phoneNumber;
+    if (!selectedPlan || !payPhone || !user) return;
 
     setIsProcessing(true);
     setPaymentStatus('processing');
@@ -173,7 +167,7 @@ function PaymentPageContent() {
         body: JSON.stringify({
           userId: user.id,
           accessToken,
-          phoneNumber,
+          phoneNumber: payPhone,
           amount,
           description: `Subscription: ${selectedPlan.name}`,
           paymentMethod: 'mobile_money', // For MakyPay
