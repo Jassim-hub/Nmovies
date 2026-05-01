@@ -12,18 +12,27 @@ export default function DownloadPage() {
         Get the best Ugandan movies and series streaming experience on your Android device. Fast, secure, and offline-ready.
       </p>
       <div className="flex flex-col gap-3 w-full max-w-md">
-        <Link
-          href="https://st67097.ispot.cc/Kilax.apk"
-          className="flex items-center justify-center gap-3 bg-gradient-to-r from-[#E50914] to-orange-400 text-white font-semibold px-6 py-4 rounded-xl shadow-lg hover:scale-105 hover:from-orange-600 hover:to-[#E50914] transition-all text-base w-full"
-          download
-        >
-          <Smartphone className="w-6 h-6" />
-          Download for Android
-        </Link>
-        <a href="https://st67097.ispot.cc/Kilax.exe" className="flex items-center justify-center gap-3 bg-gradient-to-r from-[#E50914] to-orange-400 text-white font-semibold px-6 py-4 rounded-xl shadow-lg hover:scale-105 hover:from-orange-600 hover:to-[#E50914] transition-all text-base w-full" download>
-          <Monitor className="w-6 h-6" />
-          Download for Windows
-        </a>
+        <div className="flex items-center gap-4 bg-[#1a1a1a] border border-gray-800 rounded-xl px-6 py-4 opacity-70 w-full">
+          <div className="bg-gray-800/50 p-3 rounded-xl">
+            <Smartphone className="w-6 h-6 text-gray-500" />
+          </div>
+          <div className="flex-1">
+            <span className="text-gray-400 font-semibold text-base">Android App</span>
+            <p className="text-gray-600 text-xs mt-0.5">Direct APK download available soon</p>
+          </div>
+          <span className="text-xs bg-gray-800 text-gray-500 px-3 py-1.5 rounded-full font-medium">Coming Soon</span>
+        </div>
+        
+        <div className="flex items-center gap-4 bg-[#1a1a1a] border border-gray-800 rounded-xl px-6 py-4 opacity-70 w-full">
+          <div className="bg-gray-800/50 p-3 rounded-xl">
+            <Monitor className="w-6 h-6 text-gray-500" />
+          </div>
+          <div className="flex-1">
+            <span className="text-gray-400 font-semibold text-base">Windows App</span>
+            <p className="text-gray-600 text-xs mt-0.5">Desktop app available soon</p>
+          </div>
+          <span className="text-xs bg-gray-800 text-gray-500 px-3 py-1.5 rounded-full font-medium">Coming Soon</span>
+        </div>
         <div className="flex items-center gap-4 bg-[#1a1a1a] border border-gray-800 rounded-xl px-6 py-4 opacity-70 w-full">
           <div className="bg-gray-800/50 p-3 rounded-xl">
             <Apple className="w-6 h-6 text-gray-500" />
