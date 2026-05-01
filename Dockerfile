@@ -1,4 +1,4 @@
-FROM node:22-alpine AS base
+FROM node:22-slim AS base
 WORKDIR /app
 
 # ── Install main app dependencies ─────────────────────────────────────────────
@@ -28,7 +28,7 @@ RUN mkdir -p public
 RUN npm run build
 
 # ── Final production image ────────────────────────────────────────────────────
-FROM node:22-alpine AS runner
+FROM node:22-slim AS runner
 WORKDIR /app
 
 # Install concurrently to run both servers
