@@ -1,11 +1,7 @@
 // OneSignal configuration
-const ONESIGNAL_APP_ID = process.env.ONESIGNAL_APP_ID;
-const ONESIGNAL_REST_API_KEY = process.env.ONESIGNAL_REST_API_KEY;
-
-if (!ONESIGNAL_APP_ID || !ONESIGNAL_REST_API_KEY) {
-  throw new Error('OneSignal environment variables are not set');
-}
-
+// Ensure we don't throw at build time, only when actually sending notifications
+const getOneSignalAppId = () => process.env.ONESIGNAL_APP_ID;
+const getOneSignalApiKey = () => process.env.ONESIGNAL_REST_API_KEY;
 const ONESIGNAL_API_URL = 'https://onesignal.com/api/v1/notifications';
 
 export interface PushNotificationData {
@@ -39,11 +35,14 @@ export class OneSignalService {
    * Send HTTP request to OneSignal API
    */
   private static async sendNotification(payload: OneSignalNotificationPayload): Promise<OneSignalResponse> {
+    const apiKey = getOneSignalApiKey();
+    if (!apiKey) throw new Error('OneSignal REST API key is not set');
+
     const response = await fetch(ONESIGNAL_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Basic ${ONESIGNAL_REST_API_KEY}`,
+        'Authorization': `Basic ${apiKey}`,
       },
       body: JSON.stringify(payload),
     });
@@ -61,8 +60,11 @@ export class OneSignalService {
    */
   static async sendToAll(notificationData: PushNotificationData) {
     try {
+      const appId = getOneSignalAppId();
+      if (!appId) throw new Error('OneSignal App ID is not set');
+
       const payload: OneSignalNotificationPayload = {
-        app_id: ONESIGNAL_APP_ID!,
+        app_id: appId,
         included_segments: notificationData.targetSegments || ['All'],
         headings: { en: notificationData.title },
         contents: { en: notificationData.message },
@@ -89,8 +91,11 @@ export class OneSignalService {
    */
   static async sendToUsers(userIds: string[], notificationData: PushNotificationData) {
     try {
+      const appId = getOneSignalAppId();
+      if (!appId) throw new Error('OneSignal App ID is not set');
+
       const payload: OneSignalNotificationPayload = {
-        app_id: ONESIGNAL_APP_ID!,
+        app_id: appId,
         include_external_user_ids: userIds,
         headings: { en: notificationData.title },
         contents: { en: notificationData.message },
@@ -117,8 +122,11 @@ export class OneSignalService {
    */
   static async sendToSegments(segments: string[], notificationData: PushNotificationData) {
     try {
+      const appId = getOneSignalAppId();
+      if (!appId) throw new Error('OneSignal App ID is not set');
+
       const payload: OneSignalNotificationPayload = {
-        app_id: ONESIGNAL_APP_ID!,
+        app_id: appId,
         included_segments: segments,
         headings: { en: notificationData.title },
         contents: { en: notificationData.message },
