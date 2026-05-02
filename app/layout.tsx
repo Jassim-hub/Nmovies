@@ -14,8 +14,8 @@ const roboto = Roboto({
 });
 
 export const metadata: Metadata = {
-  title: 'NicholMoviesUg - Stream & Discover',
-  description: 'Your ultimate destination for movies and series streaming',
+  title: 'NicholMoviesUg - The Home of Entertainment',
+  description: 'A world of block Buster movies,Tv Shows and More',
   icons: {
     icon: '/logo.png',
   },
