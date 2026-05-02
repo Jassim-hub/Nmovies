@@ -15,6 +15,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import PushNotificationDialog from "@/components/PushNotificationDialog";
@@ -140,7 +141,7 @@ export default function MoviesPage() {
               className="bg-black border border-gray-800 text-white rounded-lg px-4 py-2 w-full sm:w-64 focus:outline-none focus:ring-1 focus:ring-[#E50914] placeholder-gray-600"
             />
             <Button asChild className="bg-[#E50914] hover:bg-[#b80710] text-white px-4 py-2 rounded-lg font-bold uppercase tracking-wider transition w-full sm:w-auto shadow-[0_0_10px_rgba(229,9,20,0.2)] border-none">
-              <a href="/movies/add">+ Add Movie</a>
+              <Link href="/movies/add">+ Add Movie</Link>
             </Button>
           </div>
         </div>
@@ -275,7 +276,7 @@ export default function MoviesPage() {
                           <>
                             <DropdownMenuItem onClick={() => handleEdit(movie)} className="hover:bg-[#141414] focus:bg-[#141414] focus:text-white cursor-pointer py-2">Quick Edit</DropdownMenuItem>
                             <DropdownMenuItem asChild className="hover:bg-[#141414] focus:bg-[#141414] focus:text-white cursor-pointer py-2">
-                              <a href={`/movies/edit/${movie.id}`}>Edit in Full Page</a>
+                              <Link href={`/movies/edit/${movie.id}`}>Edit in Full Page</Link>
                             </DropdownMenuItem>
                           </>
                         )}
@@ -337,7 +338,7 @@ export default function MoviesPage() {
                             <>
                               <DropdownMenuItem onClick={() => handleEdit(movie)} className="focus:bg-[#141414] focus:text-white cursor-pointer">Quick Edit</DropdownMenuItem>
                               <DropdownMenuItem asChild className="focus:bg-[#141414] focus:text-white cursor-pointer">
-                                <a href={`/movies/edit/${movie.id}`}>Edit in Full Page</a>
+                                <Link href={`/movies/edit/${movie.id}`}>Edit in Full Page</Link>
                               </DropdownMenuItem>
                             </>
                           )}

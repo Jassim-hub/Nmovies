@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import Image from "next/image";
+import Link from "next/link";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -87,7 +88,7 @@ export default function SeriesPage() {
                 className="bg-black border border-gray-800 text-white rounded-lg px-4 py-2 w-full sm:w-64 focus:outline-none focus:ring-1 focus:ring-[#E50914] placeholder-gray-600"
               />
               <Button asChild className="bg-[#E50914] hover:bg-[#b80710] text-white px-4 py-2 rounded-lg font-bold uppercase tracking-wider transition whitespace-nowrap shadow-[0_0_10px_rgba(229,9,20,0.2)] border-none">
-                <a href="/series/add">+ Add Series</a>
+                <Link href="/series/add">+ Add Series</Link>
               </Button>
             </div>
           </div>
@@ -161,10 +162,10 @@ export default function SeriesPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="bg-[#1a1c21] border-gray-800 text-white">
                           <DropdownMenuItem asChild className="hover:bg-[#141414] focus:bg-[#141414] focus:text-white cursor-pointer">
-                            <a href={`/series/manage_seasons/${s.id}`}>Manage Episodes</a>
+                            <Link href={`/series/manage_seasons/${s.id}`}>Manage Episodes</Link>
                           </DropdownMenuItem>
                           <DropdownMenuItem asChild className="hover:bg-[#141414] focus:bg-[#141414] focus:text-white cursor-pointer">
-                            <a href={`/series/edit/${s.id}`}>Edit Details</a>
+                            <Link href={`/series/edit/${s.id}`}>Edit Details</Link>
                           </DropdownMenuItem>
                           <DropdownMenuItem className="hover:bg-[#141414] focus:bg-[#141414] focus:text-white cursor-pointer" onClick={() => handleSendPushNotification(s)}>
                             Send Push Notification
@@ -233,10 +234,10 @@ export default function SeriesPage() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="bg-[#1a1c21] border-gray-800 text-white min-w-[180px]">
                         <DropdownMenuItem asChild className="hover:bg-[#141414] focus:bg-[#141414] focus:text-white cursor-pointer py-2">
-                          <a href={`/series/manage_seasons/${s.id}`}>Manage Episodes</a>
+                          <Link href={`/series/manage_seasons/${s.id}`}>Manage Episodes</Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild className="hover:bg-[#141414] focus:bg-[#141414] focus:text-white cursor-pointer py-2">
-                          <a href={`/series/edit/${s.id}`}>Edit Details</a>
+                          <Link href={`/series/edit/${s.id}`}>Edit Details</Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem className="hover:bg-[#141414] focus:bg-[#141414] focus:text-white cursor-pointer py-2" onClick={() => handleSendPushNotification(s)}>
                           Send Push Notification

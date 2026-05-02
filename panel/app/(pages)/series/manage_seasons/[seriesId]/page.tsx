@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import AdminPanelLayout from "@/app/components/layout";
+import Link from "next/link";
 import { useRef } from "react";
 
 interface Season {
@@ -433,7 +434,7 @@ export default function ManageSeasonsPage() {
                     </td>
                     <td className="px-4 py-4 flex gap-2">
                       <Button asChild className="bg-[#141414] border border-gray-700 hover:border-gray-500 hover:bg-[#E50914] text-white text-xs uppercase tracking-wider font-bold transition-all">
-                        <a href={`/series/manage_episodes/${season.id}`}>Manage Episodes</a>
+                        <Link href={`/series/manage_episodes/${season.id}`}>Manage Episodes</Link>
                       </Button>
                       <Button variant="outline" size="sm" className="bg-transparent border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white uppercase tracking-wider font-bold text-xs" onClick={() => openEditModal(season)}>Edit</Button>
                       <Button variant="destructive" size="sm" className="bg-[#141414] border border-red-900/50 text-[#E50914] hover:bg-[#E50914] hover:text-white uppercase tracking-wider font-bold text-xs transition-all" onClick={() => openDeleteModal(season)} disabled={deletingId === season.id}>{deletingId === season.id ? "Deleting..." : "Delete"}</Button>
