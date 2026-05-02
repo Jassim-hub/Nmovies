@@ -78,6 +78,7 @@ export interface Episode {
   season_id: string
   title: string
   episode_number: number
+  description?: string
   video_url?: string
   videolink_url?: string
   published: boolean
