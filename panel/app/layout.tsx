@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Conven TV Admin",
-  description: "Modern admin panel for managing content.",
+  title: "NicholMovies Admin",
+  description: "admin panel for managing content.",
 };
 
 export default function RootLayout({
