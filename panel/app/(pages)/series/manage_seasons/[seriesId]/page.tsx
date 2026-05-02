@@ -74,7 +74,7 @@ export default function ManageSeasonsPage() {
   }, [seriesId]);
 
   async function fetchFromTMDB() {
-    const res = await fetch(`/api/series/${seriesId}/fetch-seasons`, { method: "GET" });
+    const res = await fetch(`/panel/api/series/${seriesId}/fetch-seasons`, { method: "GET" });
     const data = await res.json();
     setFetchedSeasons(data.seasons || []);
     setShowReviewModal(true);

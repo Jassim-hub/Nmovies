@@ -167,7 +167,7 @@ export default function AddMoviePage() {
     setSearchError("");
     setResults([]);
     try {
-      const response = await fetch(`/api/movies/search?query=${encodeURIComponent(search)}`);
+      const response = await fetch(`/panel/api/movies/search?query=${encodeURIComponent(search)}`);
       const data: TMDBResults = await response.json();
       setResults(data.results || []);
     } catch (error) {
@@ -219,7 +219,7 @@ export default function AddMoviePage() {
     // Fetch trailer
     let trailerUrl = "";
     try {
-      const videosResponse = await fetch(`/api/movies/trailer?movieId=${movie.id}`);
+      const videosResponse = await fetch(`/panel/api/movies/trailer?movieId=${movie.id}`);
       const videos: TMDBVideos = await videosResponse.json();
       const trailer = videos.results.find((v) => v.type === "Trailer" && v.site === "YouTube");
       if (trailer) trailerUrl = `https://www.youtube.com/watch?v=${trailer.key}`;
@@ -231,7 +231,7 @@ export default function AddMoviePage() {
     let duration = "";
     let genres: string[] = [];
     try {
-      const detailsResponse = await fetch(`/api/movies/details?movieId=${movie.id}`);
+      const detailsResponse = await fetch(`/panel/api/movies/details?movieId=${movie.id}`);
       const details: TMDBMovieDetails = await detailsResponse.json();
       if (details.runtime) duration = details.runtime.toString();
       if (details.genres) {

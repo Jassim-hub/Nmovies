@@ -129,7 +129,7 @@ export default function AddSeriesPage() {
     setSearchError("");
     setResults([]);
     try {
-      const response = await fetch(`/api/series/search?query=${encodeURIComponent(search)}`);
+      const response = await fetch(`/panel/api/series/search?query=${encodeURIComponent(search)}`);
       const data: TMDBResults = await response.json();
       setResults(data.results || []);
     } catch (error) {
@@ -145,7 +145,7 @@ export default function AddSeriesPage() {
     // Fetch trailer
     let trailerUrl = "";
     try {
-      const videosResponse = await fetch(`/api/series/trailer?seriesId=${series.id}`);
+      const videosResponse = await fetch(`/panel/api/series/trailer?seriesId=${series.id}`);
       const videos: TMDBVideosResponse = await videosResponse.json();
       const trailer = videos.results?.find((v: TMDBVideo) => v.type === "Trailer" && v.site === "YouTube");
       if (trailer) trailerUrl = `https://www.youtube.com/watch?v=${trailer.key}`;
@@ -155,7 +155,7 @@ export default function AddSeriesPage() {
     // Fetch full series details for genres
     let genres: string[] = [];
     try {
-      const detailsResponse = await fetch(`/api/series/details?seriesId=${series.id}`);
+      const detailsResponse = await fetch(`/panel/api/series/details?seriesId=${series.id}`);
       const details: TMDBSeriesDetails = await detailsResponse.json();
       if (details.genres) {
         genres = details.genres
