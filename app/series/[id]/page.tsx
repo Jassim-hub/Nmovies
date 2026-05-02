@@ -19,6 +19,7 @@ import { StreamitHoverCard } from "@/components/StreamitHoverCard";
 import { supabase, Series, SeriesWithVJ, Season, Episode, EpisodeWithSeason, MovieWithVJ } from "@/lib/supabase";
 import { getRelatedMoviesByGenre } from '@/lib/api';
 import { NetflixCard } from "@/components/NetflixCard";
+import { useUserPreferences } from "@/lib/hooks/useUserPreferences";
 
 export default function SeriesDetailsPage() {
   const params = useParams();
@@ -44,6 +45,11 @@ export default function SeriesDetailsPage() {
   const [streamUrl, setStreamUrl] = useState<string>('');
   const [isPlayingTrailer, setIsPlayingTrailer] = useState<boolean>(false);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState<boolean>(false);
+
+  const { watchHistory, addToWatchlist, removeFromWatchlist, isInWatchlist, updateWatchProgress } = useUserPreferences();
+  const progress = series ? watchHistory[series.id] : null;
+  const initialTime = progress ? progress.progress : 0;
+  const isWatchlisted = series ? isInWatchlist(series.id) : false;
 
   // Pagination for Episodes Grid
   const [currentPage, setCurrentPage] = useState(1);
@@ -109,10 +115,21 @@ export default function SeriesDetailsPage() {
           );
           seriesData.seasons = seasonsWithEpisodes;
           setSeasons(seasonsWithEpisodes);
-          setAllEpisodes(loadedEpisodes.sort((a, b) => {
+          const allEps = loadedEpisodes.sort((a, b) => {
              if (a.seasonOrder !== b.seasonOrder) return a.seasonOrder - b.seasonOrder;
              return a.episode_number - b.episode_number;
-          }));
+          });
+          setAllEpisodes(allEps);
+          
+          // Auto-select episode from progress or first episode
+          const savedProgress = JSON.parse(localStorage.getItem('streamit_history') || '{}')[params.id as string];
+          if (savedProgress && savedProgress.episode) {
+             const epToSelect = allEps.find(e => e.seasonOrder === savedProgress.season && e.episode_number === savedProgress.episode);
+             if (epToSelect) {
+               setSelectedEpisode(epToSelect);
+               setActiveSeasonId(epToSelect.season_id);
+             }
+          }
         } else {
           seriesData.seasons = [];
         }
@@ -204,6 +221,22 @@ export default function SeriesDetailsPage() {
       }
   }, [isPlayingTrailer, allEpisodes, isPremium]);
 
+  const handleTimeUpdate = useCallback((currentTime: number, duration: number) => {
+    if (series && selectedEpisode && !isPlayingTrailer) {
+      updateWatchProgress({
+        id: series.id,
+        type: 'series',
+        progress: currentTime,
+        duration: duration,
+        timestamp: Date.now(),
+        title: series.title,
+        poster_url: series.thumbnail_url || series.cover_image_url,
+        season: selectedEpisode.seasonOrder,
+        episode: selectedEpisode.episode_number
+      });
+    }
+  }, [series, selectedEpisode, isPlayingTrailer, updateWatchProgress]);
+
   const handleDownload = async (episode: EpisodeWithSeason) => {
     setSelectedEpisode(episode);
     if (!user?.id) { setAuthAction('download'); setShowAuthModal(true); return; }
@@ -276,6 +309,8 @@ export default function SeriesDetailsPage() {
                   currentEpisodeIndex={currentEpisodeIndex}
                   onEpisodeSelect={handleEpisodeSelect}
                   contentType="series"
+                  initialTime={(!isPlayingTrailer && selectedEpisode && progress && progress.episode === selectedEpisode.episode_number && progress.season === selectedEpisode.seasonOrder) ? initialTime : 0}
+                  onTimeUpdate={handleTimeUpdate}
                />
                
                {isPlayingTrailer && (
@@ -326,14 +361,15 @@ export default function SeriesDetailsPage() {
                   <Play className="w-6 h-6 mr-3 fill-current" /> 
                   Watch Episode 1
                </Button>
-               <button className="w-14 h-14 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all duration-300 hover:scale-110">
-                  <Plus className="w-6 h-6 text-white" />
+               <button 
+                  onClick={() => isWatchlisted ? removeFromWatchlist(series.id) : addToWatchlist(series.id)}
+                  className="w-14 h-14 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all duration-300 hover:scale-110"
+                  aria-label={isWatchlisted ? "Remove from Watchlist" : "Add to Watchlist"}
+               >
+                  {isWatchlisted ? <Heart className="w-6 h-6 text-[#E50914] fill-current" /> : <Plus className="w-6 h-6 text-white" />}
                </button>
                <button className="w-14 h-14 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all duration-300 hover:scale-110">
                   <Share2 className="w-6 h-6 text-white" />
-               </button>
-               <button className="w-14 h-14 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all duration-300 hover:scale-110">
-                  <Heart className="w-6 h-6 text-white" />
                </button>
             </div>
 
@@ -476,9 +512,19 @@ export default function SeriesDetailsPage() {
 
                   {/* Content Container */}
                   <div className="p-5 flex flex-col flex-1">
-                    <span className="text-gray-500 text-xs font-bold mb-2">
-                      {series.release_date || "2024-04-13"}
-                    </span>
+                    <div className="flex justify-between items-start mb-2">
+                      <span className="text-gray-500 text-xs font-bold">
+                        {series.release_date || "2024-04-13"}
+                      </span>
+                      {/* Download Button for Episode */}
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); handleDownload(episode); }}
+                        className="text-gray-400 hover:text-white transition-colors"
+                        title="Download Episode"
+                      >
+                        <Download className="w-4 h-4" />
+                      </button>
+                    </div>
                     <h3 className="text-white font-bold text-lg mb-3 group-hover:text-[#E50914] transition-colors line-clamp-1">
                       S{episode.seasonOrder} E{episode.episode_number} {episode.title}
                     </h3>

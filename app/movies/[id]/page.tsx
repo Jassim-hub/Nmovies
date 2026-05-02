@@ -15,7 +15,8 @@ import VideoPlayer from "@/components/VideoPlayer";
 import { normalizeVideoUrl } from "@/lib/utils";
 import { MovieCast } from "@/components/MovieCast";
 import { StreamitHoverCard } from "@/components/StreamitHoverCard";
-import { Calendar, Globe, Clock, Star, Share2, Heart, Plus, SkipForward, Play } from "lucide-react";
+import { Calendar, Globe, Clock, Star, Share2, Heart, Plus, SkipForward, Play, Check } from "lucide-react";
+import { useUserPreferences } from "@/lib/hooks/useUserPreferences";
 
 export default function MovieDetailsPage() {
   const params = useParams();
@@ -44,6 +45,11 @@ export default function MovieDetailsPage() {
   const [isPlayingTrailer, setIsPlayingTrailer] = useState<boolean>(false);
   const [hasRights, setHasRights] = useState<boolean>(false);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState<boolean>(false);
+
+  const { watchHistory, addToWatchlist, removeFromWatchlist, isInWatchlist, updateWatchProgress } = useUserPreferences();
+  const progress = movie ? watchHistory[movie.id] : null;
+  const initialTime = progress ? progress.progress : 0;
+  const isWatchlisted = movie ? isInWatchlist(movie.id) : false;
 
   useEffect(() => {
     (async () => {
@@ -154,6 +160,20 @@ export default function MovieDetailsPage() {
     setShowDownloadModal(true);
   };
 
+  const handleTimeUpdate = useCallback((currentTime: number, duration: number) => {
+    if (movie && !isPlayingTrailer && hasRights) {
+      updateWatchProgress({
+        id: movie.id,
+        type: 'movie',
+        progress: currentTime,
+        duration: duration,
+        timestamp: Date.now(),
+        title: movie.title,
+        poster_url: movie.thumbnail_url || movie.cover_image_url
+      });
+    }
+  }, [movie, isPlayingTrailer, hasRights, updateWatchProgress]);
+
   const handleWatchButtonClick = () => {
       if (!hasRights) {
          setAuthAction('play');
@@ -195,6 +215,8 @@ export default function MovieDetailsPage() {
                   onEnded={handleVideoEnded}
                   isPremiumContent={movie.premium}
                   poster={coverImage}
+                  initialTime={!isPlayingTrailer ? initialTime : 0}
+                  onTimeUpdate={handleTimeUpdate}
                />
                
                {/* Skip Trailer Overlay */}
@@ -258,23 +280,27 @@ export default function MovieDetailsPage() {
                   <Play className="w-6 h-6 mr-3 fill-current" /> 
                   Watch now
                </Button>
-               <button className="w-14 h-14 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all duration-300 hover:scale-110">
-                  <Plus className="w-6 h-6 text-white" />
+               <button 
+                  onClick={() => isWatchlisted ? removeFromWatchlist(movie.id) : addToWatchlist(movie.id)}
+                  className="w-14 h-14 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all duration-300 hover:scale-110"
+                  aria-label={isWatchlisted ? "Remove from Watchlist" : "Add to Watchlist"}
+               >
+                  {isWatchlisted ? <Check className="w-6 h-6 text-[#E50914]" /> : <Plus className="w-6 h-6 text-white" />}
                </button>
                <button className="w-14 h-14 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all duration-300 hover:scale-110">
                   <Share2 className="w-6 h-6 text-white" />
                </button>
-               <button className="w-14 h-14 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all duration-300 hover:scale-110">
-                  <Heart className="w-6 h-6 text-white" />
-               </button>
                
-               {/* Keep Download Button for users who need it */}
+               {/* Download Button */}
                <Button 
                   variant="outline"
                   onClick={handleDownload}
-                  className="ml-auto border-gray-600 text-gray-300 hover:text-white hover:bg-gray-800 hidden md:flex h-14 px-8 text-base font-bold rounded-lg transition-colors"
+                  className="border-gray-600 text-gray-300 hover:text-white hover:bg-gray-800 flex h-14 px-6 md:px-8 text-sm md:text-base font-bold rounded-lg transition-colors"
                >
-                  Download Offline
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  Download
                </Button>
             </div>
 

@@ -24,6 +24,8 @@ interface VideoPlayerProps {
   currentEpisodeIndex?: number;
   onEpisodeSelect?: (episode: EpisodeWithSeason) => void;
   contentType?: string;
+  initialTime?: number;
+  onTimeUpdate?: (currentTime: number, duration: number) => void;
 }
 
 const VideoPlayer: React.FC<VideoPlayerProps> = ({
@@ -38,7 +40,9 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   episodes = [],
   currentEpisodeIndex = -1,
   onEpisodeSelect,
-  contentType
+  contentType,
+  initialTime,
+  onTimeUpdate
 }) => {
   // Stabilize the onEnded callback to prevent unnecessary re-renders
   const stableOnEnded = useCallback(() => {
@@ -75,6 +79,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       currentEpisodeIndex={currentEpisodeIndex}
       onEpisodeSelect={onEpisodeSelect}
       contentType={contentType}
+      initialTime={initialTime}
+      onTimeUpdate={onTimeUpdate}
     />
   );
 };

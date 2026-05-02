@@ -24,6 +24,8 @@ import { Movie, Series } from "@/lib/supabase";
 
 import { useAuthCheck } from "@/components/AuthRequiredModal";
 import AuthRequiredModal from "@/components/AuthRequiredModal";
+import { useUserPreferences } from "@/lib/hooks/useUserPreferences";
+import { supabase } from "@/lib/supabase";
 
 export const dynamic = 'force-dynamic'
 
@@ -96,6 +98,36 @@ export default function HomePage() {
 
   // Auth hook
   const { checkAuth } = useAuthCheck();
+
+  // User Preferences (Continue Watching & Watchlist)
+  const { getAllContinueWatching, watchlist } = useUserPreferences();
+  const continueWatching = getAllContinueWatching();
+  const [watchlistItems, setWatchlistItems] = useState<any[]>([]);
+
+  useEffect(() => {
+    async function fetchWatchlistDetails() {
+      if (!watchlist || watchlist.length === 0) {
+        setWatchlistItems([]);
+        return;
+      }
+      try {
+        const { data: movies } = await supabase.from('movies').select('*, vjs(name)').in('id', watchlist);
+        const { data: series } = await supabase.from('series').select('*, vjs(name)').in('id', watchlist);
+        
+        const combined = [
+          ...(movies || []).map(m => ({ ...m, type: 'movie' })),
+          ...(series || []).map(s => ({ ...s, type: 'series' }))
+        ];
+        
+        // Sort by the order they appear in the watchlist array (most recently added last)
+        combined.sort((a, b) => watchlist.indexOf(a.id) - watchlist.indexOf(b.id));
+        setWatchlistItems(combined.reverse());
+      } catch (e) {
+        console.error("Failed to fetch watchlist details", e);
+      }
+    }
+    fetchWatchlistDetails();
+  }, [watchlist]);
 
   useEffect(() => {
     async function fetchCriticalData() {
@@ -274,6 +306,81 @@ export default function HomePage() {
                   {finalTop10.map((item, i) => (
                     <SwiperSlide key={`top10-${item.id}`}>
                       <Top10Card content={item} index={i + 1} />
+                    </SwiperSlide>
+                  ))}
+                </Swiper>
+              </div>
+            </section>
+          )}
+
+          {/* Continue Watching Row */}
+          {continueWatching.length > 0 && (
+            <section className="mb-8">
+              <div className="container mx-auto px-4 md:px-12">
+                <div className="flex items-center justify-between mb-4 border-b border-gray-800 pb-2">
+                  <h2 className="text-xl md:text-2xl font-bold text-white uppercase tracking-wide">Continue Watching</h2>
+                </div>
+                
+                <Swiper 
+                  {...rowSwiperSettings} 
+                  className="streamit-row-swiper"
+                >
+                  {continueWatching.map((item) => {
+                    const percentComplete = Math.round((item.progress / item.duration) * 100) || 0;
+                    return (
+                      <SwiperSlide key={`continue-${item.id}`}>
+                        <div className="group relative block w-full bg-[#141414] rounded overflow-hidden">
+                          <Link href={`/${item.type === 'movie' ? 'movies' : 'series'}/${item.id}`} className="block relative aspect-video cursor-pointer">
+                            <Image
+                              src={item.poster_url || "/placeholder-episode.jpg"}
+                              alt={item.title}
+                              fill
+                              className="object-cover transition-transform duration-500 group-hover:scale-105"
+                            />
+                            {/* Play overlay */}
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                              <div className="bg-[#E50914] rounded-full w-12 h-12 flex items-center justify-center shadow-lg">
+                                <Play fill="white" className="w-5 h-5 ml-1 text-white" />
+                              </div>
+                            </div>
+                            {/* Progress bar */}
+                            <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-gray-600">
+                              <div className="h-full bg-[#E50914]" style={{ width: `${percentComplete}%` }}></div>
+                            </div>
+                          </Link>
+                          <div className="p-3">
+                            <h3 className="font-semibold text-white text-sm truncate leading-tight group-hover:text-[#E50914] transition-colors">{item.title}</h3>
+                            {item.season && item.episode && (
+                              <p className="text-xs text-gray-400 mt-1">S{item.season} E{item.episode}</p>
+                            )}
+                          </div>
+                        </div>
+                      </SwiperSlide>
+                    );
+                  })}
+                </Swiper>
+              </div>
+            </section>
+          )}
+
+          {/* My Watchlist Row */}
+          {watchlistItems.length > 0 && (
+            <section className="mb-8">
+              <div className="container mx-auto px-4 md:px-12">
+                <div className="flex items-center justify-between mb-4 border-b border-gray-800 pb-2">
+                  <h2 className="text-xl md:text-2xl font-bold text-white uppercase tracking-wide">My Watchlist</h2>
+                  <Link href="/profile" className="text-[#E50914] hover:text-[#b80710] text-sm font-semibold transition-colors uppercase tracking-wider">Manage</Link>
+                </div>
+                
+                <Swiper 
+                  {...rowSwiperSettings} 
+                  className="streamit-row-swiper"
+                >
+                  {watchlistItems.map((item) => (
+                    <SwiperSlide key={`watchlist-${item.id}`}>
+                      <StreamitHoverCard content={item}>
+                        <NetflixCard content={item} type={item.type} />
+                      </StreamitHoverCard>
                     </SwiperSlide>
                   ))}
                 </Swiper>

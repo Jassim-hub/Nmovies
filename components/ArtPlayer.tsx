@@ -18,9 +18,11 @@ interface ArtPlayerProps {
   currentEpisodeIndex?: number
   onEpisodeSelect?: (episode: EpisodeWithSeason) => void
   contentType?: string
+  initialTime?: number
+  onTimeUpdate?: (currentTime: number, duration: number) => void
 }
 
-export function ArtPlayer({ url, poster, title, className, onEnded, episodes = [], currentEpisodeIndex = -1, onEpisodeSelect, contentType }: ArtPlayerProps) {
+export function ArtPlayer({ url, poster, title, className, onEnded, episodes = [], currentEpisodeIndex = -1, onEpisodeSelect, contentType, initialTime, onTimeUpdate }: ArtPlayerProps) {
   const artRef = useRef<HTMLDivElement>(null)
   const playerRef = useRef<Artplayer | null>(null)
   const [authenticatedUrl, setAuthenticatedUrl] = useState<string | null>(null)
@@ -255,7 +257,19 @@ export function ArtPlayer({ url, poster, title, className, onEnded, episodes = [
           }
         })
       }
+
+      // Seek to initial time if provided
+      if (initialTime && initialTime > 0) {
+        art.seek = initialTime;
+      }
     })
+
+    // Handle time updates for continue watching
+    art.on('video:timeupdate', () => {
+      if (onTimeUpdate && art.video) {
+        onTimeUpdate(art.video.currentTime, art.video.duration);
+      }
+    });
 
     // Handle play/pause events for scroll and rotation management
     art.on('play', () => {

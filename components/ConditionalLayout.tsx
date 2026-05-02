@@ -3,6 +3,7 @@
 import { usePathname } from 'next/navigation';
 import Header from '../app/components/Header';
 import Footer from '@/components/Footer';
+import MobileNav from '@/components/MobileNav';
 
 interface ConditionalLayoutProps {
   children: React.ReactNode;
@@ -21,8 +22,9 @@ export default function ConditionalLayout({ children }: ConditionalLayoutProps) 
   return (
     <>
       <Header />
-      <main className="flex-1 w-full">{children}</main>
+      <main className="flex-1 w-full pb-16 lg:pb-0">{children}</main>
       <Footer />
+      <MobileNav />
     </>
   );
 }
