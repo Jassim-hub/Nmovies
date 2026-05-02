@@ -3,7 +3,7 @@ import React from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { Play, Info, Plus, Star } from "lucide-react";
+import { Play, Info, Plus, Star, Calendar, Globe, Clock, Share2 } from "lucide-react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, Pagination, Autoplay, EffectFade } from "swiper/modules";
 import "swiper/css";
@@ -179,41 +179,47 @@ export default function HomePage() {
                       }}
                     />
                     {/* Exact Streamit gradients */}
-                    <div className="absolute inset-0 bg-gradient-to-r from-[#141414] via-[#141414]/90 md:via-[#141414]/60 to-transparent w-full md:w-[70%] z-0"></div>
-                    <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#141414] to-transparent z-0"></div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#141414] via-[#141414]/40 to-transparent z-0"></div>
+                    <div className="absolute inset-0 bg-gradient-to-r from-[#141414]/80 via-transparent to-transparent z-0"></div>
                   </div>
 
-                  {/* Hero Content */}
-                  <div className="relative z-10 flex items-center h-full">
+                  {/* Hero Content - Positioned Bottom Left */}
+                  <div className="relative z-10 flex items-end h-full pb-16 md:pb-24">
                     <div className="container mx-auto px-4 md:px-12">
-                      <div className="max-w-3xl pt-16 md:pt-0">
-                        <h1 className="text-4xl md:text-5xl lg:text-7xl font-black mb-4 text-white leading-tight uppercase tracking-wide drop-shadow-2xl">
+                      <div className="max-w-3xl">
+                        <h1 className="text-4xl md:text-5xl lg:text-7xl font-black mb-2 text-white leading-tight tracking-tight drop-shadow-2xl">
                           {content.title}
                         </h1>
 
-                        <div className="flex items-center gap-3 md:gap-4 mb-4 md:mb-6 text-sm font-medium">
-                          {content.vjs && (
-                            <span className="bg-[#E50914] text-white px-2 py-0.5 rounded-sm uppercase tracking-wider text-[10px] md:text-xs font-bold shadow-lg">
-                              {content.vjs.name}
-                            </span>
-                          )}
-                          <span className="text-[#1ABC9C] font-semibold uppercase">{content.type === 'movie' ? 'Movie' : 'Series'}</span>
-                          {content.release_date && (
-                            <span className="text-gray-300 font-semibold">{new Date(content.release_date).getFullYear()}</span>
-                          )}
-                          {'duration' in content && (content as any).duration && (
-                            <span className="text-gray-300 font-semibold">{(content as any).duration}m</span>
-                          )}
-                        </div>
-
-                        <p className="text-sm md:text-base mb-6 md:mb-8 text-gray-200 leading-relaxed max-w-xl font-normal drop-shadow-xl line-clamp-3 md:line-clamp-none">
+                        <p className="text-sm md:text-base mb-6 text-gray-200 leading-relaxed max-w-2xl font-medium drop-shadow-xl line-clamp-3 md:line-clamp-2">
                           {content.description || "Experience the best in entertainment with stunning visuals and captivating storytelling."}
                         </p>
 
-                        <div className="flex flex-wrap gap-3 md:gap-4">
+                        <div className="flex flex-wrap items-center gap-6 mb-8 text-xs md:text-sm font-bold text-gray-300">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="w-4 h-4 text-[#E50914]" />
+                            {content.release_date ? new Date(content.release_date).getFullYear() : "2024"}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Globe className="w-4 h-4 text-[#E50914]" />
+                            English
+                          </div>
+                          {'duration' in content && (content as any).duration && (
+                            <div className="flex items-center gap-2">
+                              <Clock className="w-4 h-4 text-[#E50914]" />
+                              {(content as any).duration}m
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-4">
+                          <button className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all duration-300 backdrop-blur-md">
+                            <Plus className="w-5 h-5 md:w-6 md:h-6 text-white" />
+                          </button>
+                          
                           <Button
                             size="lg"
-                            className="font-bold px-6 md:px-8 py-3 md:py-4 rounded bg-[#E50914] text-white hover:bg-[#b80710] transition-colors duration-300 flex items-center"
+                            className="font-bold px-8 md:px-10 py-6 md:py-7 rounded bg-[#E50914] text-white hover:bg-[#b80710] transition-all duration-300 flex items-center shadow-[0_8px_25px_rgba(229,9,20,0.4)] hover:scale-105 active:scale-95"
                             onClick={() => {
                               const authCheck = checkAuth(content.is_premium || false);
                               if (!authCheck.allowed) {
@@ -227,15 +233,13 @@ export default function HomePage() {
                               }
                             }}
                           >
-                            <Play className="w-4 h-4 md:w-5 md:h-5 mr-2 fill-current" />
+                            <Play className="w-4 h-4 md:w-5 md:h-5 mr-3 fill-current" />
                             PLAY NOW
                           </Button>
-                          <Link href={`/${content.type === 'movie' ? 'movies' : 'series'}/${content.id}`}>
-                            <Button size="lg" className="font-bold px-6 md:px-8 py-3 md:py-4 rounded bg-white/10 backdrop-blur-sm border border-white/30 text-white hover:bg-white hover:text-black transition-colors duration-300 flex items-center">
-                              <Plus className="w-4 h-4 md:w-5 md:h-5 mr-2" />
-                              MORE INFO
-                            </Button>
-                          </Link>
+
+                          <button className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all duration-300 backdrop-blur-md">
+                            <Share2 className="w-5 h-5 md:w-6 md:h-6 text-white" />
+                          </button>
                         </div>
                       </div>
                     </div>

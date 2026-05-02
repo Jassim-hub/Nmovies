@@ -315,6 +315,28 @@ export default function SeriesDetailsPage() {
                </button>
             </div>
 
+            {/* Action Buttons - Moved above the Title */}
+            <div className="flex items-center gap-4 flex-wrap mb-8">
+               <Button 
+                  onClick={() => {
+                     if (allEpisodes.length > 0) handleEpisodeSelect(allEpisodes[0]);
+                  }}
+                  className="bg-[#E50914] hover:bg-[#b80710] text-white font-bold text-base md:text-lg px-10 py-7 rounded-lg shadow-[0_8px_25px_rgba(229,9,20,0.4)] flex items-center transition-all duration-300 hover:scale-105 hover:shadow-[0_12px_35px_rgba(229,9,20,0.5)]"
+               >
+                  <Play className="w-6 h-6 mr-3 fill-current" /> 
+                  Watch Episode 1
+               </Button>
+               <button className="w-14 h-14 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all duration-300 hover:scale-110">
+                  <Plus className="w-6 h-6 text-white" />
+               </button>
+               <button className="w-14 h-14 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all duration-300 hover:scale-110">
+                  <Share2 className="w-6 h-6 text-white" />
+               </button>
+               <button className="w-14 h-14 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all duration-300 hover:scale-110">
+                  <Heart className="w-6 h-6 text-white" />
+               </button>
+            </div>
+
             {/* Title */}
             <h1 className="text-4xl md:text-5xl lg:text-7xl font-black mb-3 text-white leading-tight drop-shadow-2xl tracking-tight">
                {series.title}
@@ -354,28 +376,6 @@ export default function SeriesDetailsPage() {
                   <Star className="w-5 h-5 text-yellow-500 fill-current" />
                   {(Math.random() * 2 + 7).toFixed(1)} (IMDb)
                </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex items-center gap-4 flex-wrap">
-               <Button 
-                  onClick={() => {
-                     if (allEpisodes.length > 0) handleEpisodeSelect(allEpisodes[0]);
-                  }}
-                  className="bg-[#E50914] hover:bg-[#b80710] text-white font-bold text-base md:text-lg px-10 py-7 rounded-lg shadow-[0_8px_25px_rgba(229,9,20,0.4)] flex items-center transition-all duration-300 hover:scale-105 hover:shadow-[0_12px_35px_rgba(229,9,20,0.5)]"
-               >
-                  <Play className="w-6 h-6 mr-3 fill-current" /> 
-                  Watch Episode 1
-               </Button>
-               <button className="w-14 h-14 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all duration-300 hover:scale-110">
-                  <Plus className="w-6 h-6 text-white" />
-               </button>
-               <button className="w-14 h-14 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all duration-300 hover:scale-110">
-                  <Share2 className="w-6 h-6 text-white" />
-               </button>
-               <button className="w-14 h-14 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all duration-300 hover:scale-110">
-                  <Heart className="w-6 h-6 text-white" />
-               </button>
             </div>
          </div>
       </section>

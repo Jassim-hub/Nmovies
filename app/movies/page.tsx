@@ -222,7 +222,7 @@ export default function MoviesPage() {
               </Button>
 
               {showVJDropdown && (
-                <div className="absolute top-full left-0 mt-1 w-48 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto">
+                <div className="absolute top-full left-0 mt-1 w-48 bg-gray-900 border border-gray-700 rounded-lg shadow-2xl z-50 max-h-[50vh] overflow-y-auto overscroll-contain scrollbar-hide">
                   <div className="p-2">
                     <button
                       onClick={() => {

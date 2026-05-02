@@ -15,7 +15,23 @@ const roboto = Roboto({
 
 export const metadata: Metadata = {
   title: 'NicholMoviesUg - The Home of Entertainment',
-  description: 'A world of block Buster movies,Tv Shows and More',
+  description: 'A world of block Buster movies, Tv Shows, translated movies by Uganda\'s top VJs like VJ Junior, VJ Jjingo, ICE P, and more.',
+  keywords: 'nicholmovies, Nicholmovies, NicholMovies, translated movies, VJs, VJ junior, VJ jjingo, ICE P, Uganda Movies, Ugandan translated movies, premium streaming',
+  openGraph: {
+    title: 'NicholMoviesUg - The Home of Entertainment',
+    description: 'A world of block Buster movies, Tv Shows, translated movies by Uganda\'s top VJs like VJ Junior, VJ Jjingo, ICE P, and more.',
+    url: 'https://nicholmoviesug.com',
+    siteName: 'NicholMoviesUg',
+    images: [
+      {
+        url: '/logo.png',
+        width: 800,
+        height: 600,
+      },
+    ],
+    locale: 'en_UG',
+    type: 'website',
+  },
   icons: {
     icon: '/logo.png',
   },

@@ -249,6 +249,35 @@ export default function MovieDetailsPage() {
                </button>
             </div>
 
+            {/* Action Buttons - Moved above the Title */}
+            <div className="flex items-center gap-4 flex-wrap mb-8">
+               <Button 
+                  onClick={handleWatchButtonClick}
+                  className="bg-[#E50914] hover:bg-[#b80710] text-white font-bold text-base md:text-lg px-10 py-7 rounded-lg shadow-[0_8px_25px_rgba(229,9,20,0.4)] flex items-center transition-all duration-300 hover:scale-105 hover:shadow-[0_12px_35px_rgba(229,9,20,0.5)]"
+               >
+                  <Play className="w-6 h-6 mr-3 fill-current" /> 
+                  Watch now
+               </Button>
+               <button className="w-14 h-14 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all duration-300 hover:scale-110">
+                  <Plus className="w-6 h-6 text-white" />
+               </button>
+               <button className="w-14 h-14 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all duration-300 hover:scale-110">
+                  <Share2 className="w-6 h-6 text-white" />
+               </button>
+               <button className="w-14 h-14 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all duration-300 hover:scale-110">
+                  <Heart className="w-6 h-6 text-white" />
+               </button>
+               
+               {/* Keep Download Button for users who need it */}
+               <Button 
+                  variant="outline"
+                  onClick={handleDownload}
+                  className="ml-auto border-gray-600 text-gray-300 hover:text-white hover:bg-gray-800 hidden md:flex h-14 px-8 text-base font-bold rounded-lg transition-colors"
+               >
+                  Download Offline
+               </Button>
+            </div>
+
             {/* Title */}
             <h1 className="text-4xl md:text-5xl lg:text-7xl font-black mb-3 text-white leading-tight drop-shadow-2xl tracking-tight">
                {movie.title}
@@ -288,35 +317,6 @@ export default function MovieDetailsPage() {
                   <Star className="w-5 h-5 text-yellow-500 fill-current" />
                   {(Math.random() * 2 + 7).toFixed(1)} (IMDb)
                </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex items-center gap-4 flex-wrap">
-               <Button 
-                  onClick={handleWatchButtonClick}
-                  className="bg-[#E50914] hover:bg-[#b80710] text-white font-bold text-base md:text-lg px-10 py-7 rounded-lg shadow-[0_8px_25px_rgba(229,9,20,0.4)] flex items-center transition-all duration-300 hover:scale-105 hover:shadow-[0_12px_35px_rgba(229,9,20,0.5)]"
-               >
-                  <Play className="w-6 h-6 mr-3 fill-current" /> 
-                  Watch now
-               </Button>
-               <button className="w-14 h-14 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all duration-300 hover:scale-110">
-                  <Plus className="w-6 h-6 text-white" />
-               </button>
-               <button className="w-14 h-14 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all duration-300 hover:scale-110">
-                  <Share2 className="w-6 h-6 text-white" />
-               </button>
-               <button className="w-14 h-14 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all duration-300 hover:scale-110">
-                  <Heart className="w-6 h-6 text-white" />
-               </button>
-               
-               {/* Keep Download Button for users who need it */}
-               <Button 
-                  variant="outline"
-                  onClick={handleDownload}
-                  className="ml-auto border-gray-600 text-gray-300 hover:text-white hover:bg-gray-800 hidden md:flex h-14 px-8 text-base font-bold rounded-lg transition-colors"
-               >
-                  Download Offline
-               </Button>
             </div>
          </div>
       </section>
