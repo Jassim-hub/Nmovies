@@ -14,9 +14,23 @@ const roboto = Roboto({
 });
 
 export const metadata: Metadata = {
-  title: 'NicholMoviesUg - The Home of Entertainment',
-  description: 'A world of block Buster movies, Tv Shows, translated movies by Uganda\'s top VJs like VJ Junior, VJ Jjingo, ICE P, and more.',
-  keywords: 'nicholmovies, Nicholmovies, NicholMovies, translated movies, VJs, VJ junior, VJ jjingo, ICE P, Uganda Movies, Ugandan translated movies, premium streaming',
+  title: 'NicholMoviesUg - The Home of Entertainment | Translated Movies',
+  description: 'A world of block Buster movies, Tv Shows, translated movies by Uganda\'s top VJs like VJ Junior, VJ Jjingo, ICE P, and more. Watch the latest premium streaming entertainment in Uganda.',
+  keywords: 'nicholmovies, Nicholmovies, NicholMovies, nicholmoviesug, translated movies, VJs, VJ junior, VJ jjingo, ICE P, Uganda Movies, Ugandan translated movies, premium streaming, movies in luganda',
+  applicationName: 'NicholMoviesUg',
+  authors: [{ name: 'NicholMoviesUg' }],
+  generator: 'Next.js',
+  publisher: 'NicholMoviesUg',
+  creator: 'NicholMoviesUg',
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+  metadataBase: new URL('https://nicholmoviesug.com'),
+  alternates: {
+    canonical: '/',
+  },
   openGraph: {
     title: 'NicholMoviesUg - The Home of Entertainment',
     description: 'A world of block Buster movies, Tv Shows, translated movies by Uganda\'s top VJs like VJ Junior, VJ Jjingo, ICE P, and more.',
@@ -27,13 +41,35 @@ export const metadata: Metadata = {
         url: '/logo.png',
         width: 800,
         height: 600,
+        alt: 'NicholMoviesUg Logo',
       },
     ],
     locale: 'en_UG',
     type: 'website',
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'NicholMoviesUg - The Home of Entertainment',
+    description: 'A world of block Buster movies, Tv Shows, translated movies by Uganda\'s top VJs.',
+    images: ['/logo.png'],
+  },
   icons: {
     icon: '/logo.png',
+    apple: '/logo.png',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  verification: {
+    google: 'ng4R7NM6MuDzTtbHaQRZL9I0J7yFZ-itKgF-12hIQWo',
   },
 };
 
