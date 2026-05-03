@@ -13,9 +13,10 @@ function SignUpContent() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [redirecting, setRedirecting] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { signUp, signInWithGoogle } = useAuth()
+  const { signUp, signInWithGoogle, user } = useAuth()
 
   useEffect(() => {
     // Set redirect cookie if redirect parameter exists and no cookie is already set
@@ -24,6 +25,27 @@ function SignUpContent() {
       setRedirectCookie(redirectParam)
     }
   }, [searchParams])
+
+  // Handle redirect when user becomes authenticated
+  useEffect(() => {
+    if (user && !redirecting) {
+      setRedirecting(true)
+
+      let redirectPath = getRedirectCookie()
+      if (!redirectPath) {
+        redirectPath = searchParams.get('redirect')
+      }
+
+      setTimeout(() => {
+        if (redirectPath) {
+          import('@/lib/utils').then(({ clearRedirectCookie }) => clearRedirectCookie())
+          router.push(redirectPath)
+        } else {
+          router.push('/')
+        }
+      }, 100)
+    }
+  }, [user, redirecting, router, searchParams])
 
   const handleGoogleSignUp = async () => {
     setLoading(true)
@@ -63,13 +85,40 @@ function SignUpContent() {
 
     const { error } = await signUp(email, password)
 
-    if (!error) {
-      router.push('/signin?message=check_email')
-    } else {
+    if (error) {
       setError(error.message || 'Failed to sign up')
+      setLoading(false)
+    } else {
+      // If sign up is successful, the user will be logged in automatically 
+      // (assuming email confirmations are disabled in Supabase).
+      // The useEffect hook will handle the redirection.
+      // Do not set loading to false here to avoid flashing the form before redirect.
     }
+  }
 
-    setLoading(false)
+  // Show loading state when redirecting
+  if (redirecting) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-black">
+        <div className="w-full max-w-md bg-[#23272f] rounded-2xl shadow-xl px-6 py-6 flex flex-col items-center border border-gray-800">
+          <div className="flex flex-col items-center mb-6">
+            <div className="flex items-center justify-center mb-2">
+              <img
+                src="/logo.png"
+                alt="NicholMoviesUg Logo"
+                width={48}
+                height={48}
+                className="w-12 h-12 object-contain rounded"
+                style={{ margin: '0 auto' }}
+              />
+            </div>
+            <p className="text-gray-400 text-sm">Watch your favorites</p>
+          </div>
+          <div className="w-8 h-8 border-2 border-[#E50914] border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-white mt-4">Creating your account...</p>
+        </div>
+      </div>
+    )
   }
   return (
     <div className="flex min-h-screen items-center justify-center bg-black">

@@ -52,11 +52,11 @@ export default function Footer() {
               NicholMoviesUg: Your Ultimate Destination for Unlimited Movies and Shows!
             </p>
             <div className="space-y-3 text-sm text-gray-300">
-              <a href="mailto:hello@nicholomoviesug.com" className="flex items-center gap-3 hover:text-[#E50914] transition-colors">
-                <Mail className="w-4 h-4" /> hello@nicholomoviesug.com
+              <a href="mailto:nicholmoviesug@gmail.com" className="flex items-center gap-3 hover:text-[#E50914] transition-colors">
+                <Mail className="w-4 h-4" /> nicholmoviesug@gmail.com
               </a>
-              <a href="tel:+15265897485" className="flex items-center gap-3 hover:text-[#E50914] transition-colors">
-                <Phone className="w-4 h-4" /> +15265897485
+              <a href="tel:+256757588585" className="flex items-center gap-3 hover:text-[#E50914] transition-colors">
+                <Phone className="w-4 h-4" /> +256757588585
               </a>
             </div>
             <div className="flex items-center gap-4 mt-6 text-gray-400">
