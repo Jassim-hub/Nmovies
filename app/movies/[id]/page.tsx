@@ -272,32 +272,32 @@ export default function MovieDetailsPage() {
             </div>
 
             {/* Action Buttons - Moved above the Title */}
-            <div className="flex items-center gap-4 flex-wrap mb-8">
+            <div className="flex items-center gap-2 md:gap-4 flex-wrap mb-8">
                <Button 
                   onClick={handleWatchButtonClick}
-                  className="bg-[#E50914] hover:bg-[#b80710] text-white font-bold text-base md:text-lg px-10 py-7 rounded-lg shadow-[0_8px_25px_rgba(229,9,20,0.4)] flex items-center transition-all duration-300 hover:scale-105 hover:shadow-[0_12px_35px_rgba(229,9,20,0.5)]"
+                  className="bg-[#E50914] hover:bg-[#b80710] text-white font-bold text-sm md:text-lg px-4 py-6 md:px-10 md:py-7 rounded-lg shadow-[0_8px_25px_rgba(229,9,20,0.4)] flex items-center transition-all duration-300 hover:scale-105 hover:shadow-[0_12px_35px_rgba(229,9,20,0.5)]"
                >
-                  <Play className="w-6 h-6 mr-3 fill-current" /> 
+                  <Play className="w-5 h-5 md:w-6 md:h-6 mr-1.5 md:mr-3 fill-current" /> 
                   Watch now
                </Button>
                <button 
                   onClick={() => isWatchlisted ? removeFromWatchlist(movie.id) : addToWatchlist(movie.id)}
-                  className="w-14 h-14 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all duration-300 hover:scale-110"
+                  className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all duration-300 hover:scale-110 flex-shrink-0"
                   aria-label={isWatchlisted ? "Remove from Watchlist" : "Add to Watchlist"}
                >
-                  {isWatchlisted ? <Check className="w-6 h-6 text-[#E50914]" /> : <Plus className="w-6 h-6 text-white" />}
+                  {isWatchlisted ? <Check className="w-5 h-5 md:w-6 md:h-6 text-[#E50914]" /> : <Plus className="w-5 h-5 md:w-6 md:h-6 text-white" />}
                </button>
-               <button className="w-14 h-14 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all duration-300 hover:scale-110">
-                  <Share2 className="w-6 h-6 text-white" />
+               <button className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all duration-300 hover:scale-110 flex-shrink-0">
+                  <Share2 className="w-5 h-5 md:w-6 md:h-6 text-white" />
                </button>
                
                {/* Download Button */}
                <Button 
                   variant="outline"
                   onClick={handleDownload}
-                  className="border-gray-600 text-gray-300 hover:text-white hover:bg-gray-800 flex h-14 px-6 md:px-8 text-sm md:text-base font-bold rounded-lg transition-colors"
+                  className="border-gray-600 text-gray-300 hover:text-white hover:bg-gray-800 flex h-12 md:h-14 px-3 md:px-8 text-xs md:text-base font-bold rounded-lg transition-colors flex-shrink-0"
                >
-                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 md:w-5 md:h-5 mr-1.5 md:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                   </svg>
                   Download
