@@ -1,5 +1,19 @@
 import { Film, Heart, Users, Star, Award, Shield } from "lucide-react";
 import Image from "next/image";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: 'About NicholMoviesUg - Uganda\'s #1 Movie Streaming Platform',
+  description: 'Learn about NicholMoviesUg, Uganda\'s premier streaming platform for translated movies and TV shows. Featuring content from top VJs like VJ Junior, VJ Jjingo, ICE P and more.',
+  alternates: {
+    canonical: '/about',
+  },
+  openGraph: {
+    title: 'About NicholMoviesUg - Uganda\'s #1 Movie Streaming Platform',
+    description: 'Learn about NicholMoviesUg, Uganda\'s premier streaming platform for translated movies and TV shows.',
+    url: 'https://nicholmoviesug.com/about',
+  },
+};
 
 export default function AboutPage() {
   return (

@@ -239,14 +239,12 @@ function PaymentPageContent() {
           throw new Error(completeData.error || 'Failed to complete subscription');
         }
 
-        // Force refresh of user's subscription status immediately after payment
-        try {
-          window.location.reload(); // This will trigger AuthProvider to refresh user data
-        } catch (error) {
-          console.error('Error refreshing subscription status:', error);
-        }
-
         setPaymentStatus('success');
+
+        // Delay redirect so the user sees the success message
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 3000);
       } else {
         setPaymentStatus('failed');
         setErrorMessage(finalResult.response?.errorMessage || finalResult.displayStatus || 'Payment failed');

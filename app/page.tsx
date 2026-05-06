@@ -185,6 +185,8 @@ export default function HomePage() {
   return (
     <>
       <div className="min-h-screen bg-[#141414] text-white pb-16">
+        {/* SEO: Primary heading for search engines - visually hidden but crawlable */}
+        <h1 className="sr-only">NicholMoviesUg - Watch Translated Movies and TV Shows Online in Uganda | nicholmoviesug.com</h1>
         {/* Streamit-style Hero Banner */}
         <section className="relative h-[60vh] md:h-[80vh] w-full overflow-hidden">
           {featuredContent.length > 0 && (

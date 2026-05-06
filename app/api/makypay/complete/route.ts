@@ -103,8 +103,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Complete subscription payment
+    // Use userIdToValidate (may have been resolved from transaction record fallback)
+    const finalUserId = (body as any).userId || userIdToValidate;
     await MakyPayService.completeSubscriptionPayment({
-      userId,
+      userId: finalUserId as string,
       transactionId,
       subscriptionPlan,
       subscriptionDuration: parseInt(subscriptionDuration),

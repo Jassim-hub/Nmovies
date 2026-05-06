@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { supabaseAdmin } from './supabase-admin';
 
 /**
  * MakyPay Standard API Integration
@@ -405,7 +406,9 @@ export class MakyPayService {
         const expiryDate = new Date(now.getTime() + subscriptionDuration * 24 * 60 * 60 * 1000);
 
         // Insert subscription record
-        const { error: subscriptionError } = await supabase
+        // Use service-role client to bypass RLS
+        const dbClient = supabaseAdmin || supabase;
+        const { error: subscriptionError } = await dbClient
           .from('subscriptions')
           .insert({
             user_id: userId,
@@ -420,7 +423,9 @@ export class MakyPayService {
         }
 
         // Update user profile with subscription details
-        const { error: profileError } = await supabase
+        // MUST use service-role client: profiles UPDATE RLS requires auth.uid() = id,
+        // which is NULL on the server side (no user session attached to this client)
+        const { error: profileError } = await dbClient
           .from('profiles')
           .update({
             subscription: subscriptionPlan,
@@ -454,7 +459,8 @@ export class MakyPayService {
     result: MakyPayCollectionResult
   ): Promise<void> {
     try {
-      const { error } = await supabase
+      const dbClient = supabaseAdmin || supabase;
+      const { error } = await dbClient
         .from('makypay_transactions')
         .insert({
           user_id: userId,
@@ -487,7 +493,8 @@ export class MakyPayService {
     result: MakyPayCardCollectionResult
   ): Promise<void> {
     try {
-      const { error } = await supabase
+      const dbClient = supabaseAdmin || supabase;
+      const { error } = await dbClient
         .from('makypay_transactions')
         .insert({
           user_id: userId,
@@ -529,7 +536,8 @@ export class MakyPayService {
         updateData.error_message = errorMessage;
       }
 
-      const { error } = await supabase
+      const dbClient = supabaseAdmin || supabase;
+      const { error } = await dbClient
         .from('makypay_transactions')
         .update(updateData)
         .eq('uuid', transactionId);

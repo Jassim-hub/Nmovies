@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 
 /**
  * MakyPay Webhook Handler
@@ -39,7 +40,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Update by UUID or reference
-    const { error } = await supabase
+    // Use service-role client for server-side webhook writes
+    const db = supabaseAdmin || supabase;
+    const { error } = await db
       .from('makypay_transactions')
       .update(updateData)
       .or(`uuid.eq.${transaction.uuid},reference.eq.${transaction.reference}`);
@@ -103,9 +106,12 @@ async function activateSubscriptionFromTransaction(
   transactionUuid: string,
   transactionReference: string
 ): Promise<void> {
+  // Use service-role client: webhook runs without user session, so
+  // auth.uid() is NULL and RLS on profiles (auth.uid() = id) would block writes
+  const db = supabaseAdmin || supabase;
   try {
     // Look up the transaction to find the user and plan details
-    const { data: txRecord, error: txError } = await supabase
+    const { data: txRecord, error: txError } = await db
       .from('makypay_transactions')
       .select('user_id, description, amount')
       .or(`uuid.eq.${transactionUuid},reference.eq.${transactionReference}`)
@@ -117,7 +123,7 @@ async function activateSubscriptionFromTransaction(
     }
 
     // Check if user already has an active subscription (avoid duplicate activation)
-    const { data: profile } = await supabase
+    const { data: profile } = await db
       .from('profiles')
       .select('subscription, subscription_expiry_date')
       .eq('id', txRecord.user_id)
@@ -135,7 +141,7 @@ async function activateSubscriptionFromTransaction(
     const planName = txRecord.description?.replace(/^Subscription:\s*/i, '').toLowerCase() || 'basic';
 
     // Look up the plan to get the duration
-    const { data: plan } = await supabase
+    const { data: plan } = await db
       .from('plans')
       .select('name, duration_in_days')
       .ilike('name', `%${planName}%`)
@@ -146,7 +152,7 @@ async function activateSubscriptionFromTransaction(
     const expiryDate = new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000);
 
     // Insert subscription record
-    await supabase
+    await db
       .from('subscriptions')
       .insert({
         user_id: txRecord.user_id,
@@ -155,8 +161,8 @@ async function activateSubscriptionFromTransaction(
         subscribed_at: now.toISOString(),
       });
 
-    // Update user profile
-    const { error: profileError } = await supabase
+    // Update user profile — MUST use service-role to bypass profiles RLS
+    const { error: profileError } = await db
       .from('profiles')
       .update({
         subscription: planName,

@@ -1,4 +1,18 @@
 import { Mail, MessageSquare, Clock, Send, Facebook, Twitter, Instagram } from "lucide-react";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: 'Contact NicholMoviesUg - Get Support & Help',
+  description: 'Contact NicholMoviesUg for movie recommendations, subscription support, or feedback. Reach Uganda\'s #1 streaming platform for translated movies.',
+  alternates: {
+    canonical: '/contact',
+  },
+  openGraph: {
+    title: 'Contact NicholMoviesUg - Get Support & Help',
+    description: 'Contact NicholMoviesUg for movie recommendations, subscription support, or feedback.',
+    url: 'https://nicholmoviesug.com/contact',
+  },
+};
 
 export default function ContactPage() {
   return (

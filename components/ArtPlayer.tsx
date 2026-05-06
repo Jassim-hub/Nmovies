@@ -180,8 +180,16 @@ export function ArtPlayer({ url, poster, title, className, onEnded, episodes = [
       } as any,
       // Enable fast seeking
       fastForward: true,
-      // Optimize for streaming
-      type: 'mp4',
+      // Auto-detect video type from URL instead of hardcoding 'mp4'
+      // ArtPlayer natively supports MKV on Chrome/Edge/Firefox (desktop + Android)
+      ...(authenticatedUrl.toLowerCase().includes('.m3u8')
+        ? { type: 'hls' }
+        : authenticatedUrl.toLowerCase().includes('.mpd')
+          ? { type: 'dash' }
+          : authenticatedUrl.toLowerCase().includes('.flv')
+            ? { type: 'flv' }
+            : {}  // Let ArtPlayer auto-detect (works for mp4, mkv, webm, ogg)
+      ),
     })
 
     // Add error handling
