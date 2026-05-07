@@ -116,6 +116,10 @@ export interface SubscriptionPlan {
   duration: string | null
   duration_in_months: number | null
   duration_in_days: number | null
+  recommended: boolean
+  sort_order: number
+  features: string[]
+  active: boolean
 }
 
 // Extended Movie type with VJ relation for queries that join VJ data

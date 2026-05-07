@@ -16,6 +16,7 @@ import {
   Bell,
   LogOut,
   Menu as MenuIcon,
+  LayoutList,
 } from "lucide-react";
 import {
   Sheet,
@@ -50,6 +51,7 @@ const navSections = [
     items: [
       { label: "Genres", href: "/genres", icon: Tags },
       { label: "VJs", href: "/vjs", icon: UserCheck },
+      { label: "Plans", href: "/plans", icon: LayoutList },
       { label: "Subscriptions", href: "/subscriptions", icon: CreditCard },
       { label: "Notifications", href: "/notifications", icon: Bell },
     ],

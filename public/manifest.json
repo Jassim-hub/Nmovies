@@ -1,0 +1,54 @@
+{
+  "name": "NicholMoviesUg",
+  "short_name": "NicholMovies",
+  "description": "Uganda's #1 premium streaming platform. Watch blockbuster movies and TV shows translated by VJ Junior, VJ Jjingo, ICE P and more.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#141414",
+  "theme_color": "#E50914",
+  "categories": ["entertainment"],
+  "lang": "en-UG",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/hero-image.jpg",
+      "sizes": "1280x720",
+      "type": "image/jpeg",
+      "form_factor": "wide",
+      "label": "NicholMoviesUg Home Screen"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Browse Movies",
+      "url": "/movies",
+      "description": "Browse all movies"
+    },
+    {
+      "name": "Browse Series",
+      "url": "/series",
+      "description": "Browse all TV series"
+    }
+  ]
+}

@@ -50,8 +50,10 @@ describe('Subscription activation from webhook', () => {
   });
 
   it('falls back to "basic" when description is empty', () => {
-    const description = undefined;
-    const planName = description?.replace(/^Subscription:\s*/i, '').toLowerCase() || 'basic';
+    const description: string | undefined = undefined;
+    const planName = description
+      ? description.replace(/^Subscription:\s*/i, '').toLowerCase()
+      : 'basic';
     expect(planName).toBe('basic');
   });
 
@@ -203,14 +205,15 @@ describe('Webhook update data construction', () => {
   });
 
   it('omits provider_reference when not present', () => {
-    const collection = null;
+    const collection: { provider_reference?: string } | null = null;
     const updateData: Record<string, any> = {
       status: 'completed',
       updated_at: new Date().toISOString(),
     };
 
-    if (collection?.provider_reference) {
-      updateData.provider_reference = collection.provider_reference;
+    const ref = collection !== null ? collection.provider_reference : undefined;
+    if (ref) {
+      updateData.provider_reference = ref;
     }
 
     expect(updateData.provider_reference).toBeUndefined();

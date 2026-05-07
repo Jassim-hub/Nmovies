@@ -6,6 +6,8 @@ export async function getSubscriptionPlans(): Promise<SubscriptionPlan[]> {
   const { data, error } = await supabase
     .from('plans')
     .select('*')
+    .eq('active', true)
+    .order('sort_order', { ascending: true })
     .order('amount', { ascending: true })
 
   if (error) {

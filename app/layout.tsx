@@ -62,6 +62,8 @@ export const metadata: Metadata = {
     icon: '/logo.png',
     apple: '/logo.png',
   },
+  // PWA manifest
+  manifest: '/manifest.json',
   robots: {
     index: true,
     follow: true,
@@ -134,6 +136,16 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={roboto.variable}>
+      <head>
+        {/* PWA meta tags */}
+        <meta name="theme-color" content="#E50914" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="NicholMovies" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <link rel="apple-touch-icon" href="/logo.png" />
+        <link rel="apple-touch-startup-image" href="/logo.png" />
+      </head>
       {/* 
         Streamit uses #141414 for background natively or completely black, 
         but we'll define bg-streamit-bg for exact match 
@@ -144,6 +156,22 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
           strategy="afterInteractive"
+        />
+        {/* Register PWA service worker */}
+        <Script
+          id="register-sw"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                  navigator.serviceWorker.register('/sw.js').catch(function(err) {
+                    console.warn('SW registration failed:', err);
+                  });
+                });
+              }
+            `,
+          }}
         />
         <AuthProvider>
           <ConditionalLayout>{children}</ConditionalLayout>

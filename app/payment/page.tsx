@@ -15,8 +15,6 @@ import { YoPaymentsService } from '@/lib/yopayments';
 function PaymentPageContent() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const planParam = searchParams.get('plan'); // 'basic' or 'standard'
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null);
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -40,23 +38,17 @@ function PaymentPageContent() {
     const loadPlans = async () => {
       try {
         const availablePlans = await getSubscriptionPlans();
-
-        // Filter plans based on URL parameter
-        let filteredPlans = availablePlans;
-        if (planParam) {
-          filteredPlans = availablePlans.filter(plan =>
-            plan.name?.toLowerCase().includes(planParam.toLowerCase())
-          );
-        }
-
-        setPlans(filteredPlans);
-        if (filteredPlans.length > 0) setSelectedPlan(filteredPlans[0]);
+        setPlans(availablePlans);
+        // Auto-select recommended plan, or first plan
+        const recommended = availablePlans.find(p => p.recommended);
+        if (recommended) setSelectedPlan(recommended);
+        else if (availablePlans.length > 0) setSelectedPlan(availablePlans[0]);
       } catch (error) {
         console.error('Failed to load plans:', error);
       }
     };
     loadPlans();
-  }, [user, planParam]);
+  }, [user]);
 
   // Detect mobile money provider
   useEffect(() => {
@@ -314,55 +306,51 @@ function PaymentPageContent() {
 
         {paymentStatus === 'idle' && (
           <>
-            <h2 className="text-2xl font-bold mb-6 text-center">
-              {planParam ? `${planParam.charAt(0).toUpperCase() + planParam.slice(1)} Premium Plans` : 'Choose Your Plan'}
-            </h2>
-            <div className={`grid gap-6 mb-6 ${planParam ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1 md:grid-cols-2'}`}>
-              {planParam ? (
-                // Show individual plan cards when filtered
-                plans.map(plan => (
-                  <div key={plan.id} onClick={() => openPaymentModal(plan)}
-                    className={`cursor-pointer p-6 rounded-2xl border transition-all hover:border-[#E50914] hover:bg-[#E50914]/10 ${planParam === 'standard' ? 'border-blue-500' : 'border-gray-700'
-                      } ${selectedPlan?.id === plan.id ? 'border-[#E50914] bg-[#E50914]/10' : ''}`}>
-                    {planParam === 'standard' && (
-                      <span className="bg-blue-600 text-white text-xs px-3 py-1 rounded-full mb-4 inline-block">Recommended</span>
-                    )}
-                    <p className="font-medium text-3xl mb-2">
-                      {plan.duration_in_days === 1 ? '1 Day' : `${plan.duration_in_days} Days`}
-                    </p>
-                    <p className="text-lg text-gray-300 mb-2">{plan.name}</p>
-                    <p className="text-sm text-gray-400 mb-4">{plan.description}</p>
-                    <p className="text-3xl font-bold mb-4">UGX {plan.amount?.toLocaleString()}</p>
-                    <div className="flex items-center justify-center">
-                      <span className="text-sm text-[#E50914] font-medium">Tap to Pay →</span>
-                    </div>
+            <h2 className="text-2xl font-bold mb-6 text-center">Choose Your Plan</h2>
+            <div className={`grid gap-6 mb-6 ${
+              plans.length <= 2 ? 'grid-cols-1 md:grid-cols-2' : 
+              plans.length === 3 ? 'grid-cols-1 md:grid-cols-3' : 
+              'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
+            }`}>
+              {plans.map(plan => (
+                <div 
+                  key={plan.id} 
+                  onClick={() => openPaymentModal(plan)}
+                  className={`cursor-pointer p-6 rounded-2xl border transition-all hover:border-[#E50914] hover:bg-[#E50914]/10 hover:scale-[1.02] ${
+                    plan.recommended ? 'border-blue-500 ring-1 ring-blue-500/20' : 'border-gray-700'
+                  } ${selectedPlan?.id === plan.id ? 'border-[#E50914] bg-[#E50914]/10' : ''}`}
+                >
+                  {plan.recommended && (
+                    <span className="bg-blue-600 text-white text-xs px-3 py-1 rounded-full mb-4 inline-block font-bold">Recommended</span>
+                  )}
+                  <h3 className="text-2xl font-bold mb-1 capitalize">{plan.name}</h3>
+                  <p className="font-medium text-lg text-gray-300 mb-1">
+                    {plan.duration_in_days === 1 ? '1 Day' : `${plan.duration_in_days} Days`}
+                  </p>
+                  {plan.description && (
+                    <p className="text-sm text-gray-400 mb-3">{plan.description}</p>
+                  )}
+                  <p className="text-3xl font-bold mb-4">UGX {plan.amount?.toLocaleString()}</p>
+                  
+                  {/* Features list */}
+                  {plan.features && plan.features.length > 0 && (
+                    <ul className="space-y-1.5 mb-4">
+                      {plan.features.map((feature, idx) => (
+                        <li key={idx} className="flex items-center gap-2 text-sm text-gray-300">
+                          <svg className="w-3.5 h-3.5 text-green-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                          {feature}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  
+                  <div className="flex items-center justify-center">
+                    <span className="text-sm text-[#E50914] font-medium">Tap to Pay →</span>
                   </div>
-                ))
-              ) : (
-                // Show grouped cards when showing all plans
-                ['basic', 'standard'].map((type) => (
-                  <div key={type} className={`p-6 rounded-2xl border ${type === 'standard' ? 'border-blue-500' : 'border-gray-700'} hover:border-[#E50914] transition-all`}>
-                    {type === 'standard' && (
-                      <span className="bg-blue-600 text-white text-xs px-3 py-1 rounded-full mb-2 inline-block">Recommended</span>
-                    )}
-                    <h2 className="text-3xl font-bold mb-4 capitalize">{type}</h2>
-                    {plans.filter(p => p.name?.toLowerCase().includes(type)).map(plan => (
-                      <div key={plan.id} onClick={() => openPaymentModal(plan)}
-                        className={`cursor-pointer p-4 rounded-xl border mb-3 transition-all hover:border-[#E50914] hover:bg-[#E50914]/10 ${selectedPlan?.id === plan.id ? 'border-[#E50914] bg-[#E50914]/10' : 'border-gray-600'}`}>
-                        <p className="font-medium text-xl mb-1">
-                          {plan.duration_in_days === 1 ? '1 Day' : `${plan.duration_in_days} Days`}
-                        </p>
-                        <p className="text-base text-gray-300 mb-1">{plan.name}</p>
-                        <p className="text-sm text-gray-400 mb-2">{plan.description}</p>
-                        <p className="text-2xl font-bold mt-2">UGX {plan.amount?.toLocaleString()}</p>
-                        <div className="mt-3 flex items-center justify-center">
-                          <span className="text-sm text-[#E50914] font-medium">Tap to Pay →</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ))
-              )}
+                </div>
+              ))}
             </div>
 
             {/* Instructions for new modal flow */}

@@ -39,7 +39,7 @@ export default function SubscriptionsPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<'all' | 'basic' | 'standard'>('all');
+  const [filter, setFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 100;
 
@@ -182,11 +182,12 @@ export default function SubscriptionsPage() {
     const matchesFilter =
       filter === 'all'
         ? true
-        : filter === 'basic'
-          ? s.plan.toLowerCase().includes('basic') && s.status === 'active'
-          : s.plan.toLowerCase().includes('standard') && s.status === 'active';
+        : s.plan.toLowerCase() === filter.toLowerCase() && s.status === 'active';
     return matchesSearch && matchesFilter;
   });
+
+  // Get unique plan names for dynamic filter buttons
+  const uniquePlanNames = [...new Set(plans.map(p => p.name))];
 
   // Pagination logic
   const totalPages = Math.ceil(filteredSubscriptions.length / itemsPerPage);
@@ -200,8 +201,10 @@ export default function SubscriptionsPage() {
   }, [search, filter]);
 
   const total = subscriptions.length;
-  const standard = subscriptions.filter(s => s.plan.toLowerCase().includes('standard') && s.status === 'active').length;
-  const basic = subscriptions.filter(s => s.plan.toLowerCase().includes('basic') && s.status === 'active').length;
+  const activeByPlan = uniquePlanNames.map(name => ({
+    name,
+    count: subscriptions.filter(s => s.plan.toLowerCase() === name.toLowerCase() && s.status === 'active').length,
+  }));
 
   const handleSubscribe = async (user: SubscriptionData) => {
     setEditingUser(user);
@@ -356,19 +359,17 @@ export default function SubscriptionsPage() {
 
   return (
     <AdminPanelLayout>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
+      <div className={`grid grid-cols-1 sm:grid-cols-${Math.min(activeByPlan.length + 1, 4)} gap-6 mb-8`}>
         <div className="bg-[#1a1c21] rounded-2xl shadow-xl p-6 border border-gray-800 flex flex-col items-center hover:border-[#E50914]/50 transition-colors">
           <div className="text-gray-400 text-xs font-bold uppercase tracking-wider">Total Subscriptions</div>
           <div className="text-4xl font-black text-[#E50914] mt-2 tracking-tighter">{total}</div>
         </div>
-        <div className="bg-[#1a1c21] rounded-2xl shadow-xl p-6 border border-gray-800 flex flex-col items-center hover:border-[#E50914]/50 transition-colors">
-          <div className="text-gray-400 text-xs font-bold uppercase tracking-wider">Standard Premium</div>
-          <div className="text-4xl font-black text-[#E50914] mt-2 tracking-tighter">{standard}</div>
-        </div>
-        <div className="bg-[#1a1c21] rounded-2xl shadow-xl p-6 border border-gray-800 flex flex-col items-center hover:border-[#E50914]/50 transition-colors">
-          <div className="text-gray-400 text-xs font-bold uppercase tracking-wider">Basic Premium</div>
-          <div className="text-4xl font-black text-[#E50914] mt-2 tracking-tighter">{basic}</div>
-        </div>
+        {activeByPlan.map(({ name, count }) => (
+          <div key={name} className="bg-[#1a1c21] rounded-2xl shadow-xl p-6 border border-gray-800 flex flex-col items-center hover:border-[#E50914]/50 transition-colors">
+            <div className="text-gray-400 text-xs font-bold uppercase tracking-wider">{name}</div>
+            <div className="text-4xl font-black text-[#E50914] mt-2 tracking-tighter">{count}</div>
+          </div>
+        ))}
       </div>
       <div className="flex flex-col gap-4 mb-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
@@ -388,18 +389,15 @@ export default function SubscriptionsPage() {
           >
             All Plans
           </Button>
-          <Button
-            className={`px-4 py-2 rounded-lg font-bold uppercase tracking-wider text-xs border ${filter === 'basic' ? 'bg-[#E50914] text-white border-transparent shadow-[0_0_10px_rgba(229,9,20,0.3)]' : 'bg-transparent text-gray-400 border-gray-800 hover:border-[#E50914]'}`}
-            onClick={() => setFilter('basic')}
-          >
-            Basic Premium
-          </Button>
-          <Button
-            className={`px-4 py-2 rounded-lg font-bold uppercase tracking-wider text-xs border ${filter === 'standard' ? 'bg-[#E50914] text-white border-transparent shadow-[0_0_10px_rgba(229,9,20,0.3)]' : 'bg-transparent text-gray-400 border-gray-800 hover:border-[#E50914]'}`}
-            onClick={() => setFilter('standard')}
-          >
-            Standard Premium
-          </Button>
+          {uniquePlanNames.map(name => (
+            <Button
+              key={name}
+              className={`px-4 py-2 rounded-lg font-bold uppercase tracking-wider text-xs border ${filter === name ? 'bg-[#E50914] text-white border-transparent shadow-[0_0_10px_rgba(229,9,20,0.3)]' : 'bg-transparent text-gray-400 border-gray-800 hover:border-[#E50914]'}`}
+              onClick={() => setFilter(name)}
+            >
+              {name}
+            </Button>
+          ))}
         </div>
       </div>
       {/* Desktop Table View */}
