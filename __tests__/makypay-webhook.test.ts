@@ -50,7 +50,7 @@ describe('Subscription activation from webhook', () => {
   });
 
   it('falls back to "basic" when description is empty', () => {
-    const description: string | undefined = undefined;
+    const description = undefined as any;
     const planName = description
       ? description.replace(/^Subscription:\s*/i, '').toLowerCase()
       : 'basic';
@@ -205,7 +205,7 @@ describe('Webhook update data construction', () => {
   });
 
   it('omits provider_reference when not present', () => {
-    const collection: { provider_reference?: string } | null = null;
+    const collection = null as any;
     const updateData: Record<string, any> = {
       status: 'completed',
       updated_at: new Date().toISOString(),

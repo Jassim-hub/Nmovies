@@ -137,7 +137,19 @@ export default function MovieDetailsPage() {
     fetchCriticalData();
   }, [params.id, user, isPremium]);
 
-  const handleSkipTrailer = () => {
+  const handleSkipTrailer = useCallback(() => {
+     // Gate access the same way Watch Now does
+     if (!hasRights) {
+        const authResult = checkAuth(movie?.premium ?? false);
+        if (authResult.reason === 'auth_required') {
+           setAuthAction('play');
+           setShowAuthModal(true);
+        } else {
+           // Logged in but missing premium
+           setShowPremiumUpgradeModal(true);
+        }
+        return;
+     }
      if (movie) {
         const url = movie.video_url || movie.videolink_url;
         if (url) {
@@ -145,13 +157,13 @@ export default function MovieDetailsPage() {
            setStreamUrl(normalizeVideoUrl(url));
         }
      }
-  };
+  }, [hasRights, movie, checkAuth]);
 
   const handleVideoEnded = useCallback(() => {
      if (isPlayingTrailer && hasRights) {
         handleSkipTrailer();
      }
-  }, [isPlayingTrailer, hasRights, movie]);
+  }, [isPlayingTrailer, hasRights, handleSkipTrailer]);
 
   const handleDownload = async () => {
     if (!user?.id) { setAuthAction('download'); setShowAuthModal(true); return; }
@@ -219,9 +231,9 @@ export default function MovieDetailsPage() {
                   onTimeUpdate={handleTimeUpdate}
                />
                
-               {/* Skip Trailer Overlay */}
-               {isPlayingTrailer && hasRights && (
-                  <div className="absolute bottom-20 right-8 z-[100] opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+               {/* Skip Trailer Overlay — visible to all; access is gated on click */}
+               {isPlayingTrailer && (
+                  <div className="absolute bottom-20 right-8 z-[100] transition-opacity duration-300">
                      <Button 
                         onClick={handleSkipTrailer} 
                         className="bg-[#E50914] hover:bg-[#b80710] text-white font-bold px-6 py-5 text-sm md:text-base rounded shadow-2xl flex items-center shadow-[#E50914]/50"
