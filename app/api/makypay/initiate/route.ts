@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { MakyPayService } from '@/lib/makypay';
-import { supabase } from '@/lib/supabase';
 import { createClient } from '@supabase/supabase-js';
 
 export async function POST(request: NextRequest) {
@@ -43,48 +42,61 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Verify user exists
+    // Verify user exists using service-role client (bypasses RLS)
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     let userExists = false;
 
     const userIdToValidate = resolvedUserId || userId;
 
-    if (serviceRoleKey) {
-      try {
-        const adminClient = createClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-          serviceRoleKey,
-          { auth: { persistSession: false } }
-        );
-
-        const { data: adminUser, error: adminError } = await adminClient.auth.admin.getUserById(
-          userIdToValidate as string
-        );
-        if (!adminError && adminUser && adminUser.user) {
-          userExists = true;
-        }
-      } catch (e) {
-        console.error('Service-role user lookup failed:', e);
-      }
+    if (!serviceRoleKey) {
+      console.error('SUPABASE_SERVICE_ROLE_KEY is not set — cannot validate user');
+      return NextResponse.json(
+        { error: 'Server misconfiguration: missing service role key' },
+        { status: 500 }
+      );
     }
 
+    const adminClient = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+      serviceRoleKey,
+      { auth: { persistSession: false, autoRefreshToken: false } }
+    );
+
+    // Primary check: look up auth.users via admin API
+    try {
+      const { data: adminUser, error: adminError } = await adminClient.auth.admin.getUserById(
+        userIdToValidate as string
+      );
+      if (adminError) {
+        console.error('Admin getUserById error:', adminError.message);
+      } else if (adminUser && adminUser.user) {
+        userExists = true;
+      }
+    } catch (e) {
+      console.error('Service-role user lookup threw:', e);
+    }
+
+    // Fallback: check profiles table — also use admin client to bypass RLS
     if (!userExists) {
       try {
-        const { data: profile, error: profileError } = await supabase
+        const { data: profile, error: profileError } = await adminClient
           .from('profiles')
           .select('id')
           .eq('id', userIdToValidate)
           .single();
 
-        if (profile && !profileError) {
+        if (profileError) {
+          console.error('Profiles fallback lookup error:', profileError.message);
+        } else if (profile) {
           userExists = true;
         }
       } catch (e) {
-        console.error('Profiles lookup failed:', e);
+        console.error('Profiles lookup threw:', e);
       }
     }
 
     if (!userExists) {
+      console.error(`Payment blocked: no user found for ID ${userIdToValidate}`);
       return NextResponse.json(
         { error: 'Invalid user ID' },
         { status: 400 }
