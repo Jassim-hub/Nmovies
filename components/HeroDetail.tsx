@@ -3,6 +3,7 @@ import Image from "next/image";
 import { Play, Download } from "lucide-react";
 import { useAuth } from "./AuthProvider";
 import { useAuthCheck } from "./AuthRequiredModal";
+import { ShareButton } from "./ShareButton";
 
 interface HeroDetailProps {
   title: string;
@@ -81,6 +82,9 @@ const HeroDetail: React.FC<HeroDetailProps> = ({
               <Download className="w-6 h-6" />
               <span className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-full mt-1 px-2 py-1 rounded bg-black/90 text-xs text-white opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-all whitespace-nowrap">Download</span>
             </button>
+            <div className="group relative">
+              <ShareButton title={title} variant="icon" className="w-11 h-11 md:w-11 md:h-11" />
+            </div>
           </div>
           <p className="text-xs text-gray-200 mb-2 max-w-full text-left line-clamp-4">{description}</p>
         </div>
@@ -107,6 +111,7 @@ const HeroDetail: React.FC<HeroDetailProps> = ({
               {!user ? 'Sign in to watch' : 'Watch Now'}
             </button>
             <button onClick={onDownload} className="bg-gray-800 hover:bg-gray-700 text-white font-semibold py-3 px-6 rounded-lg min-w-[100px]">Download</button>
+            <ShareButton title={title} variant="button" className="py-3 px-6 rounded-lg min-w-[100px]" />
           </div>
         </div>
       </div>

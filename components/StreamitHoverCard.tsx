@@ -14,7 +14,7 @@ interface HoverCardProps {
 function ExpandedCard({ content, rect, onMouseLeave, onMouseEnter }: { content: any, rect: DOMRect, onMouseLeave: () => void, onMouseEnter: () => void }) {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
-  const expandedWidth = 340;
+  const expandedWidth = 280; // Reduced from 340 to 280
   
   useEffect(() => {
     // trigger animation frame for scale-in effect
@@ -46,8 +46,8 @@ function ExpandedCard({ content, rect, onMouseLeave, onMouseEnter }: { content: 
       onMouseLeave={onMouseLeave}
       onMouseEnter={onMouseEnter}
     >
-      {/* Top half: Media */}
-      <div className="relative w-full aspect-video bg-black group cursor-pointer" onClick={() => router.push(navUrl)}>
+      {/* Top half: Media - INCREASED HEIGHT */}
+      <div className="relative w-full aspect-[4/3] bg-black group cursor-pointer" onClick={() => router.push(navUrl)}>
         {videoUrl ? (
           <video 
             src={videoUrl}
@@ -62,26 +62,34 @@ function ExpandedCard({ content, rect, onMouseLeave, onMouseEnter }: { content: 
         )}
         
         {/* Unmute text (top right) */}
-        <div className="absolute top-3 right-3 text-white/80 text-[10px] font-semibold tracking-widest uppercase hover:text-[#E50914] transition-colors bg-black/40 px-2 py-1 rounded">
+        <div className="absolute top-3 right-3 text-white/80 text-[10px] font-semibold tracking-widest uppercase hover:text-[#E50914] transition-colors bg-black/40 px-2 py-1 rounded z-10">
           Unmute
         </div>
 
         {/* Rating & Premium Badges (bottom) */}
-        <div className="absolute bottom-3 left-3 flex items-center gap-2 w-[calc(100%-24px)] justify-between">
-          <div className="bg-yellow-500 px-2 py-0.5 rounded text-[10px] font-bold text-black flex items-center gap-1 shadow-md">
-             <Star className="w-3 h-3 fill-black" />
-             {(Math.random() * 2 + 7).toFixed(1)} {/* Placeholder rating since not in DB schema natively */}
+        <div className="absolute bottom-3 left-3 flex items-center gap-2 w-[calc(100%-24px)] justify-between z-10">
+          <div className="flex gap-2">
+            <div className="bg-yellow-500 px-2 py-0.5 rounded text-[10px] font-bold text-black flex items-center gap-1 shadow-md">
+               <Star className="w-3 h-3 fill-black" />
+               {(Math.random() * 2 + 7).toFixed(1)}
+            </div>
+            {content.vjs?.name && (
+              <div className="bg-[#E50914] px-2 py-0.5 rounded text-[10px] font-bold text-white shadow-md uppercase tracking-wider">
+                {content.vjs.name}
+              </div>
+            )}
           </div>
           {(content.premium || content.is_premium) && (
-             <div className="bg-[#E50914] p-1 rounded-full text-white shadow-md">
+             <div className="bg-[#E50914] px-2 py-1 rounded-full text-white shadow-md flex items-center gap-1">
                 <Crown className="w-3 h-3 fill-current" />
+                <span className="text-[10px] font-bold uppercase tracking-wider">Premium</span>
              </div>
           )}
         </div>
       </div>
 
-      {/* Bottom half: Metadata */}
-      <div className="p-4 flex flex-col gap-2.5">
+      {/* Bottom half: Metadata - INCREASED PADDING */}
+      <div className="p-3.5 flex flex-col gap-2.5">
         {/* Genres */}
         <div className="text-[10px] text-gray-400 font-bold uppercase tracking-wider flex items-center gap-2 line-clamp-1">
            {content.vjs?.name ? (
@@ -90,16 +98,16 @@ function ExpandedCard({ content, rect, onMouseLeave, onMouseEnter }: { content: 
                  <span className="w-1 h-1 rounded-full bg-gray-500"></span>
               </>
            ) : null}
-           Horror <span className="w-1 h-1 rounded-full bg-gray-500"></span> Thriller
+           Action <span className="w-1 h-1 rounded-full bg-gray-500"></span> Drama
         </div>
 
         {/* Title */}
-        <h3 className="text-white font-bold text-lg leading-tight line-clamp-1" title={content.title}>
+        <h3 className="text-white font-bold text-base leading-tight line-clamp-1" title={content.title}>
           {content.title}
         </h3>
 
         {/* Meta row */}
-        <div className="flex items-center gap-4 text-xs text-gray-300 font-medium">
+        <div className="flex items-center gap-3 text-xs text-gray-300 font-medium">
           <div className="flex items-center gap-1.5">
              <Clock className="w-3 h-3 text-gray-400" />
              {content.duration ? `${Math.floor(content.duration / 60)}h ${content.duration % 60}m` : '02h 15m'}
@@ -111,9 +119,9 @@ function ExpandedCard({ content, rect, onMouseLeave, onMouseEnter }: { content: 
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-3 mt-1.5">
-           <button className="w-10 h-10 flex-shrink-0 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors shadow-inner border border-white/5">
-              <Plus className="w-5 h-5 text-white" />
+        <div className="flex items-center gap-2 mt-1.5">
+           <button className="w-9 h-9 flex-shrink-0 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors shadow-inner border border-white/5">
+              <Plus className="w-4 h-4 text-white" />
            </button>
            <button 
              onClick={() => router.push(navUrl)}

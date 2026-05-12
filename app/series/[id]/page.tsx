@@ -20,6 +20,7 @@ import { supabase, Series, SeriesWithVJ, Season, Episode, EpisodeWithSeason, Mov
 import { getRelatedMoviesByGenre } from '@/lib/api';
 import { NetflixCard } from "@/components/NetflixCard";
 import { useUserPreferences } from "@/lib/hooks/useUserPreferences";
+import { ShareButton } from "@/components/ShareButton";
 
 export default function SeriesDetailsPage() {
   const params = useParams();
@@ -368,9 +369,9 @@ export default function SeriesDetailsPage() {
                >
                   {isWatchlisted ? <Heart className="w-6 h-6 text-[#E50914] fill-current" /> : <Plus className="w-6 h-6 text-white" />}
                </button>
-               <button className="w-14 h-14 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all duration-300 hover:scale-110">
-                  <Share2 className="w-6 h-6 text-white" />
-               </button>
+               
+               {/* Share Button */}
+               <ShareButton title={series.title} variant="icon" />
             </div>
 
             {/* Title */}

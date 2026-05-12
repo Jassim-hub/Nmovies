@@ -17,11 +17,19 @@ export default function DashboardPage() {
   const [userCount, setUserCount] = useState(0);
   const [movieCount, setMovieCount] = useState(0);
   const [seriesCount, setSeriesCount] = useState(0);
+  
   const [latestMovies, setLatestMovies] = useState<{ title: string; created_at: string }[]>([]);
   const [latestSeries, setLatestSeries] = useState<{ title: string; created_at: string }[]>([]);
+  
+  const [topMovies, setTopMovies] = useState<{ title: string; views: number }[]>([]);
+  const [topSeries, setTopSeries] = useState<{ title: string; views: number }[]>([]);
+  
+  const [dailyTopMovies, setDailyTopMovies] = useState<{ title: string; daily_views: number }[]>([]);
+  const [dailyTopSeries, setDailyTopSeries] = useState<{ title: string; daily_views: number }[]>([]);
 
   useEffect(() => {
-    async function fetchCountsAndLatest() {
+    async function fetchDashboardData() {
+      // Counts
       const { count: usersCount } = await supabase.from("profiles").select("id", { count: "exact", head: true });
       const { count: movies } = await supabase.from("movies").select("id", { count: "exact", head: true });
       const { count: series } = await supabase.from("series").select("id", { count: "exact", head: true });
@@ -29,22 +37,30 @@ export default function DashboardPage() {
       setMovieCount(movies || 0);
       setSeriesCount(series || 0);
 
-      const { data: latest } = await supabase
-        .from("movies")
-        .select("title, created_at")
-        .eq("latest", true)
-        .order("created_at", { ascending: false })
-        .limit(4);
-      setLatestMovies(latest || []);
+      // Latest Content
+      const { data: latestM } = await supabase.from("movies").select("title, created_at").eq("latest", true).order("created_at", { ascending: false }).limit(5);
+      setLatestMovies(latestM || []);
 
-      const { data: latestSeriesData } = await supabase
-        .from("series")
-        .select("title, created_at")
-        .order("created_at", { ascending: false })
-        .limit(4);
-      setLatestSeries(latestSeriesData || []);
+      const { data: latestS } = await supabase.from("series").select("title, created_at").order("created_at", { ascending: false }).limit(5);
+      setLatestSeries(latestS || []);
+
+      // Top All-Time
+      const { data: topM } = await supabase.from("movies").select("title, views").order("views", { ascending: false }).limit(10);
+      setTopMovies(topM || []);
+
+      const { data: topS } = await supabase.from("series").select("title, views").order("views", { ascending: false }).limit(10);
+      setTopSeries(topS || []);
+
+      // Top Today (using RPC)
+      // Note: If RPC fails or doesn't exist yet, we will just use empty array.
+      const today = new Date().toISOString().split('T')[0];
+      const { data: dailyM } = await supabase.rpc('get_daily_top_movies', { target_date: today, max_limit: 10 });
+      setDailyTopMovies(dailyM || []);
+
+      const { data: dailyS } = await supabase.rpc('get_daily_top_series', { target_date: today, max_limit: 10 });
+      setDailyTopSeries(dailyS || []);
     }
-    fetchCountsAndLatest();
+    fetchDashboardData();
   }, []);
 
   return (
@@ -139,33 +155,30 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Two-column layout for popular content */}
+        {/* Most Watched Today */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-          {/* Latest Movies Section */}
           <div className="bg-[#1a1c21] rounded-2xl border border-gray-800 shadow-xl overflow-hidden flex flex-col">
             <div className="p-6 border-b border-gray-800 bg-[#141414]/50">
               <h2 className="text-xl font-bold text-white uppercase tracking-wide flex items-center gap-2">
-                <Film className="w-5 h-5 text-[#E50914]" /> Latest Movies
+                <Film className="w-5 h-5 text-emerald-500" /> Top 10 Movies Today
               </h2>
             </div>
-            <div className="p-6 flex-1">
+            <div className="p-6 flex-1 max-h-80 overflow-y-auto">
               <div className="space-y-3">
-                {latestMovies.length === 0 ? (
-                  <div className="text-gray-500 italic p-4 text-center">No movies found.</div>
+                {dailyTopMovies.length === 0 ? (
+                  <div className="text-gray-500 italic p-4 text-center">No views tracked today.</div>
                 ) : (
-                  latestMovies.map((movie, index) => (
-                    <div key={movie.title} className="flex items-center justify-between p-4 rounded-xl bg-black border border-gray-800 hover:border-[#E50914]/50 transition-colors duration-200 group">
+                  dailyTopMovies.map((movie, index) => (
+                    <div key={index} className="flex items-center justify-between p-4 rounded-xl bg-black border border-gray-800 hover:border-emerald-500/50 transition-colors duration-200 group">
                       <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 bg-[#1a1c21] rounded-lg flex items-center justify-center text-gray-500 font-bold text-sm group-hover:text-[#E50914] transition-colors border border-gray-800">
+                        <div className="w-10 h-10 bg-[#1a1c21] rounded-lg flex items-center justify-center text-gray-500 font-bold text-sm group-hover:text-emerald-500 transition-colors border border-gray-800">
                           {index + 1}
                         </div>
                         <span className="font-bold text-gray-200 tracking-wide">{movie.title}</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-gray-500 text-xs font-medium bg-[#141414] px-3 py-1 rounded-full border border-gray-800">
-                          {new Date(movie.created_at).toLocaleDateString()}
-                        </span>
-                      </div>
+                      <span className="text-emerald-500 text-xs font-bold bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
+                        {movie.daily_views} Views
+                      </span>
                     </div>
                   ))
                 )}
@@ -173,31 +186,89 @@ export default function DashboardPage() {
             </div>
           </div>
           
-          {/* Latest Series Section */}
           <div className="bg-[#1a1c21] rounded-2xl border border-gray-800 shadow-xl overflow-hidden flex flex-col">
             <div className="p-6 border-b border-gray-800 bg-[#141414]/50">
               <h2 className="text-xl font-bold text-white uppercase tracking-wide flex items-center gap-2">
-                <Tv className="w-5 h-5 text-[#E50914]" /> Latest Series
+                <Tv className="w-5 h-5 text-emerald-500" /> Top 10 Series Today
               </h2>
             </div>
-            <div className="p-6 flex-1">
+            <div className="p-6 flex-1 max-h-80 overflow-y-auto">
               <div className="space-y-3">
-                {latestSeries.length === 0 ? (
+                {dailyTopSeries.length === 0 ? (
+                  <div className="text-gray-500 italic p-4 text-center">No views tracked today.</div>
+                ) : (
+                  dailyTopSeries.map((series, index) => (
+                    <div key={index} className="flex items-center justify-between p-4 rounded-xl bg-black border border-gray-800 hover:border-emerald-500/50 transition-colors duration-200 group">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 bg-[#1a1c21] rounded-lg flex items-center justify-center text-gray-500 font-bold text-sm group-hover:text-emerald-500 transition-colors border border-gray-800">
+                          {index + 1}
+                        </div>
+                        <span className="font-bold text-gray-200 tracking-wide">{series.title}</span>
+                      </div>
+                      <span className="text-emerald-500 text-xs font-bold bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
+                        {series.daily_views} Views
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Most Watched All Time */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+          <div className="bg-[#1a1c21] rounded-2xl border border-gray-800 shadow-xl overflow-hidden flex flex-col">
+            <div className="p-6 border-b border-gray-800 bg-[#141414]/50">
+              <h2 className="text-xl font-bold text-white uppercase tracking-wide flex items-center gap-2">
+                <Film className="w-5 h-5 text-[#E50914]" /> Top 10 Movies All-Time
+              </h2>
+            </div>
+            <div className="p-6 flex-1 max-h-80 overflow-y-auto">
+              <div className="space-y-3">
+                {topMovies.length === 0 ? (
+                  <div className="text-gray-500 italic p-4 text-center">No movies found.</div>
+                ) : (
+                  topMovies.map((movie, index) => (
+                    <div key={index} className="flex items-center justify-between p-4 rounded-xl bg-black border border-gray-800 hover:border-[#E50914]/50 transition-colors duration-200 group">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 bg-[#1a1c21] rounded-lg flex items-center justify-center text-gray-500 font-bold text-sm group-hover:text-[#E50914] transition-colors border border-gray-800">
+                          {index + 1}
+                        </div>
+                        <span className="font-bold text-gray-200 tracking-wide">{movie.title}</span>
+                      </div>
+                      <span className="text-gray-400 text-xs font-bold bg-[#141414] px-3 py-1 rounded-full border border-gray-800">
+                        {movie.views || 0} Views
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-[#1a1c21] rounded-2xl border border-gray-800 shadow-xl overflow-hidden flex flex-col">
+            <div className="p-6 border-b border-gray-800 bg-[#141414]/50">
+              <h2 className="text-xl font-bold text-white uppercase tracking-wide flex items-center gap-2">
+                <Tv className="w-5 h-5 text-[#E50914]" /> Top 10 Series All-Time
+              </h2>
+            </div>
+            <div className="p-6 flex-1 max-h-80 overflow-y-auto">
+              <div className="space-y-3">
+                {topSeries.length === 0 ? (
                   <div className="text-gray-500 italic p-4 text-center">No series found.</div>
                 ) : (
-                  latestSeries.map((series, index) => (
-                    <div key={series.title} className="flex items-center justify-between p-4 rounded-xl bg-black border border-gray-800 hover:border-[#E50914]/50 transition-colors duration-200 group">
+                  topSeries.map((series, index) => (
+                    <div key={index} className="flex items-center justify-between p-4 rounded-xl bg-black border border-gray-800 hover:border-[#E50914]/50 transition-colors duration-200 group">
                       <div className="flex items-center gap-4">
                         <div className="w-10 h-10 bg-[#1a1c21] rounded-lg flex items-center justify-center text-gray-500 font-bold text-sm group-hover:text-[#E50914] transition-colors border border-gray-800">
                           {index + 1}
                         </div>
                         <span className="font-bold text-gray-200 tracking-wide">{series.title}</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-gray-500 text-xs font-medium bg-[#141414] px-3 py-1 rounded-full border border-gray-800">
-                          {new Date(series.created_at).toLocaleDateString()}
-                        </span>
-                      </div>
+                      <span className="text-gray-400 text-xs font-bold bg-[#141414] px-3 py-1 rounded-full border border-gray-800">
+                        {series.views || 0} Views
+                      </span>
                     </div>
                   ))
                 )}

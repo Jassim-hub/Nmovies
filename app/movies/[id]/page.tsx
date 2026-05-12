@@ -15,8 +15,9 @@ import VideoPlayer from "@/components/VideoPlayer";
 import { normalizeVideoUrl } from "@/lib/utils";
 import { MovieCast } from "@/components/MovieCast";
 import { StreamitHoverCard } from "@/components/StreamitHoverCard";
-import { Calendar, Globe, Clock, Star, Share2, Heart, Plus, SkipForward, Play, Check } from "lucide-react";
+import { Calendar, Globe, Clock, Star, Heart, Plus, SkipForward, Play, Check } from "lucide-react";
 import { useUserPreferences } from "@/lib/hooks/useUserPreferences";
+import { ShareButton } from "@/components/ShareButton";
 
 export default function MovieDetailsPage() {
   const params = useParams();
@@ -299,21 +300,24 @@ export default function MovieDetailsPage() {
                >
                   {isWatchlisted ? <Check className="w-5 h-5 md:w-6 md:h-6 text-[#E50914]" /> : <Plus className="w-5 h-5 md:w-6 md:h-6 text-white" />}
                </button>
-               <button className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all duration-300 hover:scale-110 flex-shrink-0">
-                  <Share2 className="w-5 h-5 md:w-6 md:h-6 text-white" />
-               </button>
                
-               {/* Download Button */}
-               <Button 
-                  variant="outline"
-                  onClick={handleDownload}
-                  className="border-gray-600 text-gray-300 hover:text-white hover:bg-gray-800 flex h-12 md:h-14 px-3 md:px-8 text-xs md:text-base font-bold rounded-lg transition-colors flex-shrink-0"
-               >
-                  <svg className="w-4 h-4 md:w-5 md:h-5 mr-1.5 md:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                  </svg>
-                  Download
-               </Button>
+               {/* Download and Share buttons on same line */}
+               <div className="flex items-center gap-2 flex-shrink-0">
+                  {/* Download Button */}
+                  <Button 
+                     variant="outline"
+                     onClick={handleDownload}
+                     className="border-gray-600 text-gray-300 hover:text-white hover:bg-gray-800 flex h-12 md:h-14 px-3 md:px-8 text-xs md:text-base font-bold rounded-lg transition-colors"
+                  >
+                     <svg className="w-4 h-4 md:w-5 md:h-5 mr-1.5 md:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                     </svg>
+                     Download
+                  </Button>
+                  
+                  {/* Share Button */}
+                  <ShareButton title={movie.title} variant="icon" />
+               </div>
             </div>
 
             {/* Title */}

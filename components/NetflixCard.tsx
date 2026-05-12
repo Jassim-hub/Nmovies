@@ -50,11 +50,29 @@ export const NetflixCard = ({ content, type, isNonTranslated = false }: NetflixC
             }}
           />
 
-          {/* Content type badge - smaller */}
-          <div className="absolute top-2 left-2 bg-yellow-500 px-2 py-0.5 rounded text-[10px] font-bold text-black flex items-center gap-1 shadow-md z-10">
-             <Star className="w-3 h-3 fill-black" />
-             {('rating' in content && typeof content.rating === 'number') ? content.rating.toFixed(1) : (Math.random() * 2 + 7).toFixed(1)}
+          {/* Badges container - LEFT SIDE */}
+          <div className="absolute top-2 left-2 flex flex-col gap-1 z-10">
+            {/* Rating */}
+            <div className="bg-yellow-500 px-2 py-0.5 rounded text-[10px] font-bold text-black flex items-center gap-1 shadow-md w-fit">
+               <Star className="w-3 h-3 fill-black" />
+               {('rating' in content && typeof content.rating === 'number') ? content.rating.toFixed(1) : (Math.random() * 2 + 7).toFixed(1)}
+            </div>
+            {/* Premium Badge */}
+            {(('premium' in content && content.premium) || ('is_premium' in content && content.is_premium)) && (
+              <div className="bg-[#E50914] px-2 py-0.5 rounded text-[10px] font-bold text-white shadow-md flex items-center gap-1 w-fit uppercase tracking-wider">
+                Premium
+              </div>
+            )}
           </div>
+
+          {/* VJ Tag - TOP RIGHT CORNER */}
+          {('vjs' in content && (content.vjs as any)?.name) && (
+            <div className="absolute top-2 right-2 z-10">
+              <div className="bg-[#E50914] px-2 py-1 rounded text-[10px] font-bold text-white shadow-lg uppercase tracking-wider">
+                {(content.vjs as any).name}
+              </div>
+            </div>
+          )}
 
           {/* Icon overlay on hover - center play icon */}
           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center z-10">
