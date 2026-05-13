@@ -15,8 +15,8 @@ interface WatchlistItem {
   movie_id: string | null;
   series_id: string | null;
   created_at: string;
-  movies?: MovieWithVJ;
-  series?: SeriesWithVJ;
+  movies?: MovieWithVJ | null;
+  series?: SeriesWithVJ | null;
 }
 
 export default function WatchlistPage() {
@@ -56,7 +56,9 @@ export default function WatchlistPage() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setWatchlist(data || []);
+      
+      // Type assertion to handle Supabase's return type
+      setWatchlist((data as any) || []);
     } catch (error) {
       console.error('Error fetching watchlist:', error);
     } finally {

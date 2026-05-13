@@ -87,10 +87,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-
-// Disable body parsing for streaming
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
