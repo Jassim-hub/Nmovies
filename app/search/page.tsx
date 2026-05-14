@@ -14,6 +14,7 @@ interface ContentItem {
   release_date?: string
   genre_ids?: string[]
   vj_id?: string
+  premium?: boolean
   vjs?: { id: string; name: string } | null
 }
 
@@ -52,13 +53,13 @@ export default function SearchPage() {
           supabase.from("genres").select("id, name").order("name"),
           supabase
             .from("movies")
-            .select("id, title, thumbnail_url, cover_image_url, description, release_date, genre_ids, vj_id, vjs:vj_id (id, name)")
+            .select("id, title, thumbnail_url, cover_image_url, description, release_date, genre_ids, vj_id, premium, vjs:vj_id (id, name)")
             .eq("published", true)
             .order("created_at", { ascending: false })
             .limit(200),
           supabase
             .from("series")
-            .select("id, title, thumbnail_url, cover_image_url, description, release_date, genre_ids, vj_id, vjs:vj_id (id, name)")
+            .select("id, title, thumbnail_url, cover_image_url, description, release_date, genre_ids, vj_id, premium, vjs:vj_id (id, name)")
             .eq("published", true)
             .order("created_at", { ascending: false })
             .limit(200),
@@ -200,7 +201,7 @@ export default function SearchPage() {
                   : "bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-500"
                 }`}
             >
-              <span> {selectedVJName || "All VJs"}</span>
+              <span>{selectedVJName || "All VJs"}</span>
               <ChevronDown className={`w-4 h-4 transition-transform ${vjDropdownOpen ? "rotate-180" : ""}`} />
             </button>
             {vjDropdownOpen && (
@@ -238,7 +239,7 @@ export default function SearchPage() {
                   : "bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-500"
                 }`}
             >
-              <span> {selectedGenreName || "All Genres"}</span>
+              <span>{selectedGenreName || "All Genres"}</span>
               <ChevronDown className={`w-4 h-4 transition-transform ${genreDropdownOpen ? "rotate-180" : ""}`} />
             </button>
             {genreDropdownOpen && (
@@ -278,8 +279,6 @@ export default function SearchPage() {
         {/* Tab Buttons */}
         <div className="flex flex-wrap gap-3 mb-6">
           {(["all", "movies", "series"] as const).map((tab) => {
-            const count =
-              tab === "all" ? totalResults : tab === "movies" ? movies.length : series.length
             const label = tab === "all" ? "All" : tab === "movies" ? "Movies" : "Series"
             return (
               <button
@@ -290,7 +289,7 @@ export default function SearchPage() {
                     : "bg-gray-800 text-gray-300 hover:bg-[#E50914]/20 hover:text-[#E50914] border border-gray-700"
                   }`}
               >
-                {label} ({count})
+                {label}
               </button>
             )
           })}
@@ -332,21 +331,12 @@ export default function SearchPage() {
             {/* Movies */}
             {displayMovies.length > 0 && (
               <div>
-                <h2 className="text-lg font-semibold text-blue-400 mb-4">
-                  Movies ({displayMovies.length})
-                </h2>
+                <h2 className="text-lg font-semibold text-blue-400 mb-4">Movies</h2>
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-10 gap-1 sm:gap-2">
                   {displayMovies.map((movie) => (
                     <NetflixCard
                       key={movie.id}
-                      content={{
-                        id: movie.id,
-                        title: movie.title,
-                        thumbnail_url: movie.thumbnail_url,
-                        cover_image_url: movie.cover_image_url,
-                        description: movie.description,
-                        release_date: movie.release_date,
-                      }}
+                      content={movie as any}
                       type="movie"
                     />
                   ))}
@@ -357,21 +347,12 @@ export default function SearchPage() {
             {/* Series */}
             {displaySeries.length > 0 && (
               <div>
-                <h2 className="text-lg font-semibold text-green-400 mb-4">
-                  Series ({displaySeries.length})
-                </h2>
+                <h2 className="text-lg font-semibold text-green-400 mb-4">Series</h2>
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-10 gap-1 sm:gap-2">
                   {displaySeries.map((s) => (
                     <NetflixCard
                       key={s.id}
-                      content={{
-                        id: s.id,
-                        title: s.title,
-                        thumbnail_url: s.thumbnail_url,
-                        cover_image_url: s.cover_image_url,
-                        description: s.description,
-                        release_date: s.release_date,
-                      }}
+                      content={s as any}
                       type="series"
                     />
                   ))}
