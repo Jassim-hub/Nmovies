@@ -259,12 +259,6 @@ export default function Header() {
 
           {/* Desktop Right Navigation */}
           <nav className="hidden lg:flex items-center space-x-4">
-            {/* VJ & Genre Links (Filters) */}
-            <div className="flex items-center space-x-3 mr-2">
-              <Link href="/search?filter=vj" className="text-xs font-bold text-gray-300 hover:text-[#E50914] transition-colors uppercase tracking-wider">VJs</Link>
-              <Link href="/search?filter=genre" className="text-xs font-bold text-gray-300 hover:text-[#E50914] transition-colors uppercase tracking-wider">Genres</Link>
-            </div>
-            
             {/* Search Icon */}
             <Link
               href="/search"
@@ -273,16 +267,6 @@ export default function Header() {
             >
               <Search className="w-5 h-5" />
             </Link>
-
-            {/* Personalise Button */}
-            {user && (
-              <Link
-                href="/profile"
-                className="px-3 py-1.5 border border-gray-600 rounded text-xs font-bold text-gray-300 hover:text-white hover:border-white transition-colors tracking-wider"
-              >
-                PERSONALISE
-              </Link>
-            )}
 
             {/* Download Icon Button */}
             <Link

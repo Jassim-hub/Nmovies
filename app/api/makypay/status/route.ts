@@ -13,10 +13,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check transaction status with polling
-    const result = await MakyPayService.waitForTransactionCompletion({
-      transactionId,
-    });
+    // Single status check — frontend drives the polling loop
+    const result = await MakyPayService.checkTransactionStatus(transactionId);
 
     return NextResponse.json({
       success: true,

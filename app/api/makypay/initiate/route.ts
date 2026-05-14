@@ -129,11 +129,16 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('MakyPay API error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Payment initiation failed';
+    console.error('MakyPay API error:', {
+      message: errorMessage,
+      stack: error instanceof Error ? error.stack : undefined,
+    });
 
+    // Surface the actual error to the frontend (e.g., "Unsupported phone prefix...")
     return NextResponse.json(
       {
-        error: error instanceof Error ? error.message : 'Payment initiation failed',
+        error: errorMessage,
         success: false
       },
       { status: 500 }

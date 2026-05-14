@@ -162,7 +162,7 @@ function PaymentPageContent() {
           phoneNumber: payPhone,
           amount,
           description: `Subscription: ${selectedPlan.name}`,
-          paymentMethod: 'mobile_money', // For MakyPay
+          paymentMethod: 'mobile_money',
         }),
       });
 
@@ -170,77 +170,89 @@ function PaymentPageContent() {
       if (!response.ok) throw new Error(data.error || 'Payment initiation failed');
 
       const result = data.transaction;
-      
-      // Handle different response formats
       const transactionId = result.uuid || result.transactionReference || result.internalReference;
       setTransactionRef(transactionId);
-
-      // Show initial status message
       setPaymentStatus('processing');
-      setErrorMessage('');
 
-      // Poll payment status with better user feedback
+      // ── Frontend-driven polling loop ──────────────────────────────
       const statusEndpoint = PaymentProviders.isMakyPayEnabled()
         ? '/api/makypay/status'
         : '/api/yopayments/status';
 
-      const pollResponse = await fetch(statusEndpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(
-          PaymentProviders.isMakyPayEnabled()
-            ? { transactionId: transactionId }
-            : { transactionReference: transactionId }
-        ),
-      });
+      const MAX_POLLS = 24; // 24 × 5s = 2 minutes
+      const POLL_INTERVAL = 5000;
 
-      const pollData = await pollResponse.json();
-      if (!pollResponse.ok) throw new Error(pollData.error || 'Failed to check payment status');
+      for (let attempt = 0; attempt < MAX_POLLS; attempt++) {
+        await new Promise(r => setTimeout(r, POLL_INTERVAL));
 
-      const finalResult = pollData.transaction;
+        try {
+          const pollResponse = await fetch(statusEndpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(
+              PaymentProviders.isMakyPayEnabled()
+                ? { transactionId }
+                : { transactionReference: transactionId }
+            ),
+          });
 
-      if (finalResult.isCompleted) {
-        const completeEndpoint = PaymentProviders.isMakyPayEnabled()
-          ? '/api/makypay/complete'
-          : '/api/yopayments/complete';
+          if (!pollResponse.ok) continue; // retry on error
 
-        const completeResponse = await fetch(completeEndpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(
-            PaymentProviders.isMakyPayEnabled()
-              ? {
-                  userId: user.id,
-                  accessToken,
-                  transactionId: transactionId,
-                  subscriptionPlan: selectedPlan.name.toLowerCase(),
-                  subscriptionDuration: selectedPlan.duration_in_days || 30,
-                }
-              : {
-                  userId: user.id,
-                  accessToken,
-                  transactionReference: transactionId,
-                  subscriptionPlan: selectedPlan.name.toLowerCase(),
-                  subscriptionDuration: selectedPlan.duration_in_days || 30,
-                }
-          ),
-        });
+          const pollData = await pollResponse.json();
+          const txStatus = pollData.transaction;
 
-        if (!completeResponse.ok) {
-          const completeData = await completeResponse.json();
-          throw new Error(completeData.error || 'Failed to complete subscription');
+          if (txStatus?.isCompleted) {
+            // Payment confirmed — activate subscription
+            const completeEndpoint = PaymentProviders.isMakyPayEnabled()
+              ? '/api/makypay/complete'
+              : '/api/yopayments/complete';
+
+            const completeResponse = await fetch(completeEndpoint, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(
+                PaymentProviders.isMakyPayEnabled()
+                  ? {
+                      userId: user.id,
+                      accessToken,
+                      transactionId,
+                      subscriptionPlan: selectedPlan.name.toLowerCase(),
+                      subscriptionDuration: selectedPlan.duration_in_days || 30,
+                    }
+                  : {
+                      userId: user.id,
+                      accessToken,
+                      transactionReference: transactionId,
+                      subscriptionPlan: selectedPlan.name.toLowerCase(),
+                      subscriptionDuration: selectedPlan.duration_in_days || 30,
+                    }
+              ),
+            });
+
+            if (!completeResponse.ok) {
+              const completeData = await completeResponse.json();
+              throw new Error(completeData.error || 'Failed to complete subscription');
+            }
+
+            setPaymentStatus('success');
+            setTimeout(() => { window.location.href = '/'; }, 3000);
+            return; // exit polling loop
+          }
+
+          if (txStatus?.isFailed) {
+            setPaymentStatus('failed');
+            setErrorMessage(txStatus.displayStatus || 'Payment was declined');
+            return;
+          }
+          // Still pending — continue polling
+        } catch {
+          // Network error on this poll — continue trying
         }
-
-        setPaymentStatus('success');
-
-        // Delay redirect so the user sees the success message
-        setTimeout(() => {
-          window.location.href = '/';
-        }, 3000);
-      } else {
-        setPaymentStatus('failed');
-        setErrorMessage(finalResult.response?.errorMessage || finalResult.displayStatus || 'Payment failed');
       }
+
+      // Polling exhausted without completion
+      setPaymentStatus('failed');
+      setErrorMessage('Payment is still processing. If you approved on your phone, your subscription will activate shortly via webhook.');
     } catch (error) {
       setPaymentStatus('failed');
       setErrorMessage(error instanceof Error ? error.message : 'An unexpected error occurred');

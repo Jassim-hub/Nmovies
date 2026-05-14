@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { MakyPayService } from '@/lib/makypay';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 import { supabase } from '@/lib/supabase';
 import { createClient } from '@supabase/supabase-js';
 
@@ -9,12 +10,15 @@ export async function POST(request: NextRequest) {
     const { userId, transactionId, subscriptionPlan, subscriptionDuration, accessToken } = body;
 
     // Validate required fields
-    if (!userId || !transactionId || !subscriptionPlan || !subscriptionDuration) {
+    if (!userId || !transactionId || !subscriptionPlan) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
       );
     }
+
+    // Use service-role client for all server-side operations (bypasses RLS)
+    const db = supabaseAdmin || supabase;
 
     // Try resolving user from provided session access token
     let resolvedUserId: string | null = userId ?? null;
@@ -62,7 +66,7 @@ export async function POST(request: NextRequest) {
 
     if (!userExists) {
       try {
-        const { data: profile, error: profileError } = await supabase
+        const { data: profile, error: profileError } = await db
           .from('profiles')
           .select('id')
           .eq('id', userIdToValidate)
@@ -79,7 +83,7 @@ export async function POST(request: NextRequest) {
     if (!userExists) {
       // Try to resolve user from the stored transaction record as a last resort
       try {
-        const { data: txRecord, error: txError } = await supabase
+        const { data: txRecord, error: txError } = await db
           .from('makypay_transactions')
           .select('user_id')
           .eq('uuid', transactionId)
@@ -102,14 +106,42 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Complete subscription payment
-    // Use userIdToValidate (may have been resolved from transaction record fallback)
     const finalUserId = (body as any).userId || userIdToValidate;
+
+    // ── Look up the REAL plan from admin dashboard ──────────────────────
+    // Don't blindly trust the client-sent subscriptionDuration.
+    // Fetch the plan from the `plans` table to get the authoritative duration.
+    const planNameNormalized = subscriptionPlan.toLowerCase().trim();
+    let planDurationDays = subscriptionDuration ? parseInt(subscriptionDuration) : 30;
+
+    try {
+      const { data: planRecord, error: planError } = await db
+        .from('plans')
+        .select('name, duration_in_days, amount, active')
+        .ilike('name', planNameNormalized)
+        .single();
+
+      if (planError) {
+        console.warn('Could not look up plan from DB:', planError.message);
+        // Fall through — use client-sent duration as fallback
+      } else if (planRecord) {
+        if (!planRecord.active) {
+          console.warn(`Plan "${planRecord.name}" is inactive in admin dashboard`);
+        }
+        // Use the admin dashboard's authoritative duration
+        planDurationDays = planRecord.duration_in_days || planDurationDays;
+        console.log(`Plan lookup: "${planRecord.name}" → ${planDurationDays} days (from admin dashboard)`);
+      }
+    } catch (e) {
+      console.warn('Plan lookup threw, using client-sent duration as fallback:', e);
+    }
+
+    // Complete subscription payment
     await MakyPayService.completeSubscriptionPayment({
       userId: finalUserId as string,
       transactionId,
-      subscriptionPlan,
-      subscriptionDuration: parseInt(subscriptionDuration),
+      subscriptionPlan: planNameNormalized,
+      subscriptionDuration: planDurationDays,
     });
 
     console.log('✅ Subscription completed and refreshed - access granted immediately');

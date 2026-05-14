@@ -84,27 +84,28 @@ export class MakyPayService {
   /**
    * Determine mobile money provider based on phone number prefix
    * 
-   * MTN Prefixes (as of March 2025):
-   * - 077, 078, 076, 039, 031, 079 (newly added March 2025)
-   * 
-   * Airtel Prefixes:
-   * - 070, 073, 074, 075
+   * MakyPay officially supported prefixes:
+   * MTN: 077, 078, 076, 039
+   * Airtel: 070, 074, 075
    */
   static getProviderFromPhone(phoneNumber: string): string {
     const formatted = this.formatPhoneNumber(phoneNumber);
 
-    // MTN: 256 + (077, 078, 076, 039, 031, 079)
-    if (/^256(77|78|76|39|31|79)/.test(formatted)) {
+    // MTN: 256 + (077, 078, 076, 039) — per MakyPay API docs
+    if (/^256(77|78|76|39)/.test(formatted)) {
       return 'mtn';
     }
 
-    // Airtel: 256 + (070, 073, 074, 075)
-    if (/^256(70|73|74|75)/.test(formatted)) {
+    // Airtel: 256 + (070, 074, 075) — per MakyPay API docs
+    if (/^256(70|74|75)/.test(formatted)) {
       return 'airtel';
     }
 
-    // Default to MTN if unknown
-    return 'mtn';
+    // Reject unsupported prefixes instead of silently defaulting
+    const prefix = formatted.substring(3, 5);
+    throw new MakyPayException(
+      `Unsupported phone prefix (0${prefix}). MakyPay supports MTN (077/078/076/039) and Airtel (070/074/075) only.`
+    );
   }
 
   /**
@@ -136,6 +137,21 @@ export class MakyPayService {
   }
 
   /**
+   * Extract a human-readable error message from a MakyPay API response.
+   * Checks multiple possible fields since error format may vary.
+   */
+  private static extractErrorMessage(data: any, httpStatus: number): string {
+    return (
+      data?.message ||
+      data?.error ||
+      data?.data?.message ||
+      (Array.isArray(data?.errors) ? data.errors.join('; ') : null) ||
+      (typeof data?.errors === 'string' ? data.errors : null) ||
+      `API request failed with status ${httpStatus}`
+    );
+  }
+
+  /**
    * Initiate mobile money collection
    */
   static async collectMobileMoney(params: {
@@ -160,10 +176,13 @@ export class MakyPayService {
       // Generate UUID v4 reference if not provided
       const uniqueReference = reference || this.generateUUID();
 
-      // Prepare form data
+      // Ensure amount is an integer (MakyPay expects whole UGX)
+      const intAmount = Math.round(amount);
+
+      // Prepare form data (per MakyPay API docs: application/x-www-form-urlencoded)
       const formData = new URLSearchParams();
       formData.append('phone_number', formattedPhone);
-      formData.append('amount', amount.toString());
+      formData.append('amount', intAmount.toString());
       formData.append('country', 'UG');
       formData.append('reference', uniqueReference);
       formData.append('description', description.substring(0, 255)); // Max 255 chars
@@ -174,8 +193,10 @@ export class MakyPayService {
 
       console.log('MakyPay Collection Request:', {
         phone: formattedPhone,
-        amount,
+        amount: intAmount,
+        provider,
         reference: uniqueReference,
+        body: formData.toString(),
       });
 
       const response = await fetch(`${this.BASE_URL}/collections/collect-money`, {
@@ -187,13 +208,25 @@ export class MakyPayService {
         body: formData.toString(),
       });
 
-      const data = await response.json();
-      console.log('MakyPay Collection Response:', data);
+      let data: any;
+      const responseText = await response.text();
+      try {
+        data = JSON.parse(responseText);
+      } catch {
+        console.error('MakyPay returned non-JSON response:', responseText.substring(0, 500));
+        throw new MakyPayException(`MakyPay returned invalid response (HTTP ${response.status})`);
+      }
+
+      console.log('MakyPay Collection Response:', JSON.stringify(data, null, 2));
 
       if (!response.ok || data.status !== 'success') {
-        throw new MakyPayException(
-          data.message || `Collection failed: ${response.status}`
-        );
+        const errorMsg = this.extractErrorMessage(data, response.status);
+        console.error('MakyPay Collection FAILED:', {
+          httpStatus: response.status,
+          fullResponse: JSON.stringify(data),
+          extractedError: errorMsg,
+        });
+        throw new MakyPayException(errorMsg);
       }
 
       const result: MakyPayCollectionResult = {
@@ -240,10 +273,11 @@ export class MakyPayService {
       }
 
       const uniqueReference = reference || this.generateUUID();
+      const intAmount = Math.round(amount);
 
       const formData = new URLSearchParams();
       formData.append('method', 'card');
-      formData.append('amount', amount.toString());
+      formData.append('amount', intAmount.toString());
       formData.append('country', 'UG');
       formData.append('reference', uniqueReference);
       formData.append('description', description.substring(0, 255));
@@ -251,6 +285,12 @@ export class MakyPayService {
       if (callbackUrl) {
         formData.append('callback_url', callbackUrl);
       }
+
+      console.log('MakyPay Card Collection Request:', {
+        amount: intAmount,
+        reference: uniqueReference,
+        body: formData.toString(),
+      });
 
       const response = await fetch(`${this.BASE_URL}/collections/collect-money`, {
         method: 'POST',
@@ -261,12 +301,25 @@ export class MakyPayService {
         body: formData.toString(),
       });
 
-      const data = await response.json();
+      let data: any;
+      const responseText = await response.text();
+      try {
+        data = JSON.parse(responseText);
+      } catch {
+        console.error('MakyPay Card returned non-JSON:', responseText.substring(0, 500));
+        throw new MakyPayException(`MakyPay returned invalid response (HTTP ${response.status})`);
+      }
+
+      console.log('MakyPay Card Collection Response:', JSON.stringify(data, null, 2));
 
       if (!response.ok || data.status !== 'success') {
-        throw new MakyPayException(
-          data.message || `Card collection failed: ${response.status}`
-        );
+        const errorMsg = this.extractErrorMessage(data, response.status);
+        console.error('MakyPay Card Collection FAILED:', {
+          httpStatus: response.status,
+          fullResponse: JSON.stringify(data),
+          extractedError: errorMsg,
+        });
+        throw new MakyPayException(errorMsg);
       }
 
       const result: MakyPayCardCollectionResult = {
