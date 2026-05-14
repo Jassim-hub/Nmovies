@@ -62,22 +62,22 @@ export const NetflixCard = ({ content, type, isNonTranslated = false }: NetflixC
             />
 
             {/* Badges container - LEFT SIDE */}
-            <div className="absolute top-2 left-2 flex flex-col gap-1 z-10">
-              <div className="bg-yellow-500 px-2 py-0.5 rounded text-[10px] font-bold text-black flex items-center gap-1 shadow-md w-fit">
-                <Star className="w-3 h-3 fill-black" />
+            <div className="absolute top-1 left-1 sm:top-2 sm:left-2 flex flex-col gap-0.5 sm:gap-1 z-10">
+              <div className="bg-yellow-500 px-1 sm:px-2 py-0.5 rounded text-[7px] sm:text-[10px] font-bold text-black flex items-center gap-0.5 shadow-md w-fit">
+                <Star className="w-2 h-2 sm:w-3 sm:h-3 fill-black" />
                 <span>{getRating()}</span>
               </div>
               {isPremium && (
-                <div className="bg-[#E50914] px-2 py-0.5 rounded text-[10px] font-bold text-white shadow-md flex items-center gap-1 w-fit uppercase tracking-wider">
+                <div className="bg-[#E50914] px-1 sm:px-2 py-0.5 rounded text-[6px] sm:text-[10px] font-bold text-white shadow-md flex items-center gap-0.5 w-fit uppercase tracking-wider">
                   <span>Premium</span>
                 </div>
               )}
             </div>
 
-            {/* VJ Tag - TOP RIGHT CORNER - SMALLER */}
+            {/* VJ Tag - TOP RIGHT CORNER */}
             {vjName && (
-              <div className="absolute top-1.5 right-1.5 z-10">
-                <div className="bg-[#E50914] px-1.5 py-0.5 rounded text-[8px] font-bold text-white shadow-lg uppercase tracking-wide">
+              <div className="absolute top-1 right-1 sm:top-1.5 sm:right-1.5 z-10">
+                <div className="bg-[#E50914] px-1 sm:px-1.5 py-0.5 rounded text-[6px] sm:text-[8px] font-bold text-white shadow-lg uppercase tracking-wide max-w-[60px] sm:max-w-none truncate">
                   {vjName}
                 </div>
               </div>
