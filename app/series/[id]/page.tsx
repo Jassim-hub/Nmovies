@@ -77,7 +77,7 @@ export default function SeriesDetailsPage() {
       try {
         // SECURITY: No video_url in client query
         const SERIES_DETAIL_COLS = `id, title, description, release_date, cover_image_url, thumbnail_url,
-          trailer_url, genre_ids, published, premium, created_at, vj_id, tmdb_id,
+          trailer_url, genre_ids, published, created_at, vj_id, tmdb_id,
           vjs:vj_id(id, name)`;
         const { data: seriesData, error } = await supabase
           .from('series')

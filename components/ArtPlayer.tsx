@@ -91,6 +91,9 @@ export function ArtPlayer({ url, poster, title, className, onEnded, episodes = [
         if (url.startsWith('encrypted://') || url.startsWith('auth://')) {
           const urlPath = url.split('://')[1]
           normalizedUrl = `/api/stream?url=${encodeURIComponent('https://' + urlPath)}`
+        } else if (url.startsWith('/')) {
+          // Relative API paths (e.g. /api/stream?url=...) — use as-is
+          normalizedUrl = url
         } else if (!url.startsWith('http://') && !url.startsWith('https://')) {
           normalizedUrl = `https://${url}`
         }
