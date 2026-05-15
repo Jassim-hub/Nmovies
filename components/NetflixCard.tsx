@@ -68,8 +68,8 @@ export const NetflixCard = ({ content, type, isNonTranslated = false }: NetflixC
                 <span>{getRating()}</span>
               </div>
               {isPremium && (
-                <div className="bg-[#d4a017] px-1 sm:px-2 py-0.5 rounded text-[6px] sm:text-[10px] font-bold text-black shadow-md flex items-center gap-0.5 w-fit uppercase tracking-wider">
-                  <Crown className="w-2 h-2 sm:w-3 sm:h-3 fill-current" />
+                <div className="bg-[#d4a017] px-0.5 sm:px-1 py-[1px] sm:py-[2px] rounded text-[3px] sm:text-[5px] font-bold text-black shadow-md flex items-center gap-px sm:gap-0.5 w-fit uppercase tracking-wider">
+                  <Crown className="w-1 h-1 sm:w-1.5 sm:h-1.5 fill-current" />
                   <span>Premium</span>
                 </div>
               )}

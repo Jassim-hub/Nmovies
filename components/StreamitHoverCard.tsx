@@ -84,9 +84,9 @@ function ExpandedCard({ content, rect, onMouseLeave, onMouseEnter }: { content: 
             )}
           </div>
           {(content.premium || content.is_premium) && (
-             <div className="bg-[#d4a017] px-2 py-1 rounded-full text-black shadow-md flex items-center gap-1">
-                <Crown className="w-3 h-3 fill-current" />
-                <span className="text-[10px] font-bold uppercase tracking-wider">Premium</span>
+             <div className="bg-[#d4a017] px-1 py-0.5 rounded-full text-black shadow-md flex items-center gap-0.5">
+                <Crown className="w-1.5 h-1.5 fill-current" />
+                <span className="text-[5px] font-bold uppercase tracking-wider">Premium</span>
              </div>
           )}
         </div>
