@@ -156,7 +156,7 @@ export default function Footer() {
         {/* Copyright */}
         <div className="text-center pt-8 border-t border-gray-800">
           <p className="text-gray-400 text-sm">
-            © {currentYear} NicholoMoviesUg: Revolutionize your Entertainment. All Rights Reserved.
+            © {currentYear} NicholMoviesUg: Revolutionize your Entertainment. All Rights Reserved.
           </p>
         </div>
       </div>

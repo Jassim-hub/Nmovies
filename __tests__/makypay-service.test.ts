@@ -78,6 +78,28 @@ afterEach(() => {
   delete process.env.MAKYPAY_API_SECRET;
 });
 
+/** Creates a mock fetch response where text() returns JSON stringified data */
+function mockFetchSuccess(data: any) {
+  const jsonStr = JSON.stringify(data);
+  return vi.fn().mockResolvedValue({
+    ok: true,
+    status: 200,
+    text: () => Promise.resolve(jsonStr),
+    json: () => Promise.resolve(data),
+  });
+}
+
+function mockFetchError(status: number, data: any) {
+  const jsonStr = JSON.stringify(data);
+  return vi.fn().mockResolvedValue({
+    ok: false,
+    status,
+    statusText: 'Error',
+    text: () => Promise.resolve(jsonStr),
+    json: () => Promise.resolve(data),
+  });
+}
+
 // ─── Phone Formatting (Service Layer) ───────────────────────────────────────
 
 describe('MakyPayService.formatPhoneNumber', () => {
@@ -105,14 +127,14 @@ describe('MakyPayService.getProviderFromPhone', () => {
     expect(MakyPayService.getProviderFromPhone('0771234567')).toBe('mtn');
   });
 
-  it('returns mtn for 079x (extended prefix)', async () => {
+  it('throws for unsupported 079x prefix', async () => {
     const { MakyPayService } = await loadServiceWithEnv({});
-    expect(MakyPayService.getProviderFromPhone('0791234567')).toBe('mtn');
+    expect(() => MakyPayService.getProviderFromPhone('0791234567')).toThrow('Unsupported');
   });
 
-  it('returns airtel for 073x', async () => {
+  it('throws for unsupported 073x prefix', async () => {
     const { MakyPayService } = await loadServiceWithEnv({});
-    expect(MakyPayService.getProviderFromPhone('0731234567')).toBe('airtel');
+    expect(() => MakyPayService.getProviderFromPhone('0731234567')).toThrow('Unsupported');
   });
 
   it('returns airtel for 075x', async () => {
@@ -160,19 +182,16 @@ describe('MakyPayService.collectMobileMoney — amount validation', () => {
     });
 
     // Mock fetch to return success
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({
-        status: 'success',
-        data: {
-          transaction: { uuid: 'tx-1', reference: 'ref-1', status: 'processing' },
-          collection: {
-            amount: { formatted: '500.00', raw: 500, currency: 'UGX' },
-            provider: 'mtn',
-            phone_number: '256771234567',
-          },
+    globalThis.fetch = mockFetchSuccess({
+      status: 'success',
+      data: {
+        transaction: { uuid: 'tx-1', reference: 'ref-1', status: 'processing' },
+        collection: {
+          amount: { formatted: '500.00', raw: 500, currency: 'UGX' },
+          provider: 'mtn',
+          phone_number: '256771234567',
         },
-      }),
+      },
     });
 
     const result = await MakyPayService.collectMobileMoney({
@@ -191,19 +210,16 @@ describe('MakyPayService.collectMobileMoney — amount validation', () => {
       MAKYPAY_BASE64_AUTH: 'dGVzdDp0ZXN0',
     });
 
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({
-        status: 'success',
-        data: {
-          transaction: { uuid: 'tx-1', reference: 'ref-1', status: 'processing' },
-          collection: {
-            amount: { formatted: '10,000,000.00', raw: 10_000_000, currency: 'UGX' },
-            provider: 'mtn',
-            phone_number: '256771234567',
-          },
+    globalThis.fetch = mockFetchSuccess({
+      status: 'success',
+      data: {
+        transaction: { uuid: 'tx-1', reference: 'ref-1', status: 'processing' },
+        collection: {
+          amount: { formatted: '10,000,000.00', raw: 10_000_000, currency: 'UGX' },
+          provider: 'mtn',
+          phone_number: '256771234567',
         },
-      }),
+      },
     });
 
     const result = await MakyPayService.collectMobileMoney({
@@ -283,19 +299,16 @@ describe('MakyPayService.collectMobileMoney — request construction', () => {
       MAKYPAY_BASE64_AUTH: 'dGVzdDp0ZXN0',
     });
 
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({
-        status: 'success',
-        data: {
-          transaction: { uuid: 'tx-1', reference: 'ref-1', status: 'processing' },
-          collection: {
-            amount: { formatted: '10,000.00', raw: 10000, currency: 'UGX' },
-            provider: 'mtn',
-            phone_number: '256771234567',
-          },
+    globalThis.fetch = mockFetchSuccess({
+      status: 'success',
+      data: {
+        transaction: { uuid: 'tx-1', reference: 'ref-1', status: 'processing' },
+        collection: {
+          amount: { formatted: '10,000.00', raw: 10000, currency: 'UGX' },
+          provider: 'mtn',
+          phone_number: '256771234567',
         },
-      }),
+      },
     });
 
     await MakyPayService.collectMobileMoney({
@@ -331,19 +344,16 @@ describe('MakyPayService.collectMobileMoney — request construction', () => {
       MAKYPAY_BASE64_AUTH: 'dGVzdDp0ZXN0',
     });
 
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({
-        status: 'success',
-        data: {
-          transaction: { uuid: 'tx-1', reference: 'ref-1', status: 'processing' },
-          collection: {
-            amount: { formatted: '1,000.00', raw: 1000, currency: 'UGX' },
-            provider: 'mtn',
-            phone_number: '256771234567',
-          },
+    globalThis.fetch = mockFetchSuccess({
+      status: 'success',
+      data: {
+        transaction: { uuid: 'tx-1', reference: 'ref-1', status: 'processing' },
+        collection: {
+          amount: { formatted: '1,000.00', raw: 1000, currency: 'UGX' },
+          provider: 'mtn',
+          phone_number: '256771234567',
         },
-      }),
+      },
     });
 
     const longDesc = 'A'.repeat(300);
@@ -367,19 +377,16 @@ describe('MakyPayService.collectCardPayment', () => {
       MAKYPAY_BASE64_AUTH: 'dGVzdDp0ZXN0',
     });
 
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({
-        status: 'success',
-        data: {
-          transaction: { uuid: 'tx-card-1', reference: 'ref-card-1', status: 'processing' },
-          redirect_url: 'https://payment-gateway.example.com/pay?ref=abc',
-          collection: {
-            amount: { formatted: '50,000.00', raw: 50000, currency: 'UGX' },
-            provider: 'card payments',
-          },
+    globalThis.fetch = mockFetchSuccess({
+      status: 'success',
+      data: {
+        transaction: { uuid: 'tx-card-1', reference: 'ref-card-1', status: 'processing' },
+        redirect_url: 'https://payment-gateway.example.com/pay?ref=abc',
+        collection: {
+          amount: { formatted: '50,000.00', raw: 50000, currency: 'UGX' },
+          provider: 'card payments',
         },
-      }),
+      },
     });
 
     const result = await MakyPayService.collectCardPayment({
@@ -527,12 +534,9 @@ describe('Error handling', () => {
       MAKYPAY_BASE64_AUTH: 'dGVzdDp0ZXN0',
     });
 
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({
-        status: 'error',
-        message: 'Insufficient balance',
-      }),
+    globalThis.fetch = mockFetchSuccess({
+      status: 'error',
+      message: 'Insufficient balance',
     });
 
     await expect(
@@ -564,19 +568,16 @@ describe('UUID v4 generation', () => {
       MAKYPAY_BASE64_AUTH: 'dGVzdDp0ZXN0',
     });
 
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({
-        status: 'success',
-        data: {
-          transaction: { uuid: 'tx-1', reference: 'ref-1', status: 'processing' },
-          collection: {
-            amount: { formatted: '1,000.00', raw: 1000, currency: 'UGX' },
-            provider: 'mtn',
-            phone_number: '256771234567',
-          },
+    globalThis.fetch = mockFetchSuccess({
+      status: 'success',
+      data: {
+        transaction: { uuid: 'tx-1', reference: 'ref-1', status: 'processing' },
+        collection: {
+          amount: { formatted: '1,000.00', raw: 1000, currency: 'UGX' },
+          provider: 'mtn',
+          phone_number: '256771234567',
         },
-      }),
+      },
     });
 
     await MakyPayService.collectMobileMoney({
@@ -601,19 +602,16 @@ describe('UUID v4 generation', () => {
     });
 
     const customRef = '123e4567-e89b-12d3-a456-426614174000';
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({
-        status: 'success',
-        data: {
-          transaction: { uuid: 'tx-1', reference: customRef, status: 'processing' },
-          collection: {
-            amount: { formatted: '1,000.00', raw: 1000, currency: 'UGX' },
-            provider: 'mtn',
-            phone_number: '256771234567',
-          },
+    globalThis.fetch = mockFetchSuccess({
+      status: 'success',
+      data: {
+        transaction: { uuid: 'tx-1', reference: customRef, status: 'processing' },
+        collection: {
+          amount: { formatted: '1,000.00', raw: 1000, currency: 'UGX' },
+          provider: 'mtn',
+          phone_number: '256771234567',
         },
-      }),
+      },
     });
 
     await MakyPayService.collectMobileMoney({

@@ -9,11 +9,9 @@ export async function GET(request: NextRequest) {
   const type = requestUrl.searchParams.get("type");
 
   console.log("Auth callback received:", {
-    code: code?.substring(0, 10) + "...",
+    hasCode: !!code,
     error,
-    errorDescription,
     type,
-    fullUrl: request.url,
   });
 
   if (error) {

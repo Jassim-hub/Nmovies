@@ -32,30 +32,9 @@ export default function PlayerContent() {
   const { user, loading: authLoading, isPremium } = useAuth();
   const { checkAuth } = useAuthCheck();
 
-  // Preload next episode for faster switching
+  // Preloading disabled — video URLs are now fetched securely on-demand
   const preloadNextEpisode = useCallback(() => {
-    if (currentEpisodeIndex >= 0 && currentEpisodeIndex < allEpisodes.length - 1) {
-      const nextEpisode = allEpisodes[currentEpisodeIndex + 1];
-      if (nextEpisode?.video_url) {
-        // Create a hidden video element to preload the next episode
-        const preloadVideo = document.createElement('video');
-        preloadVideo.preload = 'metadata';
-
-        // Preload next episode directly
-        let preloadUrl = nextEpisode.video_url;
-        const normalizedUrl = normalizeVideoUrl(preloadUrl);
-        preloadVideo.src = preloadUrl;
-        preloadVideo.style.display = 'none';
-        document.body.appendChild(preloadVideo);
-
-        // Remove after a short delay to free up memory
-        setTimeout(() => {
-          if (document.body.contains(preloadVideo)) {
-            document.body.removeChild(preloadVideo);
-          }
-        }, 30000); // 30 seconds
-      }
-    }
+    // No-op: video URLs are no longer stored client-side
   }, [currentEpisodeIndex, allEpisodes]);
 
   useEffect(() => {
@@ -89,15 +68,14 @@ export default function PlayerContent() {
       }
 
       try {
-        let videoUrl = '';
         let contentTitle = '';
         let contentInfo: any = null;
 
         if (contentType === 'movie') {
-          // Fetch movie video URL
+          // Fetch movie display data only (NO video_url)
           const { data: movie, error } = await supabase
             .from('movies')
-            .select('id, title, video_url, published, premium')
+            .select('id, title, published, premium')
             .eq('id', contentId)
             .eq('published', true)
             .single();
@@ -107,7 +85,6 @@ export default function PlayerContent() {
           }
 
           contentInfo = movie;
-          videoUrl = movie.video_url;
           contentTitle = movie.title;
 
         } else if (contentType === 'series') {
@@ -115,13 +92,12 @@ export default function PlayerContent() {
             throw new Error('Episode ID required for series streaming');
           }
 
-          // First, fetch the episode
+          // Fetch episode display data (NO video_url)
           const { data: episode, error: episodeError } = await supabase
             .from('episodes')
             .select(`
               id,
               title,
-              video_url,
               published,
               premium,
               episode_number,
@@ -133,7 +109,6 @@ export default function PlayerContent() {
 
           if (episodeError || !episode) {
             console.error('Episode fetch error:', episodeError);
-            console.error('Episode ID:', episodeId);
             throw new Error('Episode not found or not published');
           }
 
@@ -169,7 +144,6 @@ export default function PlayerContent() {
           }
 
           contentInfo = episode;
-          videoUrl = episode.video_url;
           contentTitle = `${seriesData?.title || 'Series'} - ${season?.name || 'Season'} - ${episode.title}`;
 
           // Store series ID for episode navigation
@@ -194,14 +168,31 @@ export default function PlayerContent() {
           return;
         }
 
-        if (!videoUrl) {
+        // SECURITY: Fetch video URL from secure server-side API
+        const session = await supabase.auth.getSession();
+        const accessToken = session.data.session?.access_token;
+        if (!accessToken) {
+          setShowAuthModal(true);
+          setLoading(false);
+          return;
+        }
+
+        const videoType = contentType === 'movie' ? 'movie' : 'episode';
+        const videoId = contentType === 'movie' ? contentId : episodeId;
+        const videoRes = await fetch(`/api/get-video-url?id=${videoId}&type=${videoType}`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+
+        if (!videoRes.ok) {
+          throw new Error('Failed to load video');
+        }
+
+        const videoData = await videoRes.json();
+        if (!videoData.streamUrl) {
           throw new Error('No video URL available');
         }
 
-        // Use video URL directly
-        const normalizedUrl = normalizeVideoUrl(videoUrl);
-        console.log('🎬 PlayerContent URL:', normalizedUrl);
-        setStreamUrl(normalizedUrl);
+        setStreamUrl(videoData.streamUrl);
         setTitle(contentTitle);
         setLoading(false);
 
@@ -232,7 +223,6 @@ export default function PlayerContent() {
 
       if (seasonsError) {
         console.error('Error fetching seasons for navigation:', seasonsError);
-        console.error('Series ID:', seriesId);
         return;
       }
 
@@ -247,7 +237,6 @@ export default function PlayerContent() {
           .select(`
             id,
             title,
-            video_url,
             published,
             premium,
             episode_number,
@@ -277,7 +266,7 @@ export default function PlayerContent() {
       seasonsWithEpisodes.forEach(season => {
         if (season.episodes) {
           season.episodes
-            .filter((ep: any) => ep.published && ep.video_url)
+            .filter((ep: any) => ep.published)
             .forEach((episode: any) => {
               const episodeWithSeason: EpisodeWithSeason = {
                 ...episode,
@@ -315,27 +304,42 @@ export default function PlayerContent() {
         return;
       }
 
-      if (!episode.video_url) {
-        setError('This episode is not available for watching');
-        setSwitchingEpisode(false);
-        return;
-      }
-
       // Update URL without navigation
       const newUrl = `/player?id=${seriesId || contentId}&type=series&episodeId=${episode.id}`;
       window.history.replaceState({}, '', newUrl);
 
-      // Process video URL directly
-      let videoUrl = episode.video_url;
-      const normalizedUrl = normalizeVideoUrl(videoUrl);
-      console.log('🔄 Switching episode with direct URL');
+      // SECURITY: Fetch video URL from secure API
+      const session = await supabase.auth.getSession();
+      const accessToken = session.data.session?.access_token;
+      if (!accessToken) {
+        setShowAuthModal(true);
+        setSwitchingEpisode(false);
+        return;
+      }
+
+      const videoRes = await fetch(`/api/get-video-url?id=${episode.id}&type=episode`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+
+      if (!videoRes.ok) {
+        setError('Failed to load episode');
+        setSwitchingEpisode(false);
+        return;
+      }
+
+      const videoData = await videoRes.json();
+      if (!videoData.streamUrl) {
+        setError('This episode is not available for watching');
+        setSwitchingEpisode(false);
+        return;
+      }
 
       // Update current episode index
       const newIndex = allEpisodes.findIndex(ep => ep.id === episode.id);
       setCurrentEpisodeIndex(newIndex);
 
       // Update stream URL and title
-      setStreamUrl(videoUrl);
+      setStreamUrl(videoData.streamUrl);
       setTitle(`${contentData?.title || 'Series'} - ${episode.seasonName} - ${episode.title}`);
       setSwitchingEpisode(false);
 
@@ -393,17 +397,13 @@ export default function PlayerContent() {
   };
 
   const handleVideoError = (error: any) => {
-    console.error('Video player error:', error);
-    console.error('Stream URL:', streamUrl);
-    console.error('Content ID:', contentId);
+    console.error('Video player error:', error?.message || 'Unknown');
     console.error('Content Type:', contentType);
-    console.error('Episode ID:', episodeId);
     setError('Failed to play video. Check console for details.');
   };
 
   const handleVideoLoad = () => {
     console.log('Video loaded successfully');
-    console.log('Stream URL:', streamUrl);
     setError(null);
   };
 

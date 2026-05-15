@@ -87,12 +87,10 @@ export function ArtPlayer({ url, poster, title, className, onEnded, episodes = [
         // Process URL - use direct URLs without proxy
         let normalizedUrl = url
         
-        // Handle encrypted/authenticated URLs
+        // Handle encrypted/authenticated URLs — route through server proxy
         if (url.startsWith('encrypted://') || url.startsWith('auth://')) {
           const urlPath = url.split('://')[1]
-          const username = process.env.NEXT_PUBLIC_CADDY_USERNAME || "mat"
-          const password = process.env.NEXT_PUBLIC_CADDY_PASSWORD || "MatTh3pAR"
-          normalizedUrl = `https://${username}:${password}@${urlPath}`
+          normalizedUrl = `/api/stream?url=${encodeURIComponent('https://' + urlPath)}`
         } else if (!url.startsWith('http://') && !url.startsWith('https://')) {
           normalizedUrl = `https://${url}`
         }
@@ -127,8 +125,8 @@ export function ArtPlayer({ url, poster, title, className, onEnded, episodes = [
       return
     }
 
-    console.log('Initializing ArtPlayer with URL:', authenticatedUrl)
-    console.log('Previous URL was:', currentUrl)
+    console.log('Initializing ArtPlayer with new source')
+    console.log('URL changed from previous')
 
     // Always destroy the previous player when URL changes
     if (playerRef.current) {
@@ -194,7 +192,7 @@ export function ArtPlayer({ url, poster, title, className, onEnded, episodes = [
 
     // Add error handling
     art.on('error', (error) => {
-      console.error('ArtPlayer error:', { error, url: authenticatedUrl })
+      console.error('ArtPlayer playback error')
     })
 
     art.on('ready', () => {

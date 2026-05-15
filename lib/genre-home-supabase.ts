@@ -15,10 +15,13 @@ export async function getGenreRowsForHomeSupabase(limit = 20) {
   // For each genre, fetch movies and series that belong to it
   const genreRows = await Promise.all(
     genres.data.map(async (genre: Genre) => {
+      const MOVIE_SAFE_COLS = `id, title, description, release_date, thumbnail_url, cover_image_url, duration, premium, created_at, genre_ids, vj_id, vjs:vj_id (id, name)`;
+      const SERIES_SAFE_COLS = `id, title, description, release_date, thumbnail_url, cover_image_url, published, created_at, genre_ids, vj_id, vjs:vj_id (id, name)`;
+
       // Movies
       const { data: movies } = await supabase
         .from('movies')
-        .select(`*, vjs:vj_id (id, name)`)
+        .select(MOVIE_SAFE_COLS)
         .eq('published', true)
         .not('video_url', 'is', null)
         .contains('genre_ids', [genre.id])
@@ -28,7 +31,7 @@ export async function getGenreRowsForHomeSupabase(limit = 20) {
       // Series
       const { data: series } = await supabase
         .from('series')
-        .select(`*, vjs:vj_id (id, name)`)
+        .select(SERIES_SAFE_COLS)
         .eq('published', true)
         .contains('genre_ids', [genre.id])
         .order('created_at', { ascending: false })

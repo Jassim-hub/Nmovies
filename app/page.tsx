@@ -111,8 +111,10 @@ export default function HomePage() {
         return;
       }
       try {
-        const { data: movies } = await supabase.from('movies').select('*, vjs(name)').in('id', watchlist);
-        const { data: series } = await supabase.from('series').select('*, vjs(name)').in('id', watchlist);
+        const MOVIE_SAFE_COLS = `id, title, description, release_date, thumbnail_url, cover_image_url, premium, created_at, genre_ids, vj_id, vjs:vj_id(id, name)`;
+        const SERIES_SAFE_COLS = `id, title, description, release_date, thumbnail_url, cover_image_url, published, created_at, genre_ids, vj_id, vjs:vj_id(id, name)`;
+        const { data: movies } = await supabase.from('movies').select(MOVIE_SAFE_COLS).in('id', watchlist);
+        const { data: series } = await supabase.from('series').select(SERIES_SAFE_COLS).in('id', watchlist);
         
         const combined = [
           ...(movies || []).map(m => ({ ...m, type: 'movie' })),

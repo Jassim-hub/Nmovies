@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Movie, Series } from "@/lib/supabase";
-import { Play, Star } from "lucide-react";
+import { Play, Star, Crown } from "lucide-react";
 import React from "react";
 
 // Streamit-style card component for both movies and series
@@ -44,7 +44,7 @@ export const NetflixCard = ({ content, type, isNonTranslated = false }: NetflixC
     <div className="group relative block w-full bg-[#141414]">
       <Link href={getHref()} className="block relative h-full">
         <div className="cursor-pointer transition-all duration-300">
-          <div className="aspect-[2/3] relative rounded-md overflow-hidden bg-[#141414] border-[2px] border-transparent transition-all duration-300 group-hover:border-[#E50914] mb-2 group-hover:shadow-[0_0_15px_rgba(229,9,20,0.4)]">
+          <div className="aspect-[2/3] relative rounded-md overflow-hidden bg-[#141414] border-[2px] border-transparent transition-all duration-300 group-hover:border-[#E50914] mb-2">
             <Image
               src={
                 content.thumbnail_url ||
@@ -68,7 +68,8 @@ export const NetflixCard = ({ content, type, isNonTranslated = false }: NetflixC
                 <span>{getRating()}</span>
               </div>
               {isPremium && (
-                <div className="bg-[#E50914] px-1 sm:px-2 py-0.5 rounded text-[6px] sm:text-[10px] font-bold text-white shadow-md flex items-center gap-0.5 w-fit uppercase tracking-wider">
+                <div className="bg-[#d4a017] px-1 sm:px-2 py-0.5 rounded text-[6px] sm:text-[10px] font-bold text-black shadow-md flex items-center gap-0.5 w-fit uppercase tracking-wider">
+                  <Crown className="w-2 h-2 sm:w-3 sm:h-3 fill-current" />
                   <span>Premium</span>
                 </div>
               )}

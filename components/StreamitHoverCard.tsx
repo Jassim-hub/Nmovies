@@ -14,7 +14,8 @@ interface HoverCardProps {
 function ExpandedCard({ content, rect, onMouseLeave, onMouseEnter }: { content: any, rect: DOMRect, onMouseLeave: () => void, onMouseEnter: () => void }) {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
-  const expandedWidth = 280; // Reduced from 340 to 280
+  const [videoFailed, setVideoFailed] = useState(false);
+  const expandedWidth = 280;
   
   useEffect(() => {
     // trigger animation frame for scale-in effect
@@ -48,7 +49,7 @@ function ExpandedCard({ content, rect, onMouseLeave, onMouseEnter }: { content: 
     >
       {/* Top half: Media - INCREASED HEIGHT */}
       <div className="relative w-full aspect-[4/3] bg-black group cursor-pointer" onClick={() => router.push(navUrl)}>
-        {videoUrl ? (
+        {videoUrl && !videoFailed ? (
           <video 
             src={videoUrl}
             autoPlay 
@@ -56,15 +57,18 @@ function ExpandedCard({ content, rect, onMouseLeave, onMouseEnter }: { content: 
             loop 
             playsInline
             className="w-full h-full object-cover"
+            onError={() => setVideoFailed(true)}
           />
         ) : (
           <Image src={coverUrl} alt={content.title || "Cover"} fill className="object-cover" />
         )}
         
-        {/* Unmute text (top right) */}
-        <div className="absolute top-3 right-3 text-white/80 text-[10px] font-semibold tracking-widest uppercase hover:text-[#E50914] transition-colors bg-black/40 px-2 py-1 rounded z-10">
-          Unmute
-        </div>
+        {/* Unmute text (top right) - only when video is playing */}
+        {videoUrl && !videoFailed && (
+          <div className="absolute top-3 right-3 text-white/80 text-[10px] font-semibold tracking-widest uppercase hover:text-[#E50914] transition-colors bg-black/40 px-2 py-1 rounded z-10">
+            Unmute
+          </div>
+        )}
 
         {/* Rating & Premium Badges (bottom) */}
         <div className="absolute bottom-3 left-3 flex items-center gap-2 w-[calc(100%-24px)] justify-between z-10">
@@ -80,7 +84,7 @@ function ExpandedCard({ content, rect, onMouseLeave, onMouseEnter }: { content: 
             )}
           </div>
           {(content.premium || content.is_premium) && (
-             <div className="bg-[#E50914] px-2 py-1 rounded-full text-white shadow-md flex items-center gap-1">
+             <div className="bg-[#d4a017] px-2 py-1 rounded-full text-black shadow-md flex items-center gap-1">
                 <Crown className="w-3 h-3 fill-current" />
                 <span className="text-[10px] font-bold uppercase tracking-wider">Premium</span>
              </div>

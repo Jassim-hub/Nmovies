@@ -7,20 +7,26 @@ const normalizeVjs = (item: any) => ({
   vjs: Array.isArray(item.vjs) ? item.vjs[0] || null : item.vjs || null
 });
 
-// Simple series select (no inner joins - shows series even without episodes)
-const SERIES_SELECT = `
-  *,
-  vjs:vj_id (
-    id,
-    name
-  )
+// SECURITY: Display-only columns — NEVER include video_url, videolink_url, or trailer_url
+// in client-side listing queries. Video URLs are fetched server-side on playback.
+const MOVIE_DISPLAY_COLS = `
+  id, title, description, release_date, thumbnail_url, cover_image_url,
+  duration, premium, created_at, recommend, popular, latest, tmdb_id,
+  genre_ids, vj_id,
+  vjs:vj_id (id, name)
+`;
+
+const SERIES_DISPLAY_COLS = `
+  id, title, description, release_date, thumbnail_url, cover_image_url,
+  published, created_at, tmdb_id, genre_ids, vj_id,
+  vjs:vj_id (id, name)
 `;
 
 // Movies API
 export async function getMovies(limit = 20) {
   const { data, error } = await supabase
     .from('movies')
-    .select(`*, vjs:vj_id (id, name)`)
+    .select(MOVIE_DISPLAY_COLS)
     .eq('published', true)
     .not('video_url', 'is', null)
     .order('created_at', { ascending: false })
@@ -33,7 +39,7 @@ export async function getMovies(limit = 20) {
 export async function getFeaturedMovie() {
   const { data, error } = await supabase
     .from('movies')
-    .select(`*, vjs:vj_id (id, name)`)
+    .select(MOVIE_DISPLAY_COLS)
     .eq('published', true)
     .eq('recommend', true)
     .not('video_url', 'is', null)
@@ -48,11 +54,7 @@ export async function getFeaturedMovie() {
 export async function getPopularMovies(limit = 6) {
   const { data, error } = await supabase
     .from('movies')
-    .select(`
-      id, title, description, release_date, thumbnail_url, cover_image_url, duration, premium, created_at,
-      video_url, videolink_url, trailer_url,
-      vjs:vj_id (id, name)
-    `)
+    .select(MOVIE_DISPLAY_COLS)
     .eq('published', true)
     .eq('popular', true)
     .not('video_url', 'is', null)
@@ -67,7 +69,7 @@ export async function getPopularMovies(limit = 6) {
 export async function getSeries(limit = 20) {
   const { data, error } = await supabase
     .from('series')
-    .select(SERIES_SELECT)
+    .select(SERIES_DISPLAY_COLS)
     .eq('published', true)
     .order('created_at', { ascending: false })
     .limit(limit)
@@ -79,7 +81,7 @@ export async function getSeries(limit = 20) {
 export async function getTranslatedMovies(limit = 6) {
   const { data, error } = await supabase
     .from('movies')
-    .select(`*, vjs:vj_id (id, name)`)
+    .select(MOVIE_DISPLAY_COLS)
     .eq('published', true)
     .is('vj_id', null)
     .not('video_url', 'is', null)
@@ -93,7 +95,7 @@ export async function getTranslatedMovies(limit = 6) {
 export async function getTranslatedSeries(limit = 6) {
   const { data, error } = await supabase
     .from('series')
-    .select(SERIES_SELECT)
+    .select(SERIES_DISPLAY_COLS)
     .eq('published', true)
     .is('vj_id', null)
     .order('created_at', { ascending: false })
@@ -118,11 +120,7 @@ export async function getTranslatedContent(limit = 12) {
 export async function getVJMovies(limit = 6) {
   const { data, error } = await supabase
     .from('movies')
-    .select(`
-      id, title, description, release_date, thumbnail_url, cover_image_url, duration, created_at,
-      published, premium, recommend, popular, latest, video_url, videolink_url, trailer_url,
-      vjs:vj_id (id, name)
-    `)
+    .select(MOVIE_DISPLAY_COLS)
     .eq('published', true)
     .not('vj_id', 'is', null)
     .not('video_url', 'is', null)
@@ -136,7 +134,7 @@ export async function getVJMovies(limit = 6) {
 export async function getVJSeries(limit = 6) {
   const { data, error } = await supabase
     .from('series')
-    .select(SERIES_SELECT)
+    .select(SERIES_DISPLAY_COLS)
     .eq('published', true)
     .not('vj_id', 'is', null)
     .order('created_at', { ascending: false })
@@ -173,7 +171,7 @@ export async function getGenres() {
 export async function searchMovies(query: string, limit = 20) {
   const { data, error } = await supabase
     .from('movies')
-    .select(`*, vjs:vj_id (id, name)`)
+    .select(MOVIE_DISPLAY_COLS)
     .eq('published', true)
     .not('video_url', 'is', null)
     .ilike('title', `%${query}%`)
@@ -187,7 +185,7 @@ export async function searchMovies(query: string, limit = 20) {
 export async function searchSeries(query: string, limit = 20) {
   const { data, error } = await supabase
     .from('series')
-    .select(SERIES_SELECT)
+    .select(SERIES_DISPLAY_COLS)
     .eq('published', true)
     .ilike('title', `%${query}%`)
     .order('created_at', { ascending: false })
@@ -201,7 +199,7 @@ export async function searchSeries(query: string, limit = 20) {
 export async function getRelatedMoviesByGenre(movieId: string, genreIds: string[], limit = 6) {
   const { data, error } = await supabase
     .from('movies')
-    .select(`*, vjs:vj_id (id, name)`)
+    .select(MOVIE_DISPLAY_COLS)
     .eq('published', true)
     .not('video_url', 'is', null)
     .neq('id', movieId)
@@ -216,7 +214,7 @@ export async function getRelatedMoviesByGenre(movieId: string, genreIds: string[
 export async function getRelatedSeriesByGenre(seriesId: string, genreIds: string[], limit = 6) {
   const { data, error } = await supabase
     .from('series')
-    .select(SERIES_SELECT)
+    .select(SERIES_DISPLAY_COLS)
     .eq('published', true)
     .neq('id', seriesId)
     .overlaps('genre_ids', genreIds)
@@ -231,7 +229,7 @@ export async function getRelatedSeriesByGenre(seriesId: string, genreIds: string
 export async function getKilaxExclusiveMovies(limit = 6) {
   const { data, error } = await supabase
     .from('movies')
-    .select(`*, vjs:vj_id (id, name)`)
+    .select(MOVIE_DISPLAY_COLS)
     .eq('published', true)
     .eq('exclusive_from_kilax_movies', true)
     .not('video_url', 'is', null)
@@ -245,7 +243,7 @@ export async function getKilaxExclusiveMovies(limit = 6) {
 export async function getKilaxExclusiveSeries(limit = 6) {
   const { data, error } = await supabase
     .from('series')
-    .select(SERIES_SELECT)
+    .select(SERIES_DISPLAY_COLS)
     .eq('published', true)
     .eq('exclusive_from_kilax', true)
     .order('created_at', { ascending: false })
@@ -271,7 +269,7 @@ export async function getKilaxExclusiveContent(limit = 12) {
 export async function getMoviesByCategory(category: string, limit = 20) {
   const { data, error } = await supabase
     .from('movies')
-    .select(`*, vjs:vj_id (id, name)`)
+    .select(MOVIE_DISPLAY_COLS)
     .eq('published', true)
     .not('video_url', 'is', null)
     .eq('category', category)
@@ -285,7 +283,7 @@ export async function getMoviesByCategory(category: string, limit = 20) {
 export async function getSeriesByCategory(category: string, limit = 20) {
   const { data, error } = await supabase
     .from('series')
-    .select(SERIES_SELECT)
+    .select(SERIES_DISPLAY_COLS)
     .eq('published', true)
     .eq('category', category)
     .order('created_at', { ascending: false })

@@ -11,34 +11,36 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Video URL is required' }, { status: 400 });
     }
 
-    console.log('Stream API: Processing URL:', videoUrl);
+    // Don't log full URLs in production
+    console.log('Stream API: Processing video request');
 
-    // Use consistent environment variables with components
-    const username = process.env.NEXT_PUBLIC_CADDY_USERNAME || process.env.CADDY_USERNAME || "mat";
-    const password = process.env.NEXT_PUBLIC_CADDY_PASSWORD || process.env.CADDY_PASSWORD || "MatTh3pAR";
-    const encodedCredentials = btoa(`${username}:${password}`);
+    // Server-side only — credentials come from environment when available
+    const username = process.env.CADDY_USERNAME || process.env.VIDEO_AUTH_USERNAME;
+    const password = process.env.CADDY_PASSWORD || process.env.VIDEO_AUTH_PASSWORD;
 
     const range = request.headers.get('range');
-    const upstreamHeaders: Record<string, string> = {
-      'Authorization': `Basic ${encodedCredentials}`
-    };
+    const upstreamHeaders: Record<string, string> = {};
+
+    // Add Basic Auth if credentials are configured
+    if (username && password) {
+      const encodedCredentials = btoa(`${username}:${password}`);
+      upstreamHeaders['Authorization'] = `Basic ${encodedCredentials}`;
+    }
 
     if (range) {
       upstreamHeaders['Range'] = range;
     }
 
-    console.log('Stream API: Fetching from upstream with auth');
+    console.log('Stream API: Fetching from upstream', username ? 'with auth' : 'without auth');
     const videoResponse = await fetch(videoUrl, {
       headers: upstreamHeaders
     });
 
     if (!videoResponse.ok) {
-      console.error('Stream API: Upstream fetch failed:', videoResponse.status, videoResponse.statusText);
+      console.error('Stream API: Upstream fetch failed:', videoResponse.status);
       return NextResponse.json({
         error: 'Video fetch failed',
         status: videoResponse.status,
-        statusText: videoResponse.statusText,
-        url: videoUrl
       }, { status: videoResponse.status });
     }
 
@@ -91,8 +93,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Stream API: Internal error:', error);
     return NextResponse.json({ 
-      error: 'Internal server error',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Internal server error'
     }, { status: 500 });
   }
 }

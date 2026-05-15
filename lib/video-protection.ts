@@ -9,8 +9,7 @@
 
 import { createHash, randomBytes } from 'crypto';
 
-// Secret key for signing tokens (should be in environment variables)
-// TEMPORARILY DISABLED - Set to empty string to allow development without VIDEO_SECRET
+// Secret key for signing tokens — MUST be set in production via VIDEO_SECRET env var
 const VIDEO_SECRET = process.env.VIDEO_SECRET || '';
 
 // Token expiration time (in seconds)
@@ -207,18 +206,13 @@ export function getClientIp(headers: Headers): string {
 /**
  * Middleware function to protect video endpoints
  * Use this in your API routes that serve video content
- * TEMPORARILY DISABLED - Returns allowed: true for development
+ * Enforces referrer checking, rate limiting, and optional token verification.
  */
 export async function protectVideoEndpoint(request: Request): Promise<{
   allowed: boolean;
   error?: string;
   userId?: string;
 }> {
-  // TEMPORARILY DISABLED FOR DEVELOPMENT
-  // Remove this return statement to re-enable protection
-  return { allowed: true };
-  
-  /* ORIGINAL PROTECTION CODE - COMMENTED OUT
   const headers = request.headers;
   const url = new URL(request.url);
   
@@ -235,22 +229,23 @@ export async function protectVideoEndpoint(request: Request): Promise<{
     return { allowed: false, error: 'Rate limit exceeded' };
   }
   
-  // 3. Verify token
+  // 3. Token verification is optional — the /api/stream route 
+  //    already requires server-side credentials. Token adds defense-in-depth.
   const token = url.searchParams.get('token');
-  if (!token) {
-    return { allowed: false, error: 'Missing token' };
+  if (token) {
+    const verification = verifyVideoToken(token);
+    if (!verification.valid) {
+      return { allowed: false, error: verification.error };
+    }
+    return {
+      allowed: true,
+      userId: verification.payload?.userId,
+    };
   }
-  
-  const verification = verifyVideoToken(token);
-  if (!verification.valid) {
-    return { allowed: false, error: verification.error };
-  }
-  
-  return {
-    allowed: true,
-    userId: verification.payload?.userId,
-  };
-  */
+
+  // Allow requests without token if referrer and rate limit pass
+  // (needed for /api/stream proxy which is already auth-gated)
+  return { allowed: true };
 }
 
 /**

@@ -71,10 +71,13 @@ export default function MovieDetailsPage() {
         return;
       }
 
-      // 1. Fetch movie data
+      // 1. Fetch movie display data (SECURITY: no video_url in client query)
+      const MOVIE_DETAIL_COLS = `id, title, description, release_date, cover_image_url, thumbnail_url,
+        trailer_url, genre_ids, duration, published, premium, created_at, recommend, popular,
+        latest, vj_id, tmdb_id, vjs(name)`;
       const { data, error } = await supabase
         .from("movies")
-        .select("*, vjs(name)")
+        .select(MOVIE_DETAIL_COLS)
         .eq("id", params.id)
         .single();
 
@@ -85,6 +88,17 @@ export default function MovieDetailsPage() {
       }
 
       setMovie(data);
+
+      // Track view (fire-and-forget)
+      fetch('/api/track-view', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contentId: params.id,
+          contentType: 'movie',
+          userId: user?.id || null,
+        }),
+      }).catch(() => {}); // silently ignore errors
 
       // 2. Determine Video Player State based on Auth
       const authResult = checkAuth(data.premium);
@@ -97,13 +111,31 @@ export default function MovieDetailsPage() {
             setIsPlayingTrailer(true);
          }
       } else {
-         // Has rights: Play Trailer first (if available), then movie
+         // Has rights: Play Trailer first (if available), then fetch secure video URL
          if (data.trailer_url) {
             setStreamUrl(normalizeVideoUrl(data.trailer_url));
             setIsPlayingTrailer(true);
-         } else if (data.video_url || data.videolink_url) {
-            setStreamUrl(normalizeVideoUrl(data.video_url || data.videolink_url));
-            setIsPlayingTrailer(false);
+         }
+         // Fetch the actual video URL from the secure server-side endpoint
+         try {
+           const session = await supabase.auth.getSession();
+           const accessToken = session.data.session?.access_token;
+           if (accessToken) {
+             const videoRes = await fetch(`/api/get-video-url?id=${params.id}&type=movie`, {
+               headers: { Authorization: `Bearer ${accessToken}` },
+             });
+             if (videoRes.ok) {
+               const videoData = await videoRes.json();
+               if (!data.trailer_url && videoData.streamUrl) {
+                 setStreamUrl(videoData.streamUrl);
+                 setIsPlayingTrailer(false);
+               }
+               // Store the secure stream URL on the movie object for download/skip
+               data._secureStreamUrl = videoData.streamUrl;
+             }
+           }
+         } catch (e) {
+           console.error('Failed to fetch secure video URL');
          }
       }
 
@@ -116,13 +148,15 @@ export default function MovieDetailsPage() {
           supabase.from('genres').select('*').in('id', data.genre_ids)
             .then(({ data: genreData }) => setGenres(genreData || []))
         );
+        const RELATED_MOVIE_COLS = `id, title, description, release_date, thumbnail_url, cover_image_url, premium, created_at, genre_ids, vj_id, vjs(name)`;
+        const RELATED_SERIES_COLS = `id, title, description, release_date, thumbnail_url, cover_image_url, published, created_at, genre_ids, vj_id, vjs(name)`;
         promises.push(
-          supabase.from("movies").select("*, vjs(name)").neq("id", params.id)
+          supabase.from("movies").select(RELATED_MOVIE_COLS).neq("id", params.id)
             .overlaps("genre_ids", data.genre_ids).order("created_at", { ascending: false }).limit(6)
             .then(({ data: relatedMovies }) => setRelated(relatedMovies || []))
         );
         promises.push(
-          supabase.from("series").select("*, vjs(name)")
+          supabase.from("series").select(RELATED_SERIES_COLS)
             .overlaps("genre_ids", data.genre_ids).order("created_at", { ascending: false }).limit(6)
             .then(({ data: relatedSeriesData }) => setRelatedSeries(relatedSeriesData || []))
         );
@@ -138,7 +172,7 @@ export default function MovieDetailsPage() {
     fetchCriticalData();
   }, [params.id, user, isPremium]);
 
-  const handleSkipTrailer = useCallback(() => {
+  const handleSkipTrailer = useCallback(async () => {
      // Gate access the same way Watch Now does
      if (!hasRights) {
         const authResult = checkAuth(movie?.premium ?? false);
@@ -152,10 +186,30 @@ export default function MovieDetailsPage() {
         return;
      }
      if (movie) {
-        const url = movie.video_url || movie.videolink_url;
-        if (url) {
+        // Use stored secure URL, or fetch it fresh
+        if ((movie as any)._secureStreamUrl) {
            setIsPlayingTrailer(false);
-           setStreamUrl(normalizeVideoUrl(url));
+           setStreamUrl((movie as any)._secureStreamUrl);
+        } else {
+           // Fetch from secure API
+           try {
+             const session = await supabase.auth.getSession();
+             const accessToken = session.data.session?.access_token;
+             if (accessToken) {
+               const res = await fetch(`/api/get-video-url?id=${movie.id}&type=movie`, {
+                 headers: { Authorization: `Bearer ${accessToken}` },
+               });
+               if (res.ok) {
+                 const data = await res.json();
+                 if (data.streamUrl) {
+                   setIsPlayingTrailer(false);
+                   setStreamUrl(data.streamUrl);
+                 }
+               }
+             }
+           } catch (e) {
+             console.error('Failed to fetch video URL');
+           }
         }
      }
   }, [hasRights, movie, checkAuth]);
@@ -418,31 +472,32 @@ export default function MovieDetailsPage() {
             <Button
               className="w-full bg-[#E50914] hover:bg-[#b80710] text-white mb-3"
               onClick={async () => {
-                const url = movie.video_url || movie.videolink_url;
-                if (!url) return;
-                let processedUrl = url;
-                if (processedUrl.startsWith('encrypted://') || processedUrl.startsWith('auth://')) {
-                  const urlPath = processedUrl.split('://')[1];
-                  const username = process.env.NEXT_PUBLIC_CADDY_USERNAME || "mat";
-                  const password = process.env.NEXT_PUBLIC_CADDY_PASSWORD || "MatTh3pAR";
-                  processedUrl = `https://${username}:${password}@${urlPath}`;
-                }
-                if (processedUrl.startsWith('http://') || processedUrl.startsWith('https://')) {
+                try {
+                  const session = await supabase.auth.getSession();
+                  const accessToken = session.data.session?.access_token;
+                  if (!accessToken) return;
+                  const res = await fetch(`/api/get-video-url?id=${movie.id}&type=movie`, {
+                    headers: { Authorization: `Bearer ${accessToken}` },
+                  });
+                  if (!res.ok) return;
+                  const data = await res.json();
+                  if (!data.streamUrl) return;
                   const cleanTitle = movie.title.replace(/[^a-zA-Z0-9\s\-_.]/g, '').trim();
                   const filename = `${cleanTitle}.mp4`;
-                  processedUrl = `/api/stream?url=${encodeURIComponent(processedUrl)}&filename=${encodeURIComponent(filename)}`;
+                  const downloadUrl = `${data.streamUrl}&filename=${encodeURIComponent(filename)}`;
+                  const a = document.createElement('a');
+                  a.href = downloadUrl;
+                  a.download = movie.title + '.mp4';
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                } catch (e) {
+                  console.error('Download failed');
                 }
-                const a = document.createElement('a');
-                a.href = processedUrl;
-                a.download = movie.title + '.mp4';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
                 setShowDownloadModal(false);
               }}
-              disabled={!movie.video_url && !movie.videolink_url}
             >
-              {movie.video_url || movie.videolink_url ? "Download Now" : "No download available"}
+              Download Now
             </Button>
             <Button className="w-full" variant="outline" onClick={() => setShowDownloadModal(false)}>Close</Button>
           </div>

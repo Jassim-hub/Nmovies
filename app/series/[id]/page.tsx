@@ -75,9 +75,13 @@ export default function SeriesDetailsPage() {
       if (!params.id) return;
 
       try {
+        // SECURITY: No video_url in client query
+        const SERIES_DETAIL_COLS = `id, title, description, release_date, cover_image_url, thumbnail_url,
+          trailer_url, genre_ids, published, premium, created_at, vj_id, tmdb_id,
+          vjs:vj_id(id, name)`;
         const { data: seriesData, error } = await supabase
           .from('series')
-          .select(`*, vjs:vj_id(id, name)`)
+          .select(SERIES_DETAIL_COLS)
           .eq('id', params.id)
           .eq('published', true)
           .single();
@@ -97,9 +101,11 @@ export default function SeriesDetailsPage() {
           setActiveSeasonId(seasonsOnly[0].id);
           const seasonsWithEpisodes = await Promise.all(
             seasonsOnly.map(async (season) => {
+              // SECURITY: Don't fetch video_url to client — only display fields
+              const EPISODE_DISPLAY_COLS = `id, title, description, published, premium, episode_number, thumbnail_url, duration, season_id`;
               const { data: episodes } = await supabase
                 .from('episodes')
-                .select('*')
+                .select(EPISODE_DISPLAY_COLS)
                 .eq('season_id', season.id)
                 .eq('published', true)
                 .order('episode_number', { ascending: true });
@@ -136,7 +142,18 @@ export default function SeriesDetailsPage() {
         }
         
         setSeries(seriesData);
-        
+
+        // Track view (fire-and-forget)
+        fetch('/api/track-view', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contentId: params.id,
+            contentType: 'series',
+            userId: user?.id || null,
+          }),
+        }).catch(() => {});
+
         // Auto-play trailer if available
         if (seriesData.trailer_url) {
            setStreamUrl(normalizeVideoUrl(seriesData.trailer_url));
@@ -151,8 +168,9 @@ export default function SeriesDetailsPage() {
           setGenres(genreData || []);
           
           // Related Content
+          const RELATED_SAFE = `id, title, description, release_date, thumbnail_url, cover_image_url, published, created_at, genre_ids, vj_id, vjs(name)`;
           const { data: related } = await supabase
-            .from('series').select('*, vjs(name)').eq('published', true).neq('id', params.id)
+            .from('series').select(RELATED_SAFE).eq('published', true).neq('id', params.id)
             .overlaps('genre_ids', seriesData.genre_ids).order('created_at', { ascending: false }).limit(10);
           setRelatedSeries(related || []);
 
@@ -196,16 +214,40 @@ export default function SeriesDetailsPage() {
       return;
     }
 
-    if (!episode.video_url && !episode.videolink_url) {
-      alert('This episode is not available for watching');
-      return;
-    }
-
-    // Play the episode directly in the hero player
+    // SECURITY: Fetch video URL from secure server API, not from client data
     setIsPlayingTrailer(false);
-    const url = episode.video_url || episode.videolink_url;
-    if (url) {
-      setStreamUrl(normalizeVideoUrl(url));
+    try {
+      const session = await supabase.auth.getSession();
+      const accessToken = session.data.session?.access_token;
+      if (accessToken) {
+        const res = await fetch(`/api/get-video-url?id=${episode.id}&type=episode`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.streamUrl) {
+            setStreamUrl(data.streamUrl);
+          } else {
+            alert('This episode is not available for watching');
+            return;
+          }
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          if (errData.requirePremium) {
+            setShowPremiumUpgradeModal(true);
+          } else {
+            alert('Failed to load episode');
+          }
+          return;
+        }
+      } else {
+        setAuthAction('play');
+        setShowAuthModal(true);
+        return;
+      }
+    } catch (e) {
+      console.error('Failed to fetch episode URL');
+      return;
     }
     
     // Scroll to player
@@ -248,27 +290,29 @@ export default function SeriesDetailsPage() {
 
   const handleDownloadNow = async () => {
     if (!selectedEpisode) return;
-    const downloadUrl = selectedEpisode.videolink_url || selectedEpisode.video_url;
-    if (!downloadUrl) return;
-    let processedUrl = downloadUrl;
-    if (processedUrl.startsWith('encrypted://') || processedUrl.startsWith('auth://')) {
-      const urlPath = processedUrl.split('://')[1];
-      const username = process.env.NEXT_PUBLIC_CADDY_USERNAME || "mat";
-      const password = process.env.NEXT_PUBLIC_CADDY_PASSWORD || "MatTh3pAR";
-      processedUrl = `https://${username}:${password}@${urlPath}`;
-    }
-    if (processedUrl.startsWith('http://') || processedUrl.startsWith('https://')) {
+    try {
+      const session = await supabase.auth.getSession();
+      const accessToken = session.data.session?.access_token;
+      if (!accessToken) return;
+      const res = await fetch(`/api/get-video-url?id=${selectedEpisode.id}&type=episode`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!data.streamUrl) return;
       const cleanSeriesTitle = series?.title.replace(/[^a-zA-Z0-9\s\-_.]/g, '').trim() || 'Series';
       const cleanEpisodeTitle = selectedEpisode.title.replace(/[^a-zA-Z0-9\s\-_.]/g, '').trim();
       const filename = `${cleanSeriesTitle} - S${selectedEpisode.seasonOrder}E${selectedEpisode.episode_number} - ${cleanEpisodeTitle}.mp4`;
-      processedUrl = `/api/stream?url=${encodeURIComponent(processedUrl)}&filename=${encodeURIComponent(filename)}`;
+      const downloadUrl = `${data.streamUrl}&filename=${encodeURIComponent(filename)}`;
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch (e) {
+      console.error('Download failed');
     }
-    const a = document.createElement('a');
-    a.href = processedUrl;
-    a.download = `${series?.title || 'Series'} - S${selectedEpisode.seasonOrder}E${selectedEpisode.episode_number} - ${selectedEpisode.title}.mp4`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
     setShowDownloadModal(false);
   };
 

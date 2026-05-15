@@ -78,8 +78,6 @@ describe('getProviderFromPhone', () => {
     ['0781234567', '78'],
     ['0761234567', '76'],
     ['0391234567', '39'],
-    ['0311234567', '31'],
-    ['0791234567', '79'],
   ])('detects MTN for prefix %s (0%s)', (phone) => {
     expect(getProviderFromPhone(phone)).toBe('mtn');
   });
@@ -89,8 +87,6 @@ describe('getProviderFromPhone', () => {
     ['256781234567'],
     ['256761234567'],
     ['256391234567'],
-    ['256311234567'],
-    ['256791234567'],
   ])('detects MTN for already-formatted %s', (phone) => {
     expect(getProviderFromPhone(phone)).toBe('mtn');
   });
@@ -98,7 +94,6 @@ describe('getProviderFromPhone', () => {
   // --- Airtel prefixes ---
   it.each([
     ['0701234567', '70'],
-    ['0731234567', '73'],
     ['0741234567', '74'],
     ['0751234567', '75'],
   ])('detects Airtel for prefix %s (0%s)', (phone) => {
@@ -107,17 +102,24 @@ describe('getProviderFromPhone', () => {
 
   it.each([
     ['256701234567'],
-    ['256731234567'],
     ['256741234567'],
     ['256751234567'],
   ])('detects Airtel for already-formatted %s', (phone) => {
     expect(getProviderFromPhone(phone)).toBe('airtel');
   });
 
-  // --- Default / unknown ---
-  it('defaults to mtn for unknown prefix', () => {
-    // 256 + 41 is not a known prefix
-    expect(getProviderFromPhone('256411234567')).toBe('mtn');
+  // --- Unsupported prefixes (valid Ugandan but not MakyPay-supported) ---
+  it.each([
+    ['0311234567', '31'],
+    ['0791234567', '79'],
+    ['0731234567', '73'],
+  ])('throws for unsupported prefix %s (0%s)', (phone) => {
+    expect(() => getProviderFromPhone(phone)).toThrow('Unsupported number');
+  });
+
+  // --- Unknown prefix ---
+  it('throws for completely unknown prefix', () => {
+    expect(() => getProviderFromPhone('256411234567')).toThrow('Unsupported number');
   });
 });
 
