@@ -86,8 +86,12 @@ export default function MovieDetailsPage() {
         setLoading(false);
         return;
       }
-
-      setMovie(data);
+      // Normalize vjs from array to single object (Supabase returns array for joins)
+      const movieData = {
+        ...data,
+        vjs: Array.isArray(data.vjs) ? data.vjs[0] || null : data.vjs,
+      } as MovieWithVJ;
+      setMovie(movieData);
 
       // Track view (fire-and-forget)
       fetch('/api/track-view', {
@@ -130,8 +134,6 @@ export default function MovieDetailsPage() {
                  setStreamUrl(videoData.streamUrl);
                  setIsPlayingTrailer(false);
                }
-               // Store the secure stream URL on the movie object for download/skip
-               data._secureStreamUrl = videoData.streamUrl;
              }
            }
          } catch (e) {
@@ -153,12 +155,12 @@ export default function MovieDetailsPage() {
         promises.push(
           supabase.from("movies").select(RELATED_MOVIE_COLS).neq("id", params.id)
             .overlaps("genre_ids", data.genre_ids).order("created_at", { ascending: false }).limit(6)
-            .then(({ data: relatedMovies }) => setRelated(relatedMovies || []))
+            .then(({ data: relatedMovies }) => setRelated((relatedMovies || []) as unknown as MovieWithVJ[]))
         );
         promises.push(
           supabase.from("series").select(RELATED_SERIES_COLS)
             .overlaps("genre_ids", data.genre_ids).order("created_at", { ascending: false }).limit(6)
-            .then(({ data: relatedSeriesData }) => setRelatedSeries(relatedSeriesData || []))
+            .then(({ data: relatedSeriesData }) => setRelatedSeries((relatedSeriesData || []) as any[]))
         );
       }
       if (data.vj_id) {

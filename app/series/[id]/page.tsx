@@ -115,12 +115,12 @@ export default function SeriesDetailsPage() {
                   ...e,
                   seasonName: season.name || `Season ${season.order}`,
                   seasonOrder: season.order
-              }));
+              })) as unknown as EpisodeWithSeason[];
               loadedEpisodes = [...loadedEpisodes, ...mappedEps];
               return { ...season, episodes: seasonEps };
             })
           );
-          seriesData.seasons = seasonsWithEpisodes;
+          (seriesData as any).seasons = seasonsWithEpisodes;
           setSeasons(seasonsWithEpisodes);
           const allEps = loadedEpisodes.sort((a, b) => {
              if (a.seasonOrder !== b.seasonOrder) return a.seasonOrder - b.seasonOrder;
@@ -138,7 +138,7 @@ export default function SeriesDetailsPage() {
              }
           }
         } else {
-          seriesData.seasons = [];
+          (seriesData as any).seasons = [];
         }
         
         setSeries(seriesData);
@@ -172,7 +172,7 @@ export default function SeriesDetailsPage() {
           const { data: related } = await supabase
             .from('series').select(RELATED_SAFE).eq('published', true).neq('id', params.id)
             .overlaps('genre_ids', seriesData.genre_ids).order('created_at', { ascending: false }).limit(10);
-          setRelatedSeries(related || []);
+          setRelatedSeries((related || []) as unknown as SeriesWithVJ[]);
 
           try {
             const relatedMoviesData = await getRelatedMoviesByGenre(params.id as string, seriesData.genre_ids as string[], 10) as MovieWithVJ[];
@@ -198,7 +198,7 @@ export default function SeriesDetailsPage() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authAction, setAuthAction] = useState<'play' | 'download'>('play');
 
-  const handleEpisodeSelect = (episode: EpisodeWithSeason) => {
+  const handleEpisodeSelect = async (episode: EpisodeWithSeason) => {
     setSelectedEpisode(episode);
     
     // Check authentication
