@@ -457,11 +457,44 @@ export default function Header() {
                 </Link>
                 {/* Mobile Navigation Footer */}
                 <div className="mt-4 pt-4 border-t border-gray-700">
-                  <div className="px-4 py-2">
-                    <p className="text-xs text-gray-500 text-center">
-                      NicholMoviesUg - Your Entertainment Hub
-                    </p>
-                  </div>
+                  {user ? (
+                    <div className="px-4 py-2 flex flex-col gap-2">
+                      <div className="flex items-center gap-3 mb-1">
+                        {user.user_metadata?.avatar_url ? (
+                          <Image
+                            src={user.user_metadata.avatar_url}
+                            alt="Profile"
+                            width={36}
+                            height={36}
+                            className="w-9 h-9 rounded-full border-2 border-[#E50914]"
+                          />
+                        ) : (
+                          <div className="w-9 h-9 rounded-full bg-[#E50914] flex items-center justify-center text-white font-bold text-sm">
+                            {user.email?.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-white truncate">{user.user_metadata?.full_name || 'Account'}</p>
+                          <p className="text-xs text-gray-400 truncate">{user.email}</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => { handleSignOut(); setIsMenuOpen(false); }}
+                        className="w-full flex items-center gap-2 px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 transition-colors text-sm font-medium min-h-[44px]"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                        </svg>
+                        Sign Out
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="px-4 py-2">
+                      <p className="text-xs text-gray-500 text-center">
+                        NicholMoviesUg - Your Entertainment Hub
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             </nav>

@@ -1,5 +1,6 @@
-import { createClient } from "@supabase/supabase-js";
+import { createServerClient } from "@supabase/ssr";
 import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
@@ -7,12 +8,6 @@ export async function GET(request: NextRequest) {
   const error = requestUrl.searchParams.get("error");
   const errorDescription = requestUrl.searchParams.get("error_description");
   const type = requestUrl.searchParams.get("type");
-
-  console.log("Auth callback received:", {
-    hasCode: !!code,
-    error,
-    type,
-  });
 
   if (error) {
     console.error("Auth callback error:", error, errorDescription);
@@ -22,12 +17,28 @@ export async function GET(request: NextRequest) {
   }
 
   if (code) {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    const cookieStore = await cookies();
+
+    // Use @supabase/ssr so it can access the PKCE code_verifier stored in cookies
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            );
+          },
+        },
+      }
+    );
 
     try {
-      const { data, error: exchangeError } =
+      const { error: exchangeError } =
         await supabase.auth.exchangeCodeForSession(code);
 
       if (exchangeError) {
@@ -39,17 +50,17 @@ export async function GET(request: NextRequest) {
         );
       }
 
-      console.log("Code exchange successful:", data.session?.user?.email);
-
-      // Check if this is a password reset callback
-      if (type === 'recovery') {
+      // Password recovery — redirect to reset-password page
+      if (type === "recovery") {
         return NextResponse.redirect(
-          `${requestUrl.origin}/reset-password?session=active`
+          `${requestUrl.origin}/reset-password`
         );
       }
 
-      // For OAuth sign-in/sign-up, redirect to intended page or home
-      return NextResponse.redirect(`${requestUrl.origin}/auth/callback-client`);
+      // OAuth sign-in/sign-up — redirect via callback-client to handle cookie
+      return NextResponse.redirect(
+        `${requestUrl.origin}/auth/callback-client`
+      );
     } catch (err) {
       console.error("Callback processing error:", err);
       return NextResponse.redirect(
@@ -58,6 +69,5 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // If no code or error, redirect to sign in page
   return NextResponse.redirect(`${requestUrl.origin}/signin`);
 }

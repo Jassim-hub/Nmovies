@@ -36,50 +36,9 @@ function ResetPasswordForm() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    // Check for token_hash parameter from email link (new Supabase format)
-    const tokenHash = searchParams.get("token_hash");
-    const type = searchParams.get("type");
-    const errorParam = searchParams.get("error");
-
-    if (errorParam) {
-      setError(decodeURIComponent(errorParam));
-    }
-
-    // Also check for legacy parameters
-    const tokenParam = searchParams.get("token");
-    const accessToken = searchParams.get("access_token");
-    const refreshToken = searchParams.get("refresh_token");
-
-    // Also check URL hash for Supabase parameters
-    let hashParams: URLSearchParams | null = null;
-    if (typeof window !== "undefined" && window.location.hash) {
-      hashParams = new URLSearchParams(window.location.hash.substring(1));
-    }
-
-    const hashAccessToken = hashParams?.get("access_token");
-    const hashRefreshToken = hashParams?.get("refresh_token");
-    const hashType = hashParams?.get("type");
-
-    // Valid if we have token_hash with recovery type, or other valid token combinations
-    const hasValidToken = Boolean(
-      (tokenHash && type === "recovery") ||
-      tokenParam ||
-      (accessToken && refreshToken && type === "recovery") ||
-      (hashAccessToken && hashRefreshToken && hashType === "recovery")
-    );
-
-    console.log("Reset password validation:", {
-      tokenParam,
-      accessToken: accessToken?.substring(0, 10) + "...",
-      refreshToken: refreshToken?.substring(0, 10) + "...",
-      type,
-      hashAccessToken: hashAccessToken?.substring(0, 10) + "...",
-      hashRefreshToken: hashRefreshToken?.substring(0, 10) + "...",
-      hashType,
-      hasValidToken,
-    });
-
-    setIsValidToken(hasValidToken);
+    // Session is established by AuthProvider's PASSWORD_RECOVERY handler
+    // before redirecting to this page. No URL token validation needed.
+    setIsValidToken(true);
   }, [searchParams]);
 
   const validatePassword = (pwd: string) => {
@@ -123,121 +82,30 @@ function ResetPasswordForm() {
       return;
     }
 
-    // --- Supabase password update logic ---
     try {
-      // Dynamically import supabase client (adjust path as needed)
       const { createClient } = await import("@supabase/supabase-js");
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-      if (!supabaseUrl || !supabaseAnonKey) {
-        throw new Error("Supabase environment variables not set");
-      }
-      const supabase = createClient(supabaseUrl, supabaseAnonKey);
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
 
-      // Check for token_hash parameter (new Supabase format)
-      const tokenHash = searchParams.get("token_hash");
-      const type = searchParams.get("type");
+      // The session is already active via PASSWORD_RECOVERY event.
+      // Simply update the user's password directly.
+      const { error: updateError } = await supabase.auth.updateUser({ password });
 
-      // Also check for legacy parameters
-      let accessToken = searchParams.get("access_token");
-      let refreshToken = searchParams.get("refresh_token");
-
-      // Also check URL hash for Supabase parameters
-      if (
-        !accessToken &&
-        typeof window !== "undefined" &&
-        window.location.hash
-      ) {
-        const hashParams = new URLSearchParams(
-          window.location.hash.substring(1)
-        );
-        accessToken = hashParams.get("access_token");
-        refreshToken = hashParams.get("refresh_token");
+      if (updateError) {
+        setError(updateError.message || "Failed to reset password");
+        setIsLoading(false);
+        return;
       }
 
-      if (tokenHash && type === "recovery") {
-        // Use the new token_hash method for password reset
-        const { error: verifyError } = await supabase.auth.verifyOtp({
-          token_hash: tokenHash,
-          type: "recovery",
-        });
+      // Sign out after successful reset so user logs in fresh with new password
+      await supabase.auth.signOut();
 
-        if (verifyError) {
-          setError("Invalid or expired reset link: " + verifyError.message);
-          setIsLoading(false);
-          return;
-        }
-
-        // Now update the password
-        const { error: updateError } = await supabase.auth.updateUser({
-          password,
-        });
-        if (updateError) {
-          setError(updateError.message || "Failed to reset password");
-          setIsLoading(false);
-          return;
-        }
-
-        // Sign out after successful password reset for security
-        await supabase.auth.signOut();
-
-        setIsSuccess(true);
-        setIsLoading(false);
-      } else if (type === "recovery" && accessToken && refreshToken) {
-        // Legacy method with access/refresh tokens
-        const { error: sessionError } = await supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken,
-        });
-
-        if (sessionError) {
-          setError("Invalid or expired reset link: " + sessionError.message);
-          setIsLoading(false);
-          return;
-        }
-
-        // Now update the password
-        const { error: updateError } = await supabase.auth.updateUser({
-          password,
-        });
-        if (updateError) {
-          setError(updateError.message || "Failed to reset password");
-          setIsLoading(false);
-          return;
-        }
-
-        // Sign out after successful password reset for security
-        await supabase.auth.signOut();
-
-        setIsSuccess(true);
-        setIsLoading(false);
-      } else {
-        // Fallback for other token formats
-        const token = searchParams.get("token");
-        if (!token && !tokenHash) {
-          setError("Invalid or missing reset token");
-          setIsLoading(false);
-          return;
-        }
-
-        // For legacy tokens, try to update password directly
-        const { error: updateError } = await supabase.auth.updateUser({
-          password,
-        });
-        if (updateError) {
-          setError(updateError.message || "Failed to reset password");
-          setIsLoading(false);
-          return;
-        }
-        setIsSuccess(true);
-        setIsLoading(false);
-      }
+      setIsSuccess(true);
+      setIsLoading(false);
     } catch (err: unknown) {
-      if (err instanceof Error) {
-        setError(err.message || "An error occurred");
-      } else {
-        setError("An error occurred");
-      }
+      setError(err instanceof Error ? err.message : "An error occurred");
       setIsLoading(false);
     }
   };

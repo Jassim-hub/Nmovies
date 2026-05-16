@@ -1,6 +1,7 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 import { getUserSubscription } from '@/lib/subscriptions'
@@ -23,6 +24,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [isPremium, setIsPremium] = useState(false)
+  const router = useRouter()
 
   // Check premium status when user changes
   const checkPremiumStatus = async (currentUser: User | null) => {
@@ -106,6 +108,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('AuthProvider: Auth state changed', event, session?.user?.email || 'no user')
+
+        // Intercept password recovery — do NOT sign the user in.
+        // Redirect them to the reset-password page to set a new password.
+        if (event === 'PASSWORD_RECOVERY') {
+          setLoading(false)
+          clearTimeout(loadingTimeout)
+          router.push('/reset-password')
+          return
+        }
+
         setUser(session?.user ?? null)
 
         // Only check premium status if we have a user and it's not a sign out event
