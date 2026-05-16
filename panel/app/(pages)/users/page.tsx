@@ -66,12 +66,22 @@ export default function UsersPage() {
 
   const fetchUsers = async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from("profiles")
-      .select("id, name, email, subscription, subscription_start_date, subscription_expiry_date")
-      .order("name");
-    setUsers(data || []);
-    setLoading(false);
+    try {
+      const res = await fetch('/api/profiles');
+      const json = await res.json();
+      if (!res.ok) {
+        console.error('Error fetching users:', json.error);
+        setMessage({ type: 'error', text: 'Failed to load users' });
+        setUsers([]);
+      } else {
+        setUsers(json.data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      setMessage({ type: 'error', text: 'Failed to load users' });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const fetchPlans = async () => {
@@ -233,14 +243,16 @@ export default function UsersPage() {
 
       console.log('Updating subscription with data:', updateData);
 
-      const { error } = await supabase
-        .from('profiles')
-        .update(updateData)
-        .eq('id', editingUser.id);
+      const res = await fetch('/api/profiles', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: editingUser.id, ...updateData }),
+      });
 
-      if (error) {
-        console.error('Supabase error:', error);
-        throw error;
+      if (!res.ok) {
+        const json = await res.json();
+        console.error('API error:', json.error);
+        throw new Error(json.error || 'Failed to update subscription');
       }
 
       console.log('Subscription updated successfully');
@@ -285,16 +297,16 @@ export default function UsersPage() {
 
     setDeleting(true);
     try {
-      const { error } = await supabase
-        .from("profiles")
-        .delete()
-        .eq("id", userToDelete.id);
+      const res = await fetch(`/api/profiles?id=${userToDelete.id}`, {
+        method: 'DELETE',
+      });
 
-      if (error) {
-        console.error('Error deleting user:', error);
+      if (!res.ok) {
+        const json = await res.json();
+        console.error('Error deleting user:', json.error);
         setMessage({
           type: 'error',
-          text: `Failed to delete user: ${error.message}`
+          text: `Failed to delete user: ${json.error || 'Unknown error'}`
         });
         return;
       }

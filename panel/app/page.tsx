@@ -30,10 +30,12 @@ export default function DashboardPage() {
   useEffect(() => {
     async function fetchDashboardData() {
       // Counts
-      const { count: usersCount } = await supabase.from("profiles").select("id", { count: "exact", head: true });
+      // Use API route for profiles to bypass RLS (profiles are restricted to own row)
+      const profilesRes = await fetch('/api/profiles');
+      const profilesJson = await profilesRes.json();
       const { count: movies } = await supabase.from("movies").select("id", { count: "exact", head: true });
       const { count: series } = await supabase.from("series").select("id", { count: "exact", head: true });
-      setUserCount(usersCount || 0);
+      setUserCount(profilesJson.count || 0);
       setMovieCount(movies || 0);
       setSeriesCount(series || 0);
 
