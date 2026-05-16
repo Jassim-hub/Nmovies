@@ -16,7 +16,10 @@ export default function SignInContent() {
   const [redirecting, setRedirecting] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { signIn, signInWithGoogle, user } = useAuth()
+  const { signIn, signInWithGoogle, resetPassword, user } = useAuth()
+  const [showForgotPassword, setShowForgotPassword] = useState(false)
+  const [forgotEmail, setForgotEmail] = useState('')
+  const [forgotLoading, setForgotLoading] = useState(false)
 
   useEffect(() => {
     const errorParam = searchParams.get('error')
@@ -97,6 +100,29 @@ export default function SignInContent() {
       // Sign-in successful, reset loading so redirect effect can trigger
       setLoading(false)
     }
+  }
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setForgotLoading(true)
+    setError('')
+    setMessage('')
+
+    if (!forgotEmail.trim()) {
+      setError('Please enter your email address')
+      setForgotLoading(false)
+      return
+    }
+
+    const { error } = await resetPassword(forgotEmail)
+
+    if (error) {
+      setError(error.message || 'Failed to send reset email')
+    } else {
+      setMessage('Password reset link sent! Check your email inbox.')
+      setShowForgotPassword(false)
+    }
+    setForgotLoading(false)
   }
 
   // Show loading state when redirecting
@@ -207,7 +233,40 @@ export default function SignInContent() {
 
         {/* Links */}
         <div className="w-full flex flex-col items-center mt-5">
-          <Link href="#" className="text-sm text-[#E50914] hover:underline mb-2">Forgot your password?</Link>
+          <button
+            type="button"
+            onClick={() => {
+              setShowForgotPassword(!showForgotPassword)
+              setError('')
+              setMessage('')
+            }}
+            className="text-sm text-[#E50914] hover:underline mb-2"
+          >
+            {showForgotPassword ? 'Back to Sign In' : 'Forgot your password?'}
+          </button>
+
+          {showForgotPassword && (
+            <form onSubmit={handleForgotPassword} className="w-full flex flex-col gap-3 mt-2 mb-3 p-4 rounded-lg bg-[#22283a] border border-gray-700">
+              <p className="text-gray-400 text-xs text-center">Enter your email to receive a password reset link</p>
+              <input
+                type="email"
+                placeholder="Email address"
+                value={forgotEmail}
+                onChange={(e) => setForgotEmail(e.target.value)}
+                required
+                disabled={forgotLoading}
+                className="w-full rounded bg-[#1a1c21] border border-gray-700 px-4 py-3 text-base text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#E50914] disabled:opacity-50"
+              />
+              <Button
+                type="submit"
+                disabled={forgotLoading}
+                className="w-full bg-[#E50914] hover:bg-[#b80710] text-white font-semibold text-sm py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {forgotLoading ? 'Sending...' : 'Send Reset Link'}
+              </Button>
+            </form>
+          )}
+
           <span className="text-gray-400 text-sm">Don&apos;t have an account? <Link href="/signup" className="text-[#E50914] hover:underline">Sign up</Link></span>
         </div>
       </div>
