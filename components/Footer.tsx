@@ -45,7 +45,7 @@ export default function Footer() {
           {/* Column 1: Brand Info */}
           <div>
             <Link href="/" className="flex items-center mb-6">
-              <Image src="/logo.png" alt="NicholMoviesUg Logo" width={40} height={40} className="w-10 h-10 object-contain mr-3" />
+              <Image src="/logo.jpeg" alt="NicholMoviesUg Logo" width={40} height={40} className="w-10 h-10 object-contain mr-3" />
               <span className="text-2xl font-black text-[#E50914] tracking-wider uppercase">NicholMoviesUg</span>
             </Link>
             <p className="text-gray-400 text-sm mb-6 leading-relaxed">

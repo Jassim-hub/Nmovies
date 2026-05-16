@@ -97,7 +97,7 @@ export default function Header() {
               className="mr-2 flex items-center lg:flex hidden"
             >
               <Image
-                src="/logo.png"
+                src="/logo.jpeg"
                 alt="NicholMoviesUg Logo"
                 width={40}
                 height={40}
@@ -420,7 +420,7 @@ export default function Header() {
                   }}
                 >
                   <Image
-                    src="/logo.png"
+                    src="/logo.jpeg"
                     alt="NichloMoviesUg Logo"
                     width={24}
                     height={24}

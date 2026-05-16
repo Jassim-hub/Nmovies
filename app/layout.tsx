@@ -42,7 +42,7 @@ export const metadata: Metadata = {
     siteName: 'NicholMoviesUg',
     images: [
       {
-        url: '/logo.png',
+        url: '/logo.jpeg',
         width: 800,
         height: 600,
         alt: 'NicholMoviesUg - Uganda Premium Movie Streaming',
@@ -55,12 +55,12 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'NicholMoviesUg - Watch Translated Movies & TV Shows Online',
     description: 'Uganda\'s #1 premium streaming platform. Watch movies translated by VJ Junior, VJ Jjingo, ICE P and more.',
-    images: ['/logo.png'],
+    images: ['/logo.jpeg'],
     site: '@nicholmoviesug',
   },
   icons: {
-    icon: '/logo.png',
-    apple: '/logo.png',
+    icon: '/logo.jpeg',
+    apple: '/logo.jpeg',
   },
   // PWA manifest
   manifest: '/manifest.json',
@@ -110,7 +110,7 @@ const jsonLd = {
       url: 'https://nicholmoviesug.com',
       logo: {
         '@type': 'ImageObject',
-        url: 'https://nicholmoviesug.com/logo.png',
+        url: 'https://nicholmoviesug.com/logo.jpeg',
         width: 800,
         height: 600,
       },
@@ -143,8 +143,8 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="NicholMovies" />
         <meta name="mobile-web-app-capable" content="yes" />
-        <link rel="apple-touch-icon" href="/logo.png" />
-        <link rel="apple-touch-startup-image" href="/logo.png" />
+        <link rel="apple-touch-icon" href="/logo.jpeg" />
+        <link rel="apple-touch-startup-image" href="/logo.jpeg" />
       </head>
       {/* 
         Streamit uses #141414 for background natively or completely black, 

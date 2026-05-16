@@ -119,7 +119,7 @@ function AdminPanelLayoutInner({ children }: AdminPanelLayoutProps) {
       <aside className="hidden md:flex flex-col border-r border-gray-800 bg-[#1a1c21] w-64 h-screen">
         {/* Fixed Header */}
         <div className="p-6 font-black text-xl text-[#E50914] border-b border-gray-800 flex items-center tracking-wider uppercase">
-          <img src="/logo.png" alt="Logo" className="w-8 h-8 mr-3 object-contain" />
+          <img src="/logo.jpeg" alt="Logo" className="w-8 h-8 mr-3 object-contain" />
           NicholMovies
         </div>
 
@@ -145,7 +145,7 @@ function AdminPanelLayoutInner({ children }: AdminPanelLayoutProps) {
         <SheetContent side="left" className="p-0 w-64 h-full flex flex-col bg-[#1a1c21] border-r-gray-800 text-white">
           <SheetHeader>
             <SheetTitle className="p-6 font-black text-xl text-[#E50914] mb-0 border-b border-gray-800 flex items-center uppercase tracking-wider text-left">
-              <img src="/logo.png" alt="Logo" className="w-8 h-8 mr-3 object-contain" />
+              <img src="/logo.jpeg" alt="Logo" className="w-8 h-8 mr-3 object-contain" />
               NicholMovies
             </SheetTitle>
             <SheetDescription className="sr-only">
@@ -187,7 +187,7 @@ function AdminPanelLayoutInner({ children }: AdminPanelLayoutProps) {
             <MenuIcon className="w-6 h-6 text-[#E50914]" />
           </button>
           <div className="font-black text-xl text-[#E50914] md:hidden tracking-wider uppercase flex items-center">
-            <img src="/logo.png" alt="Logo" className="w-6 h-6 mr-2 object-contain" />
+            <img src="/logo.jpeg" alt="Logo" className="w-6 h-6 mr-2 object-contain" />
             NicholMovies
           </div>
           <div className="hidden md:block text-gray-400 font-medium">

@@ -86,7 +86,7 @@ export default function InstallAppBanner() {
                 style={{ background: '#1a0000' }}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/logo.png" alt="NicholMoviesUg" className="w-full h-full object-cover" />
+                <img src="/logo.jpeg" alt="NicholMoviesUg" className="w-full h-full object-cover" />
               </div>
 
               <div className="flex-1 min-w-0">

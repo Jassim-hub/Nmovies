@@ -115,7 +115,7 @@ export default function DownloadPage() {
               }}
             >
               <Image
-                src="/logo.png"
+                src="/logo.jpeg"
                 alt="NicholMoviesUg App"
                 width={96}
                 height={96}
@@ -266,7 +266,7 @@ export default function DownloadPage() {
                     className="w-14 h-14 rounded-2xl overflow-hidden flex-shrink-0"
                     style={{ boxShadow: '0 4px 20px rgba(229,9,20,0.3)' }}
                   >
-                    <Image src="/logo.png" alt="App" width={56} height={56} className="w-full h-full object-cover" />
+                    <Image src="/logo.jpeg" alt="App" width={56} height={56} className="w-full h-full object-cover" />
                   </div>
                   <div>
                     <p className="text-white font-bold text-base">NicholMoviesUg</p>

@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 
 export default function DownloadLogo() {
-  const [src, setSrc] = useState("/logo.png");
+  const [src, setSrc] = useState("/logo.jpeg");
   return (
     <img
       src={src}

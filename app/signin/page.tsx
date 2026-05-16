@@ -8,7 +8,7 @@ function SignInFallback() {
         <div className="flex flex-col items-center mb-6">
           <div className="flex items-center justify-center mb-2">
             <img
-              src="/logo.png"
+              src="/logo.jpeg"
               alt="NicholMoviesUg Logo"
               width={48}
               height={48}
