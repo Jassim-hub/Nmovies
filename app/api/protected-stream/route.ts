@@ -1,6 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { protectVideoEndpoint } from '@/lib/video-protection';
 
+// Reusable SSRF protection — blocks private/internal addresses
+function isAllowedVideoUrl(urlString: string): boolean {
+  const envHosts = process.env.ALLOWED_VIDEO_HOSTS || '';
+  const allowedHosts = envHosts.split(',').map(h => h.trim().toLowerCase()).filter(Boolean);
+
+  try {
+    const url = new URL(urlString);
+    const hostname = url.hostname.toLowerCase();
+
+    const blockedPatterns = [
+      /^localhost$/i, /^127\./, /^10\./, /^172\.(1[6-9]|2\d|3[01])\./,
+      /^192\.168\./, /^169\.254\./, /^0\./, /^\[::1\]$/, /^metadata\./i, /^internal\./i,
+    ];
+    if (blockedPatterns.some(p => p.test(hostname))) return false;
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return false;
+    if (allowedHosts.length > 0) {
+      return allowedHosts.some(host => hostname === host || hostname.endsWith(`.${host}`));
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Protected Video Streaming Endpoint
  * 
@@ -8,6 +32,7 @@ import { protectVideoEndpoint } from '@/lib/video-protection';
  * - Referrer checking
  * - Token-based authentication
  * - Rate limiting
+ * - SSRF protection via URL allowlist
  * 
  * Usage: /api/protected-stream?url=<video_url>&token=<access_token>
  */
@@ -30,6 +55,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         { error: 'Missing video URL' },
         { status: 400 }
+      );
+    }
+
+    // SECURITY: Validate the URL against the allowlist to prevent SSRF
+    if (!isAllowedVideoUrl(url)) {
+      return NextResponse.json(
+        { error: 'Invalid video source' },
+        { status: 403 }
       );
     }
 

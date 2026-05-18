@@ -655,9 +655,8 @@ export default function SeriesDetailsPage() {
             <Button
               className="w-full bg-[#E50914] hover:bg-[#b80710] text-white mb-3"
               onClick={handleDownloadNow}
-              disabled={!selectedEpisode.video_url && !selectedEpisode.videolink_url}
             >
-              {selectedEpisode.video_url || selectedEpisode.videolink_url ? "Download Now" : "No download available"}
+              Download Now
             </Button>
             <Button className="w-full" variant="outline" onClick={() => setShowDownloadModal(false)}>Close</Button>
           </div>

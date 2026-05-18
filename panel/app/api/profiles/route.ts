@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { verifyAdminRequest } from '@/lib/apiAuth'
 
 // GET /api/profiles - Fetch all profiles (bypasses RLS)
-export async function GET() {
+export async function GET(request: NextRequest) {
+  // SECURITY: Verify the caller is an authenticated admin
+  const auth = await verifyAdminRequest(request);
+  if (!auth.authorized) return auth.response;
+
   try {
     const { data, error, count } = await supabaseAdmin
       .from('profiles')
@@ -11,7 +16,7 @@ export async function GET() {
 
     if (error) {
       console.error('Error fetching profiles:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ error: 'Failed to fetch profiles' }, { status: 500 })
     }
 
     return NextResponse.json({ data: data || [], count: count || 0 })
@@ -23,6 +28,10 @@ export async function GET() {
 
 // PUT /api/profiles - Update a profile's subscription (bypasses RLS)
 export async function PUT(request: NextRequest) {
+  // SECURITY: Verify the caller is an authenticated admin
+  const auth = await verifyAdminRequest(request);
+  if (!auth.authorized) return auth.response;
+
   try {
     const body = await request.json()
     const { id, subscription, subscription_start_date, subscription_expiry_date } = body
@@ -42,7 +51,7 @@ export async function PUT(request: NextRequest) {
 
     if (error) {
       console.error('Error updating profile:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ error: 'Failed to update profile' }, { status: 500 })
     }
 
     return NextResponse.json({ success: true })
@@ -54,6 +63,10 @@ export async function PUT(request: NextRequest) {
 
 // DELETE /api/profiles - Delete a profile (bypasses RLS)
 export async function DELETE(request: NextRequest) {
+  // SECURITY: Verify the caller is an authenticated admin
+  const auth = await verifyAdminRequest(request);
+  if (!auth.authorized) return auth.response;
+
   try {
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
@@ -69,7 +82,7 @@ export async function DELETE(request: NextRequest) {
 
     if (error) {
       console.error('Error deleting profile:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ error: 'Failed to delete profile' }, { status: 500 })
     }
 
     return NextResponse.json({ success: true })

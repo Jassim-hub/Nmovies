@@ -11,6 +11,7 @@ import { ChevronDown, Plus, Film, Tv, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { authFetch } from "@/lib/authFetch";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -31,7 +32,7 @@ export default function DashboardPage() {
     async function fetchDashboardData() {
       // Counts
       // Use API route for profiles to bypass RLS (profiles are restricted to own row)
-      const profilesRes = await fetch('/api/profiles');
+      const profilesRes = await authFetch('/api/profiles');
       const profilesJson = await profilesRes.json();
       const { count: movies } = await supabase.from("movies").select("id", { count: "exact", head: true });
       const { count: series } = await supabase.from("series").select("id", { count: "exact", head: true });

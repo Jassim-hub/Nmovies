@@ -1,5 +1,6 @@
 'use client'
 import AdminPanelLayout from "@/app/components/layout";
+import { authFetch } from "@/lib/authFetch";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -67,7 +68,7 @@ export default function UsersPage() {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/profiles');
+      const res = await authFetch('/api/profiles');
       const json = await res.json();
       if (!res.ok) {
         console.error('Error fetching users:', json.error);
@@ -243,7 +244,7 @@ export default function UsersPage() {
 
       console.log('Updating subscription with data:', updateData);
 
-      const res = await fetch('/api/profiles', {
+      const res = await authFetch('/api/profiles', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: editingUser.id, ...updateData }),
@@ -297,7 +298,7 @@ export default function UsersPage() {
 
     setDeleting(true);
     try {
-      const res = await fetch(`/api/profiles?id=${userToDelete.id}`, {
+      const res = await authFetch(`/api/profiles?id=${userToDelete.id}`, {
         method: 'DELETE',
       });
 

@@ -24,9 +24,10 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('MakyPay status check error:', error);
 
+    const isUserFacing = error instanceof Error && error.name === 'MakyPayException';
     return NextResponse.json(
       {
-        error: error instanceof Error ? error.message : 'Status check failed',
+        error: isUserFacing ? error.message : 'Status check failed',
         success: false
       },
       { status: 500 }

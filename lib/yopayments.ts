@@ -105,7 +105,8 @@ export class YoPaymentsService {
   private static async sendRequest(xmlBody: string): Promise<YoPaymentsResponse> {
     try {
       console.log('YoPayments Request URL:', this.baseUrl);
-      console.log('YoPayments Request Body:', xmlBody);
+      // SECURITY: XML body contains API credentials — do not log in production
+      console.log('YoPayments Request: Sending request (body redacted for security)');
 
       const response = await fetch(this.baseUrl, {
         method: 'POST',

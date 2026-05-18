@@ -1,5 +1,66 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+/**
+ * Validates that a URL belongs to a trusted video host.
+ * Configure allowed hosts via the ALLOWED_VIDEO_HOSTS env var (comma-separated).
+ * This prevents SSRF attacks where an attacker could use this proxy to reach
+ * internal networks or arbitrary external services.
+ */
+function isAllowedVideoUrl(urlString: string): boolean {
+  // Configurable allowlist via env var (comma-separated domains)
+  const envHosts = process.env.ALLOWED_VIDEO_HOSTS || '';
+  const allowedHosts = envHosts
+    .split(',')
+    .map(h => h.trim().toLowerCase())
+    .filter(Boolean);
+
+  // If no allowlist is configured, only block obviously dangerous targets
+  // (private IPs, metadata endpoints, localhost). In production you should
+  // set ALLOWED_VIDEO_HOSTS for a strict allowlist.
+  try {
+    const url = new URL(urlString);
+    const hostname = url.hostname.toLowerCase();
+
+    // Always block private/internal addresses
+    const blockedPatterns = [
+      /^localhost$/i,
+      /^127\./,
+      /^10\./,
+      /^172\.(1[6-9]|2\d|3[01])\./,
+      /^192\.168\./,
+      /^169\.254\./,        // AWS metadata
+      /^0\./,
+      /^\[::1\]$/,          // IPv6 localhost
+      /^metadata\./i,
+      /^internal\./i,
+    ];
+
+    if (blockedPatterns.some(p => p.test(hostname))) {
+      return false;
+    }
+
+    // Block non-http(s) schemes
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+      return false;
+    }
+
+    // If an allowlist is configured, enforce it strictly
+    if (allowedHosts.length > 0) {
+      return allowedHosts.some(
+        host => hostname === host || hostname.endsWith(`.${host}`)
+      );
+    }
+
+    // No allowlist configured — allow (with blocked patterns filtered above)
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// The allowed origin for CORS — restricts who can embed our streams
+const CORS_ORIGIN = process.env.NEXT_PUBLIC_APP_URL || '*';
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -9,6 +70,12 @@ export async function GET(request: NextRequest) {
     if (!videoUrl) {
       console.error('Stream API: No video URL provided');
       return NextResponse.json({ error: 'Video URL is required' }, { status: 400 });
+    }
+
+    // SECURITY: Validate the URL against the allowlist to prevent SSRF
+    if (!isAllowedVideoUrl(videoUrl)) {
+      console.error('Stream API: Blocked request to non-allowed host');
+      return NextResponse.json({ error: 'Invalid video source' }, { status: 403 });
     }
 
     // Don't log full URLs in production
@@ -21,8 +88,8 @@ export async function GET(request: NextRequest) {
     const range = request.headers.get('range');
     const upstreamHeaders: Record<string, string> = {};
 
-    // Add Basic Auth if credentials are configured
-    if (username && password) {
+    // SECURITY: Only attach auth credentials when URL is on an allowed host
+    if (username && password && isAllowedVideoUrl(videoUrl)) {
       const encodedCredentials = btoa(`${username}:${password}`);
       upstreamHeaders['Authorization'] = `Basic ${encodedCredentials}`;
     }
@@ -52,7 +119,7 @@ export async function GET(request: NextRequest) {
     const responseHeaders = new Headers({
       'Content-Type': contentType,
       'Cache-Control': 'public, max-age=3600',
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': CORS_ORIGIN,
       'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
       'Access-Control-Allow-Headers': 'Range, Content-Range, Content-Length, Content-Type'
     });
@@ -107,7 +174,7 @@ export async function OPTIONS() {
   return new NextResponse(null, {
     status: 200,
     headers: {
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': CORS_ORIGIN,
       'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
       'Access-Control-Allow-Headers': 'Range, Content-Range, Content-Length, Content-Type',
     },

@@ -31,7 +31,8 @@ function ExpandedCard({ content, rect, onMouseLeave, onMouseEnter }: { content: 
   if (left + expandedWidth > window.innerWidth - 20) left = window.innerWidth - expandedWidth - 20;
 
   // Media fallback
-  const videoUrl = content.trailer_url || content.video_url; 
+  // SECURITY: Only use trailer_url for previews — never raw video_url
+  const videoUrl = content.trailer_url || null; 
   const coverUrl = content.cover_image_url || content.thumbnail_url || content.poster_url || `https://via.placeholder.com/640x360/1f2937/e50914?text=${encodeURIComponent(content.title || '')}`;
 
   const navUrl = `/${content.type === 'movie' || !content.type ? 'movies' : 'series'}/${content.id}`;

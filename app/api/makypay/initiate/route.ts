@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
     if (!serviceRoleKey) {
       console.error('SUPABASE_SERVICE_ROLE_KEY is not set — cannot validate user');
       return NextResponse.json(
-        { error: 'Server misconfiguration: missing service role key' },
+        { error: 'Service temporarily unavailable' },
         { status: 500 }
       );
     }
@@ -129,13 +129,13 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Payment initiation failed';
+    const isUserFacing = error instanceof Error && error.name === 'MakyPayException';
+    const errorMessage = isUserFacing ? error.message : 'Payment initiation failed';
     console.error('MakyPay API error:', {
-      message: errorMessage,
+      message: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
     });
 
-    // Surface the actual error to the frontend (e.g., "Unsupported phone prefix...")
     return NextResponse.json(
       {
         error: errorMessage,

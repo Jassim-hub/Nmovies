@@ -15,6 +15,19 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
  */
 export async function POST(request: NextRequest) {
   try {
+    // SECURITY: Verify webhook authenticity via shared secret
+    // Set MAKYPAY_WEBHOOK_SECRET in .env and append ?secret=<value> to the webhook URL
+    // registered with MakyPay.
+    const webhookSecret = process.env.MAKYPAY_WEBHOOK_SECRET;
+    if (webhookSecret) {
+      const { searchParams } = new URL(request.url);
+      const providedSecret = searchParams.get('secret');
+      if (providedSecret !== webhookSecret) {
+        console.error('MakyPay Webhook: Invalid or missing secret');
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+      }
+    }
+
     const body = await request.json();
     
     console.log('MakyPay Webhook received:', JSON.stringify(body, null, 2));

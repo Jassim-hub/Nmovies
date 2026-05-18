@@ -154,9 +154,10 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('MakyPay completion error:', error);
 
+    const isUserFacing = error instanceof Error && error.name === 'MakyPayException';
     return NextResponse.json(
       {
-        error: error instanceof Error ? error.message : 'Subscription completion failed',
+        error: isUserFacing ? error.message : 'Subscription completion failed',
         success: false
       },
       { status: 500 }

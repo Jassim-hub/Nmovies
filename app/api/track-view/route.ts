@@ -1,9 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { supabase } from '@/lib/supabase';
+import { checkRateLimit, getClientIp } from '@/lib/video-protection';
 
 export async function POST(request: NextRequest) {
   try {
+    // SECURITY: Rate limit view tracking to prevent artificial inflation
+    const clientIp = getClientIp(request.headers);
+    const rateCheck = checkRateLimit(clientIp, 30, 60000); // 30 views per minute per IP
+    if (!rateCheck.allowed) {
+      return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+    }
+
     const body = await request.json();
     const { contentId, contentType, userId } = body;
 
