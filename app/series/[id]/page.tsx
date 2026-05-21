@@ -11,7 +11,7 @@ import VideoPlayer from "@/components/VideoPlayer";
 import { useAuth } from "@/components/AuthProvider";
 import { getProfile, Profile } from '@/lib/profiles';
 import AuthRequiredModal, { useAuthCheck } from '@/components/AuthRequiredModal';
-import PremiumUpgradeModal from '@/components/PremiumUpgradeModal';
+
 import { isStandardPremium } from "@/lib/isStandardPremium";
 import { normalizeVideoUrl } from "@/lib/utils";
 import { MovieCast } from "@/components/MovieCast";
@@ -194,7 +194,7 @@ export default function SeriesDetailsPage() {
   }, [params.id]);
 
   const [showDownloadModal, setShowDownloadModal] = useState(false);
-  const [showPremiumUpgradeModal, setShowPremiumUpgradeModal] = useState(false);
+
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authAction, setAuthAction] = useState<'play' | 'download'>('play');
 
@@ -210,7 +210,7 @@ export default function SeriesDetailsPage() {
 
     // Check premium
     if (episode.premium && !isPremium) {
-      setShowPremiumUpgradeModal(true);
+      router.push('/payment');
       return;
     }
 
@@ -234,7 +234,7 @@ export default function SeriesDetailsPage() {
         } else {
           const errData = await res.json().catch(() => ({}));
           if (errData.requirePremium) {
-            setShowPremiumUpgradeModal(true);
+            router.push('/payment');
           } else {
             alert('Failed to load episode');
           }
@@ -283,8 +283,8 @@ export default function SeriesDetailsPage() {
   const handleDownload = async (episode: EpisodeWithSeason) => {
     setSelectedEpisode(episode);
     if (!user?.id) { setAuthAction('download'); setShowAuthModal(true); return; }
-    if (episode.premium && !isPremium) { setShowPremiumUpgradeModal(true); return; }
-    if (!isStandardPremiumUser) { setShowPremiumUpgradeModal(true); return; }
+    if (episode.premium && !isPremium) { router.push('/payment'); return; }
+    if (!isStandardPremiumUser) { router.push('/payment'); return; }
     setShowDownloadModal(true);
   };
 
@@ -662,7 +662,7 @@ export default function SeriesDetailsPage() {
           </div>
         </div>
       )}
-      <PremiumUpgradeModal isOpen={showPremiumUpgradeModal} onClose={() => setShowPremiumUpgradeModal(false)} />
+
       <AuthRequiredModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} action={authAction} requirePremium={Boolean(selectedEpisode?.premium)} />
     </div>
   );

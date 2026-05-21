@@ -6,7 +6,7 @@ import Image from "next/image";
 import { useAuth } from "@/components/AuthProvider";
 import { supabase, MovieWithVJ, SeriesWithVJ } from "@/lib/supabase";
 import AuthRequiredModal, { useAuthCheck } from '@/components/AuthRequiredModal';
-import PremiumUpgradeModal from '@/components/PremiumUpgradeModal';
+
 import { FullPageSpinner, InlineSpinner } from "@/components/LoadingSpinner";
 import { Button } from "@/components/ui/button";
 import { NetflixCard } from "@/components/NetflixCard";
@@ -32,7 +32,7 @@ export default function MovieDetailsPage() {
   const [error, setError] = useState<string | null>(null);
   
   const [showDownloadModal, setShowDownloadModal] = useState(false);
-  const [showPremiumUpgradeModal, setShowPremiumUpgradeModal] = useState(false);
+
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authAction, setAuthAction] = useState<'play' | 'download'>('play');
   
@@ -183,7 +183,7 @@ export default function MovieDetailsPage() {
            setShowAuthModal(true);
         } else {
            // Logged in but missing premium
-           setShowPremiumUpgradeModal(true);
+           router.push('/payment');
         }
         return;
      }
@@ -224,8 +224,8 @@ export default function MovieDetailsPage() {
 
   const handleDownload = async () => {
     if (!user?.id) { setAuthAction('download'); setShowAuthModal(true); return; }
-    if (movie?.premium && !isPremium) { setShowPremiumUpgradeModal(true); return; }
-    if (!isStandardPremiumUser) { setShowPremiumUpgradeModal(true); return; }
+    if (movie?.premium && !isPremium) { router.push('/payment'); return; }
+    if (!isStandardPremiumUser) { router.push('/payment'); return; }
     setShowDownloadModal(true);
   };
 
@@ -505,7 +505,7 @@ export default function MovieDetailsPage() {
           </div>
         </div>
       )}
-      <PremiumUpgradeModal isOpen={showPremiumUpgradeModal} onClose={() => setShowPremiumUpgradeModal(false)} />
+
       <AuthRequiredModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} action={authAction} requirePremium={false} />
     </div>
   );

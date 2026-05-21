@@ -7,7 +7,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { signOut } from "@/lib/auth";
 import { setRedirectCookie } from "@/lib/utils";
 import { Search } from "lucide-react";
-import PremiumUpgradeModal from "@/components/PremiumUpgradeModal";
+
 
 const leftNavItems: { href: string; label: React.ReactNode }[] = [
   { href: "/", label: "Home" },
@@ -22,7 +22,7 @@ export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [showPremiumUpgradeModal, setShowPremiumUpgradeModal] = useState(false);
+
 
   const { user, loading, isPremium } = useAuth();
 
@@ -536,11 +536,7 @@ export default function Header() {
       `}</style>
       </header>
 
-      {/* Premium Upgrade Modal */}
-      <PremiumUpgradeModal
-        isOpen={showPremiumUpgradeModal}
-        onClose={() => setShowPremiumUpgradeModal(false)}
-      />
+
     </>
   );
 }
