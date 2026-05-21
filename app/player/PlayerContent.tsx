@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from 'next/navigation';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import VideoPlayer from '@/components/VideoPlayer';
 import { ArrowLeft, AlertCircle, ChevronLeft, ChevronRight, Play } from 'lucide-react';
@@ -28,6 +28,10 @@ export default function PlayerContent() {
   const [showNextEpisodePrompt, setShowNextEpisodePrompt] = useState(false);
   const [seriesId, setSeriesId] = useState<string | null>(null);
   const [switchingEpisode, setSwitchingEpisode] = useState(false);
+  // Tracks the content key for which we have already successfully fetched a stream URL,
+  // preventing redundant re-fetches caused by multiple Supabase auth state events
+  // (TOKEN_REFRESHED, INITIAL_SESSION, SIGNED_IN) firing for the same user on page load.
+  const streamFetchedRef = useRef<string | null>(null);
 
   const { user, loading: authLoading, isPremium } = useAuth();
   const { checkAuth } = useAuthCheck();
@@ -64,6 +68,16 @@ export default function PlayerContent() {
 
       // Wait for auth to load
       if (authLoading) {
+        return;
+      }
+
+      // Guard: if we already successfully fetched a stream URL for this exact content,
+      // do not re-fetch. This prevents the player from blinking when Supabase fires
+      // multiple auth state events (TOKEN_REFRESHED, INITIAL_SESSION, SIGNED_IN) for
+      // the same user on page load, each of which would otherwise re-run this effect.
+      // We use a ref (not state) because refs are always live in closures — no staleness.
+      const fetchKey = `${contentId}-${contentType}-${episodeId ?? 'none'}`;
+      if (streamFetchedRef.current === fetchKey) {
         return;
       }
 
@@ -192,6 +206,9 @@ export default function PlayerContent() {
           throw new Error('No video URL available');
         }
 
+        // Mark this content as successfully fetched so the guard above
+        // blocks any subsequent redundant re-fetches from auth state changes.
+        streamFetchedRef.current = fetchKey;
         setStreamUrl(videoData.streamUrl);
         setTitle(contentTitle);
         setLoading(false);
@@ -204,7 +221,12 @@ export default function PlayerContent() {
     };
 
     fetchStreamUrl();
-  }, [contentId, contentType, episodeId, user, authLoading, isPremium]);
+  // Use user?.id (not `user`) so new object references for the same logged-in user
+  // (e.g. from multiple Supabase auth events) do not cause re-runs.
+  // `isPremium` and `streamUrl` are intentionally excluded: isPremium is not used
+  // directly (checkAuth reads it internally), and streamUrl would cause a redundant
+  // re-run after every successful fetch. The ref-based guard handles idempotency.
+  }, [contentId, contentType, episodeId, user?.id, authLoading]);
 
   // Fetch all episodes for navigation
   const fetchAllEpisodes = async (seriesId: string, currentEpisodeId: string) => {
