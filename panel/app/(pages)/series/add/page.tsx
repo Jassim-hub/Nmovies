@@ -273,14 +273,10 @@ export default function AddSeriesPage() {
     }
 
     setSubmitLoading(false);
-    if (error) {
-      setSubmitError(error.message);
-    } else {
-      setSubmitSuccess(true);
-      setTimeout(() => {
-        router.push("/series");
-      }, 1500);
-    }
+    setSubmitSuccess(true);
+    setTimeout(() => {
+      router.push("/series");
+    }, 1500);
   };
 
   // Season Handlers
