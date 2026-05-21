@@ -31,7 +31,10 @@ export async function authFetch(
     headers.set('Content-Type', 'application/json');
   }
 
-  return fetch(url, {
+  // Automatically prepend basePath for absolute API paths
+  const fetchUrl = url.startsWith('/api/') ? `/panel${url}` : url;
+
+  return fetch(fetchUrl, {
     ...options,
     headers,
   });

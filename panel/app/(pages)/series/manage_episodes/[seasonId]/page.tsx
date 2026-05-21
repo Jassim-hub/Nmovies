@@ -112,7 +112,7 @@ export default function ManageEpisodesPage() {
   }
 
   async function fetchFromTMDB() {
-    const url = `/api/seasons/${seasonId}/fetch-episodes`;
+    const url = `/panel/api/seasons/${seasonId}/fetch-episodes`;
     const res = await fetch(url, { method: "GET" });
     let data;
     try {

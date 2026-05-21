@@ -116,7 +116,7 @@ export default function NotificationsPage() {
     setSending(notification.id);
     
     try {
-      const response = await fetch('/api/notifications/send', {
+      const response = await fetch('/panel/api/notifications/send', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
