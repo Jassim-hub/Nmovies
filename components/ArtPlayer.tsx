@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState, useCallback } from "react"
+import { useEffect, useRef, useState } from "react"
 import Artplayer from "artplayer"
 import { isIOSDevice, canStreamMKV } from "@/lib/device-utils"
 import { EpisodeWithSeason } from '@/lib/supabase'
@@ -31,9 +31,17 @@ export function ArtPlayer({ url, poster, title, className, onEnded, episodes = [
   const [authError, setAuthError] = useState<string | null>(null)
   const blobUrlRef = useRef<string | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
-  const [currentUrl, setCurrentUrl] = useState<string | null>(null)
   const [showEpisodesOverlay, setShowEpisodesOverlay] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
+
+  // Refs for callbacks used in ongoing event handlers. Using refs (instead of
+  // putting these in the initialization effect's dependency array) prevents
+  // the player from being destroyed and recreated when only callbacks change.
+  // This was the root cause of the infinite re-initialization loop.
+  const onEndedRef = useRef(onEnded)
+  const onTimeUpdateRef = useRef(onTimeUpdate)
+  onEndedRef.current = onEnded
+  onTimeUpdateRef.current = onTimeUpdate
 
   const { checkAuth } = useAuthCheck()
 
@@ -56,12 +64,7 @@ export function ArtPlayer({ url, poster, title, className, onEnded, episodes = [
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [showEpisodesOverlay, contentType, episodes.length]);
 
-  // Stabilize the onEnded callback
-  const stableOnEnded = useCallback(() => {
-    if (onEnded) {
-      onEnded();
-    }
-  }, [onEnded]);
+
 
   // The keyboard handling is now managed by the useEpisodeNavigation hook
 
@@ -143,8 +146,7 @@ export function ArtPlayer({ url, poster, title, className, onEnded, episodes = [
       playerRef.current = null
     }
 
-    // Update current URL tracking
-    setCurrentUrl(authenticatedUrl)
+
 
     const art = new Artplayer({
       container: artRef.current,
@@ -275,8 +277,8 @@ export function ArtPlayer({ url, poster, title, className, onEnded, episodes = [
 
     // Handle time updates for continue watching
     art.on('video:timeupdate', () => {
-      if (onTimeUpdate && art.video) {
-        onTimeUpdate(art.video.currentTime, art.video.duration);
+      if (onTimeUpdateRef.current && art.video) {
+        onTimeUpdateRef.current(art.video.currentTime, art.video.duration);
       }
     });
 
@@ -339,7 +341,7 @@ export function ArtPlayer({ url, poster, title, className, onEnded, episodes = [
 
     // Handle video ended event
     art.on('video:ended', () => {
-      stableOnEnded()
+      onEndedRef.current?.()
     })
 
     // Handle fullscreen events for auto-rotation
@@ -556,9 +558,8 @@ export function ArtPlayer({ url, poster, title, className, onEnded, episodes = [
         }
       }
 
-      setCurrentUrl(null)
     }
-  }, [authenticatedUrl, poster, title, stableOnEnded])
+  }, [authenticatedUrl])
 
   if (loading) {
     return (
