@@ -71,6 +71,26 @@ export default function AddSeriesPage() {
   const [allVjs, setAllVjs] = useState<{ id: string; name: string }[]>([]);
   const [vjsLoading, setVjsLoading] = useState(true);
 
+  interface EpisodeState {
+    id: string;
+    episode_number: number;
+    title: string;
+    video_url: string;
+    thumbnail_url: string;
+    overview: string;
+    premium: boolean;
+    release_date: string;
+  }
+
+  interface SeasonState {
+    id: string;
+    season_number: number;
+    name: string;
+    overview: string;
+    episodes: EpisodeState[];
+  }
+
+  const [seasons, setSeasons] = useState<SeasonState[]>([]);
   const [showForm, setShowForm] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
@@ -206,7 +226,52 @@ export default function AddSeriesPage() {
       thumbnail_url: form.thumbnail,
       tmdb_id: form.tmdb_id,
     };
-    const { error } = await supabase.from("series").insert([seriesData]);
+    const { data: insertedSeries, error } = await supabase.from("series").insert([seriesData]).select().single();
+    if (error) {
+      setSubmitLoading(false);
+      setSubmitError(error.message);
+      return;
+    }
+
+    const seriesId = insertedSeries.id;
+
+    // Insert seasons and episodes
+    for (const season of seasons) {
+      const seasonData = {
+        series_id: seriesId,
+        name: season.name,
+        overview: season.overview,
+        order: season.season_number,
+      };
+      
+      const { data: insertedSeason, error: seasonError } = await supabase.from("seasons").insert([seasonData]).select().single();
+      
+      if (seasonError) {
+         console.error("Error inserting season:", seasonError);
+         continue;
+      }
+      
+      const seasonId = insertedSeason.id;
+      
+      if (season.episodes.length > 0) {
+        const episodesData = season.episodes.map(ep => ({
+          season_id: seasonId,
+          title: ep.title,
+          description: ep.overview,
+          video_url: ep.video_url,
+          thumbnail_url: ep.thumbnail_url,
+          episode_number: ep.episode_number,
+          premium: ep.premium,
+          published: true,
+        }));
+        
+        const { error: episodesError } = await supabase.from("episodes").insert(episodesData);
+        if (episodesError) {
+          console.error("Error inserting episodes:", episodesError);
+        }
+      }
+    }
+
     setSubmitLoading(false);
     if (error) {
       setSubmitError(error.message);
@@ -216,6 +281,129 @@ export default function AddSeriesPage() {
         router.push("/series");
       }, 1500);
     }
+  };
+
+  // Season Handlers
+  const handleAddSeason = () => {
+    const newSeasonNumber = seasons.length > 0 ? Math.max(...seasons.map(s => s.season_number)) + 1 : 1;
+    setSeasons(prev => [...prev, {
+      id: crypto.randomUUID(),
+      season_number: newSeasonNumber,
+      name: `Season ${newSeasonNumber}`,
+      overview: "",
+      episodes: []
+    }]);
+  };
+
+  const handleFetchSeason = async (seasonId: string) => {
+    if (!form.tmdb_id) {
+       alert("No TMDB ID set for series");
+       return;
+    }
+    const season = seasons.find(s => s.id === seasonId);
+    if (!season) return;
+    
+    try {
+      const res = await fetch(`/panel/api/series/fetch-season?seriesId=${form.tmdb_id}&seasonNumber=${season.season_number}`);
+      if (!res.ok) throw new Error("Failed to fetch season");
+      const data = await res.json();
+      
+      setSeasons(prev => prev.map(s => s.id === seasonId ? {
+        ...s,
+        name: data.name || s.name,
+        overview: data.overview || s.overview,
+      } : s));
+    } catch (err) {
+      console.error(err);
+      alert("Failed to fetch season data");
+    }
+  };
+
+  const handleSeasonChange = (seasonId: string, field: string, value: any) => {
+    setSeasons(prev => prev.map(s => s.id === seasonId ? { ...s, [field]: value } : s));
+  };
+  
+  const handleRemoveSeason = (seasonId: string) => {
+    setSeasons(prev => prev.filter(s => s.id !== seasonId));
+  };
+
+  // Episode Handlers
+  const handleAddEpisode = (seasonId: string) => {
+    setSeasons(prev => prev.map(season => {
+      if (season.id !== seasonId) return season;
+      const newEpisodeNumber = season.episodes.length > 0 ? Math.max(...season.episodes.map(e => e.episode_number)) + 1 : 1;
+      return {
+        ...season,
+        episodes: [...season.episodes, {
+          id: crypto.randomUUID(),
+          episode_number: newEpisodeNumber,
+          title: `Episode ${newEpisodeNumber}`,
+          video_url: "",
+          thumbnail_url: "",
+          overview: "",
+          premium: false,
+          release_date: "",
+        }]
+      };
+    }));
+  };
+
+  const handleFetchEpisode = async (seasonId: string, episodeId: string) => {
+    if (!form.tmdb_id) {
+       alert("No TMDB ID set for series");
+       return;
+    }
+    const season = seasons.find(s => s.id === seasonId);
+    if (!season) return;
+    const episode = season.episodes.find(e => e.id === episodeId);
+    if (!episode) return;
+    
+    try {
+      const res = await fetch(`/panel/api/series/fetch-episode?seriesId=${form.tmdb_id}&seasonNumber=${season.season_number}&episodeNumber=${episode.episode_number}`);
+      if (!res.ok) throw new Error("Failed to fetch episode");
+      const data = await res.json();
+      
+      setSeasons(prev => prev.map(s => {
+        if (s.id !== seasonId) return s;
+        return {
+          ...s,
+          episodes: s.episodes.map(e => {
+            if (e.id !== episodeId) return e;
+            return {
+              ...e,
+              title: data.name || e.title,
+              overview: data.overview || e.overview,
+              thumbnail_url: data.still_path ? `https://image.tmdb.org/t/p/original${data.still_path}` : e.thumbnail_url,
+              release_date: data.air_date || e.release_date,
+              // video_url intentionally left unchanged (blank)
+            };
+          })
+        };
+      }));
+    } catch (err) {
+      console.error(err);
+      alert("Failed to fetch episode data");
+    }
+  };
+
+  const handleEpisodeChange = (seasonId: string, episodeId: string, field: string, value: any) => {
+    setSeasons(prev => prev.map(s => {
+      if (s.id !== seasonId) return s;
+      return {
+        ...s,
+        episodes: s.episodes.map(e => e.id === episodeId ? { ...e, [field]: value } : e)
+      };
+    }));
+  };
+
+  const handleRemoveEpisode = (seasonId: string, episodeId: string) => {
+    setSeasons(prev => prev.map(s => {
+      if (s.id !== seasonId) return s;
+      return {
+        ...s,
+        episodes: s.episodes.filter(e => e.id !== episodeId)
+      };
+    }));
   };
 
   return (
@@ -419,6 +607,180 @@ export default function AddSeriesPage() {
               >
                 {submitLoading ? "Saving..." : "+ Create Series"}
               </button>
+            </div>
+
+            {/* Seasons & Episodes Section */}
+            <div className="md:col-span-2 border-t border-gray-800 pt-8 mt-4">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold text-white uppercase tracking-wider">Seasons & Episodes</h2>
+                <button
+                  type="button"
+                  onClick={handleAddSeason}
+                  className="bg-gray-800 hover:bg-gray-700 text-white font-bold text-xs uppercase tracking-wider py-2 px-4 rounded transition-colors"
+                >
+                  + Add Season
+                </button>
+              </div>
+
+              <div className="space-y-8">
+                {seasons.map((season) => (
+                  <div key={season.id} className="bg-black border border-gray-800 rounded-xl p-6">
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="flex-1 mr-4">
+                        <div className="flex items-center gap-4 mb-3">
+                          <h3 className="text-lg font-bold text-white">Season {season.season_number}</h3>
+                          {form.tmdb_id && (
+                            <button
+                              type="button"
+                              onClick={() => handleFetchSeason(season.id)}
+                              className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-1 rounded"
+                            >
+                              Fetch TMDB Data
+                            </button>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-gray-500 text-xs font-bold uppercase mb-1">Season Name</label>
+                            <input
+                              value={season.name}
+                              onChange={(e) => handleSeasonChange(season.id, 'name', e.target.value)}
+                              className="w-full p-2 bg-gray-900 border border-gray-800 text-white rounded text-sm focus:outline-none focus:ring-1 focus:ring-[#E50914]"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-gray-500 text-xs font-bold uppercase mb-1">Season Number</label>
+                            <input
+                              type="number"
+                              value={season.season_number}
+                              onChange={(e) => handleSeasonChange(season.id, 'season_number', parseInt(e.target.value) || 1)}
+                              className="w-full p-2 bg-gray-900 border border-gray-800 text-white rounded text-sm focus:outline-none focus:ring-1 focus:ring-[#E50914]"
+                            />
+                          </div>
+                          <div className="md:col-span-2">
+                            <label className="block text-gray-500 text-xs font-bold uppercase mb-1">Overview</label>
+                            <textarea
+                              value={season.overview}
+                              onChange={(e) => handleSeasonChange(season.id, 'overview', e.target.value)}
+                              rows={2}
+                              className="w-full p-2 bg-gray-900 border border-gray-800 text-white rounded text-sm focus:outline-none focus:ring-1 focus:ring-[#E50914]"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveSeason(season.id)}
+                        className="text-red-500 hover:text-red-400 font-bold text-xs uppercase"
+                      >
+                        Remove
+                      </button>
+                    </div>
+
+                    {/* Episodes List */}
+                    <div className="mt-6 border-t border-gray-800 pt-4">
+                      <div className="flex justify-between items-center mb-4">
+                        <h4 className="text-md font-bold text-gray-300">Episodes</h4>
+                        <button
+                          type="button"
+                          onClick={() => handleAddEpisode(season.id)}
+                          className="bg-gray-800 hover:bg-gray-700 text-white font-bold text-xs uppercase py-1.5 px-3 rounded"
+                        >
+                          + Add Episode
+                        </button>
+                      </div>
+
+                      <div className="space-y-4">
+                        {season.episodes.map((episode) => (
+                          <div key={episode.id} className="bg-gray-900 border border-gray-800 rounded p-4">
+                            <div className="flex justify-between items-center mb-3">
+                              <span className="text-white font-bold text-sm">Episode {episode.episode_number}</span>
+                              <div className="flex gap-2">
+                                {form.tmdb_id && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleFetchEpisode(season.id, episode.id)}
+                                    className="bg-blue-600/80 hover:bg-blue-600 text-white text-xs px-2 py-1 rounded transition-colors"
+                                  >
+                                    Fetch from TMDB
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveEpisode(season.id, episode.id)}
+                                  className="text-red-500 hover:text-red-400 text-xs font-bold uppercase ml-2"
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-gray-500 text-xs font-bold uppercase mb-1">Title</label>
+                                <input
+                                  value={episode.title}
+                                  onChange={(e) => handleEpisodeChange(season.id, episode.id, 'title', e.target.value)}
+                                  className="w-full p-2 bg-black border border-gray-800 text-white rounded text-sm focus:outline-none focus:ring-1 focus:ring-[#E50914]"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-gray-500 text-xs font-bold uppercase mb-1">Episode Number</label>
+                                <input
+                                  type="number"
+                                  value={episode.episode_number}
+                                  onChange={(e) => handleEpisodeChange(season.id, episode.id, 'episode_number', parseInt(e.target.value) || 1)}
+                                  className="w-full p-2 bg-black border border-gray-800 text-white rounded text-sm focus:outline-none focus:ring-1 focus:ring-[#E50914]"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-gray-500 text-xs font-bold uppercase mb-1">Video URL</label>
+                                <input
+                                  value={episode.video_url}
+                                  onChange={(e) => handleEpisodeChange(season.id, episode.id, 'video_url', e.target.value)}
+                                  placeholder="Leave blank to use vidsrc or fill manually"
+                                  className="w-full p-2 bg-black border border-gray-800 text-white rounded text-sm focus:outline-none focus:ring-1 focus:ring-[#E50914]"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-gray-500 text-xs font-bold uppercase mb-1">Thumbnail URL</label>
+                                <input
+                                  value={episode.thumbnail_url}
+                                  onChange={(e) => handleEpisodeChange(season.id, episode.id, 'thumbnail_url', e.target.value)}
+                                  className="w-full p-2 bg-black border border-gray-800 text-white rounded text-sm focus:outline-none focus:ring-1 focus:ring-[#E50914]"
+                                />
+                              </div>
+                              <div className="md:col-span-2">
+                                <label className="block text-gray-500 text-xs font-bold uppercase mb-1">Overview</label>
+                                <textarea
+                                  value={episode.overview}
+                                  onChange={(e) => handleEpisodeChange(season.id, episode.id, 'overview', e.target.value)}
+                                  rows={2}
+                                  className="w-full p-2 bg-black border border-gray-800 text-white rounded text-sm focus:outline-none focus:ring-1 focus:ring-[#E50914]"
+                                />
+                              </div>
+                              <div>
+                                <label className="flex items-center gap-2 text-gray-400 text-xs font-bold uppercase cursor-pointer mt-2 w-fit">
+                                  <input
+                                    type="checkbox"
+                                    checked={episode.premium}
+                                    onChange={(e) => handleEpisodeChange(season.id, episode.id, 'premium', e.target.checked)}
+                                    className="w-3 h-3 accent-[#E50914]"
+                                  />
+                                  Premium Episode
+                                </label>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                        {season.episodes.length === 0 && (
+                          <div className="text-gray-500 text-sm italic py-2">No episodes added yet.</div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </form>
         )}

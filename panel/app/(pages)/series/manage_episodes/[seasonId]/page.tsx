@@ -62,6 +62,9 @@ export default function ManageEpisodesPage() {
     premium: false,
     release_date: new Date().toISOString().split('T')[0]
   });
+  const [tmdbId, setTmdbId] = useState<string | null>(null);
+  const [seasonOrder, setSeasonOrder] = useState<number | null>(null);
+  const [fetchLoading, setFetchLoading] = useState(false);
 
   useEffect(() => {
     async function fetchEpisodes() {
@@ -72,10 +75,41 @@ export default function ManageEpisodesPage() {
         .eq("season_id", seasonId)
         .order("episode_number");
       setEpisodes(data || []);
+      
+      const { data: seasonData } = await supabase.from("seasons").select("order, series_id").eq("id", seasonId).single();
+      if (seasonData) {
+        setSeasonOrder(seasonData.order);
+        const { data: seriesData } = await supabase.from("series").select("tmdb_id").eq("id", seasonData.series_id).single();
+        if (seriesData) setTmdbId(seriesData.tmdb_id);
+      }
+
       setLoading(false);
     }
     fetchEpisodes();
   }, [seasonId]);
+
+  async function handleFetchSingleEpisode() {
+    if (!tmdbId || seasonOrder === null || !editForm.episode_number) return;
+    setFetchLoading(true);
+    try {
+      const res = await fetch(`/panel/api/series/fetch-episode?seriesId=${tmdbId}&seasonNumber=${seasonOrder}&episodeNumber=${editForm.episode_number}`);
+      const data = await res.json();
+      if (data && !data.error) {
+        setEditForm(f => ({ 
+          ...f, 
+          title: data.name || f.title, 
+          description: data.overview || f.description,
+          thumbnail_url: data.still_path ? `https://image.tmdb.org/t/p/original${data.still_path}` : f.thumbnail_url,
+          release_date: data.air_date || f.release_date
+        }));
+      } else if (data.error) {
+        alert(data.error);
+      }
+    } catch(e) {
+      alert("Failed to fetch episode from TMDB");
+    }
+    setFetchLoading(false);
+  }
 
   async function fetchFromTMDB() {
     const url = `/api/seasons/${seasonId}/fetch-episodes`;
@@ -548,6 +582,15 @@ export default function ManageEpisodesPage() {
                 />
               </div>
               <div>
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Thumbnail URL</label>
+                <Input
+                  value={editForm.thumbnail_url || ""}
+                  onChange={e => handleEditChange("thumbnail_url", e.target.value)}
+                  className="bg-black border-gray-800 text-white focus-visible:ring-[#E50914]"
+                  placeholder="Thumbnail URL"
+                />
+              </div>
+              <div>
                 <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Video URL</label>
                 <Input
                   value={editForm.video_url || ""}
@@ -564,9 +607,19 @@ export default function ManageEpisodesPage() {
                   <input type="checkbox" checked={!!editForm.premium} onChange={e => handleEditChange("premium", e.target.checked)} className="w-4 h-4 accent-[#E50914]" /> Premium
                 </label>
               </div>
-              <div className="flex justify-end gap-2 pt-4 border-t border-gray-800 mt-2">
-                <Button type="button" variant="outline" onClick={closeEditModal} className="bg-transparent border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white uppercase tracking-wider font-bold">Cancel</Button>
-                <Button type="submit" className="bg-[#E50914] hover:bg-[#b80710] text-white uppercase tracking-wider font-bold shadow-[0_0_10px_rgba(229,9,20,0.2)]">Save</Button>
+              <div className="flex justify-between items-center pt-4 border-t border-gray-800 mt-2">
+                <Button 
+                  type="button" 
+                  onClick={handleFetchSingleEpisode} 
+                  className="bg-[#141414] border border-gray-700 hover:bg-gray-800 text-white uppercase tracking-wider font-bold text-xs" 
+                  disabled={fetchLoading || !tmdbId || seasonOrder === null || !editForm.episode_number}
+                >
+                  {fetchLoading ? "Fetching..." : "Fetch from TMDB"}
+                </Button>
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="outline" onClick={closeEditModal} className="bg-transparent border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white uppercase tracking-wider font-bold">Cancel</Button>
+                  <Button type="submit" className="bg-[#E50914] hover:bg-[#b80710] text-white uppercase tracking-wider font-bold shadow-[0_0_10px_rgba(229,9,20,0.2)]">Save</Button>
+                </div>
               </div>
             </form>
           )}
@@ -627,6 +680,16 @@ export default function ManageEpisodesPage() {
                 placeholder="Episode description"
                 className="bg-black border-gray-800 text-white focus-visible:ring-[#E50914]"
                 rows={3}
+              />
+            </div>
+            
+            <div>
+              <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Thumbnail URL</label>
+              <Input
+                value={createForm.thumbnail_url || ""}
+                onChange={e => handleCreateChange("thumbnail_url", e.target.value)}
+                placeholder="Thumbnail URL"
+                className="bg-black border-gray-800 text-white focus-visible:ring-[#E50914]"
               />
             </div>
             

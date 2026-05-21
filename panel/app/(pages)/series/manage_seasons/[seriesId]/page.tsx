@@ -58,6 +58,8 @@ export default function ManageSeasonsPage() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [seasonToDelete, setSeasonToDelete] = useState<Season | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [tmdbId, setTmdbId] = useState<string | null>(null);
+  const [fetchLoading, setFetchLoading] = useState(false);
 
   useEffect(() => {
     async function fetchSeasons() {
@@ -68,10 +70,31 @@ export default function ManageSeasonsPage() {
         .eq("series_id", seriesId)
         .order("order");
       setSeasons(data || []);
+      
+      const { data: seriesData } = await supabase.from("series").select("tmdb_id").eq("id", seriesId).single();
+      if (seriesData) setTmdbId(seriesData.tmdb_id);
+
       setLoading(false);
     }
     fetchSeasons();
   }, [seriesId]);
+
+  async function handleFetchSingleSeason() {
+    if (!tmdbId || !editForm.order) return;
+    setFetchLoading(true);
+    try {
+      const res = await fetch(`/panel/api/series/fetch-season?seriesId=${tmdbId}&seasonNumber=${editForm.order}`);
+      const data = await res.json();
+      if (data && !data.error) {
+        setEditForm(f => ({ ...f, name: data.name || f.name, overview: data.overview || f.overview }));
+      } else if (data.error) {
+        alert(data.error);
+      }
+    } catch(e) {
+      alert("Failed to fetch season from TMDB");
+    }
+    setFetchLoading(false);
+  }
 
   async function fetchFromTMDB() {
     const res = await fetch(`/panel/api/series/${seriesId}/fetch-seasons`, { method: "GET" });
@@ -367,9 +390,19 @@ export default function ManageSeasonsPage() {
                     rows={4}
                   />
                 </div>
-                <div className="flex justify-end gap-2 pt-4">
-                  <Button type="button" variant="outline" onClick={closeEditModal} className="bg-transparent border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white uppercase tracking-wider font-bold">Cancel</Button>
-                  <Button type="submit" className="bg-[#E50914] hover:bg-[#b80710] text-white uppercase tracking-wider font-bold shadow-[0_0_10px_rgba(229,9,20,0.2)]" disabled={editLoading}>{editLoading ? "Saving..." : "Save"}</Button>
+                <div className="flex justify-between items-center pt-4 border-t border-gray-800 mt-2">
+                  <Button 
+                    type="button" 
+                    onClick={handleFetchSingleSeason} 
+                    className="bg-[#141414] border border-gray-700 hover:bg-gray-800 text-white uppercase tracking-wider font-bold text-xs" 
+                    disabled={fetchLoading || !tmdbId || !editForm.order}
+                  >
+                    {fetchLoading ? "Fetching..." : "Fetch from TMDB"}
+                  </Button>
+                  <div className="flex justify-end gap-2">
+                    <Button type="button" variant="outline" onClick={closeEditModal} className="bg-transparent border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white uppercase tracking-wider font-bold">Cancel</Button>
+                    <Button type="submit" className="bg-[#E50914] hover:bg-[#b80710] text-white uppercase tracking-wider font-bold shadow-[0_0_10px_rgba(229,9,20,0.2)]" disabled={editLoading}>{editLoading ? "Saving..." : "Save"}</Button>
+                  </div>
                 </div>
               </form>
             )}
