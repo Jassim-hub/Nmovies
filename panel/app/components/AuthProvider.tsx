@@ -1,5 +1,5 @@
 "use client";
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { Session, User } from '@supabase/supabase-js';
@@ -18,6 +18,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
+
+  // Keep a ref so handleSession can always read the latest pathname
+  // without pathname being a useEffect dependency (which re-runs the whole
+  // auth flow — including re-registering onAuthStateChange — on every navigation).
+  const pathnameRef = useRef(pathname);
+  useEffect(() => {
+    pathnameRef.current = pathname;
+  }, [pathname]);
 
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
@@ -71,6 +79,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (currentSession?.user) {
         const isAdmin = await verifyAdmin(currentSession.user.id);
         if (!isAdmin) {
+          // Clear loading BEFORE signing out so the screen doesn't stay stuck
+          // while waiting for onAuthStateChange to fire from signOut().
+          setLoading(false);
           await supabase.auth.signOut();
           router.push("/login?unauthorized=1");
           return;
@@ -82,7 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(null);
         setUser(null);
         cleanupInactivityTimer();
-        if (pathname !== "/login") {
+        if (pathnameRef.current !== "/login") {
           router.push("/login");
         }
       }
@@ -95,7 +106,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await handleSession(data.session);
       } catch (error) {
         console.error("Error getting session:", error);
-        if (pathname !== "/login") {
+        if (pathnameRef.current !== "/login") {
           router.push("/login");
         }
         setLoading(false);
@@ -105,7 +116,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     getSession();
 
     const { data: listener } = supabase.auth.onAuthStateChange(async (_event, currentSession) => {
-      // Don't override loading state immediately on auth state change if we are still verifying
       setLoading(true);
       await handleSession(currentSession);
     });
@@ -114,7 +124,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       listener.subscription.unsubscribe();
       cleanupInactivityTimer();
     };
-  }, [router, pathname]);
+  // router is stable across renders in Next.js App Router.
+  // pathname is intentionally excluded — we read it via pathnameRef instead
+  // to avoid re-running the entire auth flow (and re-registering the
+  // onAuthStateChange listener) on every in-app navigation.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router]);
 
   // Show loading state while checking authentication
   if (loading) {
