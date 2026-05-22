@@ -41,7 +41,6 @@ describe('Critical Components', () => {
     'components/StreamitHoverCard.tsx',
     'components/VideoPlayer.tsx',
     'components/AuthProvider.tsx',
-    'components/PremiumUpgradeModal.tsx',
     'app/components/Header.tsx',
     'components/Footer.tsx',
   ];

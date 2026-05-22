@@ -5,9 +5,9 @@ import { Play, Download } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { EpisodeWithSeason } from '@/lib/supabase';
 import AuthRequiredModal, { useAuthCheck } from './AuthRequiredModal';
-import PremiumUpgradeModal from './PremiumUpgradeModal';
 import { isStandardPremium } from '@/lib/isStandardPremium';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 
 
 interface InlinePlayerProps {
@@ -40,11 +40,11 @@ const InlinePlayer: React.FC<InlinePlayerProps> = ({
   subscriptionPlan
 }) => {
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [showPremiumUpgradeModal, setShowPremiumUpgradeModal] = useState(false);
   const [authAction, setAuthAction] = useState<'play' | 'download'>('play');
 
   const { user, isPremium } = useAuth();
   const { checkAuth } = useAuthCheck();
+  const router = useRouter();
 
   const handlePlayClick = () => {
     if (!selectedEpisode) {
@@ -61,8 +61,7 @@ const InlinePlayer: React.FC<InlinePlayerProps> = ({
 
     // Check if episode requires premium and user doesn't have it
     if (selectedEpisode.premium && !isPremium) {
-      // Show premium upgrade modal instead of auth modal
-      setShowPremiumUpgradeModal(true);
+      router.push('/payment');
       return;
     }
 
@@ -85,8 +84,7 @@ const InlinePlayer: React.FC<InlinePlayerProps> = ({
 
     // Check if episode requires premium and user doesn't have it
     if (selectedEpisode.premium && !isPremium) {
-      // Show premium upgrade modal instead of auth modal
-      setShowPremiumUpgradeModal(true);
+      router.push('/payment');
       return;
     }
 
@@ -95,8 +93,7 @@ const InlinePlayer: React.FC<InlinePlayerProps> = ({
     const hasStandardPremium = isStandardPremium(subscription);
 
     if (!hasStandardPremium) {
-      // Show premium upgrade modal instead of auth modal
-      setShowPremiumUpgradeModal(true);
+      router.push('/payment');
       return;
     }
 
@@ -248,11 +245,7 @@ const InlinePlayer: React.FC<InlinePlayerProps> = ({
         <div className="pointer-events-none absolute left-0 right-0 bottom-0 h-28 z-20" style={{ background: "linear-gradient(180deg, transparent 0%, #09090b 90%)" }} />
       </section>
 
-      {/* Premium Upgrade Modal */}
-      <PremiumUpgradeModal
-        isOpen={showPremiumUpgradeModal}
-        onClose={() => setShowPremiumUpgradeModal(false)}
-      />
+
 
       {/* Authentication Modal (for non-authenticated users only) */}
       <AuthRequiredModal
