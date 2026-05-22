@@ -24,7 +24,18 @@ export default async function LoginPage() {
   } = await supabase.auth.getUser();
 
   if (user) {
-    redirect('/');
+    // Verify if the user is actually an admin before redirecting to the dashboard.
+    // If a normal user's session cookie is still present on the server, we don't want to
+    // redirect them back to the panel, which would cause an infinite redirect loop.
+    const { data: adminData } = await supabase
+      .from('admins')
+      .select('user_id')
+      .eq('user_id', user.id)
+      .single();
+
+    if (adminData) {
+      redirect('/');
+    }
   }
 
   return (

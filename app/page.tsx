@@ -333,29 +333,37 @@ export default function HomePage() {
                     const percentComplete = Math.round((item.progress / item.duration) * 100) || 0;
                     return (
                       <SwiperSlide key={`continue-${item.id}`}>
-                        <div className="group relative block w-full bg-[#141414] rounded overflow-hidden">
-                          <Link href={`/${item.type === 'movie' ? 'movies' : 'series'}/${item.id}`} className="block relative aspect-video cursor-pointer">
-                            <Image
-                              src={item.poster_url || "/placeholder-episode.jpg"}
-                              alt={item.title}
-                              fill
-                              className="object-cover transition-transform duration-500 group-hover:scale-105"
-                            />
-                            {/* Play overlay */}
-                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                              <div className="bg-[#E50914] rounded-full w-12 h-12 flex items-center justify-center shadow-lg">
-                                <Play fill="white" className="w-5 h-5 ml-1 text-white" />
+                        <div className="group relative block w-full bg-[#141414]">
+                          <Link href={`/${item.type === 'movie' ? 'movies' : 'series'}/${item.id}`} className="block relative h-full">
+                            <div className="cursor-pointer transition-all duration-300">
+                              <div className="aspect-[2/3] relative rounded-md overflow-hidden bg-[#141414] border-[2px] border-transparent transition-all duration-300 group-hover:border-[#E50914] mb-2">
+                                <Image
+                                  src={item.thumbnail_url || item.poster_url || item.cover_image_url || `https://via.placeholder.com/240x360/1f2937/e50914?text=${encodeURIComponent(item.title || '')}`}
+                                  alt={item.title}
+                                  fill
+                                  className="object-cover transition-transform duration-500 group-hover:scale-110"
+                                  onError={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    target.src = `https://via.placeholder.com/240x360/1f2937/e50914?text=${encodeURIComponent(item.title || '')}`;
+                                  }}
+                                />
+                                {/* Play overlay */}
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center z-10">
+                                  <div className="bg-[#E50914] rounded-full w-10 h-10 flex items-center justify-center transform scale-0 group-hover:scale-100 transition-transform duration-300 delay-100">
+                                    <Play fill="white" className="w-4 h-4 ml-0.5 text-white" />
+                                  </div>
+                                </div>
+                                {/* Progress bar */}
+                                <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-600/80 z-20">
+                                  <div className="h-full bg-[#E50914]" style={{ width: `${percentComplete}%` }}></div>
+                                </div>
                               </div>
                             </div>
-                            {/* Progress bar */}
-                            <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-gray-600">
-                              <div className="h-full bg-[#E50914]" style={{ width: `${percentComplete}%` }}></div>
-                            </div>
                           </Link>
-                          <div className="p-3">
-                            <h3 className="font-semibold text-white text-sm truncate leading-tight group-hover:text-[#E50914] transition-colors">{item.title}</h3>
+                          <div className="mt-1">
+                            <h3 className="font-medium text-white text-xs truncate leading-tight group-hover:text-[#E50914] transition-colors">{item.title}</h3>
                             {item.season && item.episode && (
-                              <p className="text-xs text-gray-400 mt-1">S{item.season} E{item.episode}</p>
+                              <p className="text-[10px] text-gray-400 mt-0.5 font-medium">S{item.season} E{item.episode}</p>
                             )}
                           </div>
                         </div>
