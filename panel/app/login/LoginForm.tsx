@@ -11,12 +11,19 @@ export default function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [unauthorized, setUnauthorized] = useState(false);
+  const [timeoutMessage, setTimeoutMessage] = useState(false);
 
   useEffect(() => {
     if (searchParams && searchParams.get("unauthorized") === "1") {
       setUnauthorized(true);
     } else {
       setUnauthorized(false);
+    }
+    
+    if (searchParams && searchParams.get("reason") === "timeout") {
+      setTimeoutMessage(true);
+    } else {
+      setTimeoutMessage(false);
     }
   }, [searchParams]);
 
@@ -113,6 +120,12 @@ export default function LoginForm() {
           {unauthorized && (
             <div className="bg-red-900/20 border border-red-900 text-red-500 px-4 py-3 rounded-lg text-sm">
               You are not authorized to access this panel.
+            </div>
+          )}
+
+          {timeoutMessage && (
+            <div className="bg-yellow-900/20 border border-yellow-900 text-yellow-500 px-4 py-3 rounded-lg text-sm">
+              Your session has expired due to 30 minutes of inactivity. Please log in again.
             </div>
           )}
 

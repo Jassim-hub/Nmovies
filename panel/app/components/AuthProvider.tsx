@@ -20,40 +20,99 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+
+    const resetTimeout = () => {
+      clearTimeout(timeoutId);
+      // 30 minutes = 30 * 60 * 1000 = 1800000 ms
+      timeoutId = setTimeout(async () => {
+        await supabase.auth.signOut();
+        router.push("/login?reason=timeout");
+      }, 1800000);
+    };
+
+    const setupInactivityTimer = () => {
+      window.addEventListener("mousemove", resetTimeout);
+      window.addEventListener("keydown", resetTimeout);
+      window.addEventListener("click", resetTimeout);
+      window.addEventListener("scroll", resetTimeout);
+      resetTimeout(); // Start the timer initially
+    };
+
+    const cleanupInactivityTimer = () => {
+      window.removeEventListener("mousemove", resetTimeout);
+      window.removeEventListener("keydown", resetTimeout);
+      window.removeEventListener("click", resetTimeout);
+      window.removeEventListener("scroll", resetTimeout);
+      clearTimeout(timeoutId);
+    };
+
+    const verifyAdmin = async (userId: string) => {
+      try {
+        const { data, error } = await supabase
+          .from('admins')
+          .select('user_id')
+          .eq('user_id', userId)
+          .single();
+
+        if (error && error.code !== 'PGRST116') {
+          console.error("Error checking admin status:", error);
+          return false;
+        }
+
+        return !!data;
+      } catch (error) {
+        console.error("Error checking admin status:", error);
+        return false;
+      }
+    };
+
+    const handleSession = async (currentSession: Session | null) => {
+      if (currentSession?.user) {
+        const isAdmin = await verifyAdmin(currentSession.user.id);
+        if (!isAdmin) {
+          await supabase.auth.signOut();
+          router.push("/login?unauthorized=1");
+          return;
+        }
+        setSession(currentSession);
+        setUser(currentSession.user);
+        setupInactivityTimer();
+      } else {
+        setSession(null);
+        setUser(null);
+        cleanupInactivityTimer();
+        if (pathname !== "/login") {
+          router.push("/login");
+        }
+      }
+      setLoading(false);
+    };
+
     const getSession = async () => {
       try {
         const { data } = await supabase.auth.getSession();
-        setSession(data.session);
-        setUser(data.session?.user ?? null);
-        
-        // Only redirect if we're not already on the login page
-        if (!data.session && pathname !== "/login") {
-          router.push("/login");
-        }
+        await handleSession(data.session);
       } catch (error) {
         console.error("Error getting session:", error);
         if (pathname !== "/login") {
           router.push("/login");
         }
-      } finally {
         setLoading(false);
       }
     };
 
     getSession();
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-      
-      if (!session && pathname !== "/login") {
-        router.push("/login");
-      }
+    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, currentSession) => {
+      // Don't override loading state immediately on auth state change if we are still verifying
+      setLoading(true);
+      await handleSession(currentSession);
     });
 
     return () => {
       listener.subscription.unsubscribe();
+      cleanupInactivityTimer();
     };
   }, [router, pathname]);
 
