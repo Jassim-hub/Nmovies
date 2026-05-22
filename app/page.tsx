@@ -338,7 +338,7 @@ export default function HomePage() {
                             <div className="cursor-pointer transition-all duration-300">
                               <div className="aspect-[2/3] relative rounded-md overflow-hidden bg-[#141414] border-[2px] border-transparent transition-all duration-300 group-hover:border-[#E50914] mb-2">
                                 <Image
-                                  src={item.thumbnail_url || item.poster_url || item.cover_image_url || `https://via.placeholder.com/240x360/1f2937/e50914?text=${encodeURIComponent(item.title || '')}`}
+                                  src={item.poster_url || `https://via.placeholder.com/240x360/1f2937/e50914?text=${encodeURIComponent(item.title || '')}`}
                                   alt={item.title}
                                   fill
                                   className="object-cover transition-transform duration-500 group-hover:scale-110"
