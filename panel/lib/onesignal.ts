@@ -8,6 +8,7 @@ export interface PushNotificationData {
   title: string;
   message: string;
   imageUrl?: string;
+  iconUrl?: string;
   data?: Record<string, unknown>;
   targetSegments?: string[];
   targetUserIds?: string[];
@@ -21,6 +22,9 @@ interface OneSignalNotificationPayload {
   contents: { en: string };
   big_picture?: string;
   large_icon?: string;
+  chrome_web_icon?: string;
+  firefox_icon?: string;
+  chrome_web_image?: string;
   data?: Record<string, unknown>;
 }
 
@@ -70,9 +74,17 @@ export class OneSignalService {
         contents: { en: notificationData.message },
       };
       
+      if (notificationData.iconUrl) {
+        payload.chrome_web_icon = notificationData.iconUrl;
+        payload.firefox_icon = notificationData.iconUrl;
+      }
+      
       if (notificationData.imageUrl) {
         payload.big_picture = notificationData.imageUrl;
         payload.large_icon = notificationData.imageUrl;
+        payload.chrome_web_image = notificationData.imageUrl;
+      } else if (notificationData.iconUrl) {
+        payload.large_icon = notificationData.iconUrl;
       }
       
       if (notificationData.data) {
@@ -101,9 +113,17 @@ export class OneSignalService {
         contents: { en: notificationData.message },
       };
       
+      if (notificationData.iconUrl) {
+        payload.chrome_web_icon = notificationData.iconUrl;
+        payload.firefox_icon = notificationData.iconUrl;
+      }
+      
       if (notificationData.imageUrl) {
         payload.big_picture = notificationData.imageUrl;
         payload.large_icon = notificationData.imageUrl;
+        payload.chrome_web_image = notificationData.imageUrl;
+      } else if (notificationData.iconUrl) {
+        payload.large_icon = notificationData.iconUrl;
       }
       
       if (notificationData.data) {
@@ -132,9 +152,17 @@ export class OneSignalService {
         contents: { en: notificationData.message },
       };
       
+      if (notificationData.iconUrl) {
+        payload.chrome_web_icon = notificationData.iconUrl;
+        payload.firefox_icon = notificationData.iconUrl;
+      }
+      
       if (notificationData.imageUrl) {
         payload.big_picture = notificationData.imageUrl;
         payload.large_icon = notificationData.imageUrl;
+        payload.chrome_web_image = notificationData.imageUrl;
+      } else if (notificationData.iconUrl) {
+        payload.large_icon = notificationData.iconUrl;
       }
       
       if (notificationData.data) {
