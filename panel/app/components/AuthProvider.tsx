@@ -1,40 +1,24 @@
 "use client";
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { Session, User } from '@supabase/supabase-js';
 
-interface AuthContextType {
-  session: Session | null;
-  user: User | null;
-  loading: boolean;
-}
-
-const AuthContext = createContext<AuthContextType>({ session: null, user: null, loading: true });
+const AuthContext = createContext<any>({ session: null, user: null, loading: true });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
-  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
 
-  // Keep a ref so handleSession can always read the latest pathname
-  // without pathname being a useEffect dependency (which re-runs the whole
-  // auth flow — including re-registering onAuthStateChange — on every navigation).
-  const pathnameRef = useRef(pathname);
-  const isRedirectingRef = useRef(false);
   useEffect(() => {
-    pathnameRef.current = pathname;
-  }, [pathname]);
-
-  useEffect(() => {
+    let mounted = true;
     let timeoutId: NodeJS.Timeout;
-    let isMounted = true;
 
+    // 30-minute inactivity timeout
     const resetTimeout = () => {
       clearTimeout(timeoutId);
-      // 30 minutes = 30 * 60 * 1000 = 1800000 ms
       timeoutId = setTimeout(async () => {
         await supabase.auth.signOut();
         router.push("/login?reason=timeout");
@@ -46,7 +30,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       window.addEventListener("keydown", resetTimeout);
       window.addEventListener("click", resetTimeout);
       window.addEventListener("scroll", resetTimeout);
-      resetTimeout(); // Start the timer initially
+      resetTimeout();
     };
 
     const cleanupInactivityTimer = () => {
@@ -57,127 +41,73 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       clearTimeout(timeoutId);
     };
 
-    const verifyAdmin = async (userId: string) => {
+    async function checkAuth() {
+      if (mounted) setLoading(true);
+
       try {
-        const { data, error } = await supabase
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+
+        if (!currentSession?.user) {
+          if (mounted) {
+            setSession(null);
+            setLoading(false);
+            cleanupInactivityTimer();
+            if (pathname !== "/login") router.push("/login");
+          }
+          return;
+        }
+
+        // Check if user is an admin - using maybeSingle() so it won't throw an error if no rows match!
+        const { data: adminData } = await supabase
           .from('admins')
           .select('user_id')
-          .eq('user_id', userId)
-          .single();
+          .eq('user_id', currentSession.user.id)
+          .maybeSingle();
 
-        if (error && error.code !== 'PGRST116') {
-          console.error("Error checking admin status:", error);
-          return false;
+        if (!adminData) {
+          // Force logout for non-admins
+          await supabase.auth.signOut();
+          
+          // Clear all cookies forcefully to destroy the main app's session token too
+          document.cookie.split(";").forEach((c) => {
+            document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+          });
+
+          // Hard redirect to clear React state completely and prevent routing loops
+          if (mounted) window.location.href = "/panel/login?unauthorized=1";
+          return;
         }
 
-        return !!data;
-      } catch (error) {
-        console.error("Error checking admin status:", error);
-        return false;
-      }
-    };
-
-    const handleSession = async (currentSession: Session | null) => {
-      if (!isMounted) return;
-      
-      try {
-        if (currentSession?.user) {
-          const isAdmin = await verifyAdmin(currentSession.user.id);
-          if (!isMounted) return;
-          
-          if (!isAdmin) {
-            isRedirectingRef.current = true;
-            // Delete all Supabase-related cookies to clear the session across the domain
-            // Do this for various domain combinations to ensure it's fully purged
-            document.cookie.split(";").forEach((c) => {
-              const cookieName = c.trim().split("=")[0];
-              if (cookieName.startsWith("sb-")) {
-                document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
-                const domainParts = window.location.hostname.split('.');
-                while (domainParts.length > 0) {
-                  const domain = domainParts.join('.');
-                  document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=${domain};`;
-                  document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.${domain};`;
-                  domainParts.shift();
-                }
-              }
-            });
-
-            await supabase.auth.signOut();
-            
-            if (isMounted) {
-              setLoading(false);
-              router.push("/login?unauthorized=1");
-            }
-            return;
-          }
-          
+        // User is a valid admin
+        if (mounted) {
           setSession(currentSession);
-          setUser(currentSession.user);
+          setLoading(false);
           setupInactivityTimer();
-        } else {
-          setSession(null);
-          setUser(null);
-          cleanupInactivityTimer();
-          if (pathnameRef.current !== "/login" && !isRedirectingRef.current) {
-            router.push("/login");
-          }
         }
       } catch (error) {
-        console.error("Error in session handling:", error);
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        console.error("Auth check failed:", error);
+        if (mounted) setLoading(false);
       }
-    };
+    }
 
-    let sessionHandled = false;
+    // Run the initial check
+    checkAuth();
 
-    const getSession = async () => {
-      try {
-        const { data } = await supabase.auth.getSession();
-        if (!sessionHandled && isMounted) {
-          sessionHandled = true;
-          await handleSession(data.session);
-        }
-      } catch (error) {
-        console.error("Error getting session:", error);
-        if (isMounted) {
-          if (pathnameRef.current !== "/login") {
-            router.push("/login");
-          }
-          setLoading(false);
-        }
-      }
-    };
-
-    getSession();
-
-    const { data: listener } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
-      if (event === 'INITIAL_SESSION' && sessionHandled) {
-        return; // Already handled by getSession
-      }
-      sessionHandled = true;
-      if (isMounted) {
-        setLoading(true);
-        await handleSession(currentSession);
+    // Re-check auth state when it changes (e.g., login, logout)
+    const { data: listener } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED') {
+        checkAuth();
       }
     });
 
     return () => {
-      isMounted = false;
+      mounted = false;
       listener.subscription.unsubscribe();
       cleanupInactivityTimer();
     };
-  // router is stable across renders in Next.js App Router.
-  // pathname is intentionally excluded — we read it via pathnameRef instead
-  // to avoid re-running the entire auth flow (and re-registering the
-  // onAuthStateChange listener) on every in-app navigation.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [router]);
+  }, [pathname, router]);
 
-  // Show loading state while checking authentication
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-[#141414]">
@@ -187,7 +117,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ session, user, loading }}>
+    <AuthContext.Provider value={{ session, user: session?.user || null, loading }}>
       {children}
     </AuthContext.Provider>
   );
