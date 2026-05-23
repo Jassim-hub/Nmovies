@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
+import { supabase } from '@/lib/supabaseClient';
 import {
   Dialog,
   DialogContent,
@@ -86,6 +87,18 @@ export default function PushNotificationDialog({
       const result = await response.json();
 
       if (response.ok) {
+        // Save to database
+        const { error: dbError } = await supabase.from('notifications').insert([{
+          title: title.trim(),
+          message: message.trim(),
+          image_url: contentImage || null,
+          status: 'sent'
+        }]);
+
+        if (dbError) {
+          console.error('Failed to save notification to database:', dbError);
+        }
+
         // Extract useful info from OneSignal response
         const onesignalData = result.data || {};
         const recipients = onesignalData.recipients ?? 'unknown';
