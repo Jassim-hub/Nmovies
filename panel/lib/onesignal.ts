@@ -25,6 +25,7 @@ interface OneSignalNotificationPayload {
   chrome_web_icon?: string;
   firefox_icon?: string;
   chrome_web_image?: string;
+  chrome_web_badge?: string;
   data?: Record<string, unknown>;
 }
 
@@ -77,6 +78,7 @@ export class OneSignalService {
       if (notificationData.iconUrl) {
         payload.chrome_web_icon = notificationData.iconUrl;
         payload.firefox_icon = notificationData.iconUrl;
+        payload.chrome_web_badge = notificationData.iconUrl;
       }
       
       if (notificationData.imageUrl) {
@@ -116,6 +118,7 @@ export class OneSignalService {
       if (notificationData.iconUrl) {
         payload.chrome_web_icon = notificationData.iconUrl;
         payload.firefox_icon = notificationData.iconUrl;
+        payload.chrome_web_badge = notificationData.iconUrl;
       }
       
       if (notificationData.imageUrl) {
@@ -155,6 +158,7 @@ export class OneSignalService {
       if (notificationData.iconUrl) {
         payload.chrome_web_icon = notificationData.iconUrl;
         payload.firefox_icon = notificationData.iconUrl;
+        payload.chrome_web_badge = notificationData.iconUrl;
       }
       
       if (notificationData.imageUrl) {
