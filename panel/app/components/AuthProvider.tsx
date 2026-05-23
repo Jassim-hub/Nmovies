@@ -23,12 +23,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // without pathname being a useEffect dependency (which re-runs the whole
   // auth flow — including re-registering onAuthStateChange — on every navigation).
   const pathnameRef = useRef(pathname);
+  const isRedirectingRef = useRef(false);
   useEffect(() => {
     pathnameRef.current = pathname;
   }, [pathname]);
 
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
+    let isMounted = true;
 
     const resetTimeout = () => {
       clearTimeout(timeoutId);
@@ -76,51 +78,95 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     const handleSession = async (currentSession: Session | null) => {
-      if (currentSession?.user) {
-        const isAdmin = await verifyAdmin(currentSession.user.id);
-        if (!isAdmin) {
-          // Clear loading BEFORE signing out so the screen doesn't stay stuck
-          // while waiting for onAuthStateChange to fire from signOut().
-          setLoading(false);
-          await supabase.auth.signOut();
-          router.push("/login?unauthorized=1");
-          return;
+      if (!isMounted) return;
+      
+      try {
+        if (currentSession?.user) {
+          const isAdmin = await verifyAdmin(currentSession.user.id);
+          if (!isMounted) return;
+          
+          if (!isAdmin) {
+            isRedirectingRef.current = true;
+            // Delete all Supabase-related cookies to clear the session across the domain
+            // Do this for various domain combinations to ensure it's fully purged
+            document.cookie.split(";").forEach((c) => {
+              const cookieName = c.trim().split("=")[0];
+              if (cookieName.startsWith("sb-")) {
+                document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+                const domainParts = window.location.hostname.split('.');
+                while (domainParts.length > 0) {
+                  const domain = domainParts.join('.');
+                  document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=${domain};`;
+                  document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.${domain};`;
+                  domainParts.shift();
+                }
+              }
+            });
+
+            await supabase.auth.signOut();
+            
+            if (isMounted) {
+              setLoading(false);
+              router.push("/login?unauthorized=1");
+            }
+            return;
+          }
+          
+          setSession(currentSession);
+          setUser(currentSession.user);
+          setupInactivityTimer();
+        } else {
+          setSession(null);
+          setUser(null);
+          cleanupInactivityTimer();
+          if (pathnameRef.current !== "/login" && !isRedirectingRef.current) {
+            router.push("/login");
+          }
         }
-        setSession(currentSession);
-        setUser(currentSession.user);
-        setupInactivityTimer();
-      } else {
-        setSession(null);
-        setUser(null);
-        cleanupInactivityTimer();
-        if (pathnameRef.current !== "/login") {
-          router.push("/login");
+      } catch (error) {
+        console.error("Error in session handling:", error);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
         }
       }
-      setLoading(false);
     };
+
+    let sessionHandled = false;
 
     const getSession = async () => {
       try {
         const { data } = await supabase.auth.getSession();
-        await handleSession(data.session);
+        if (!sessionHandled && isMounted) {
+          sessionHandled = true;
+          await handleSession(data.session);
+        }
       } catch (error) {
         console.error("Error getting session:", error);
-        if (pathnameRef.current !== "/login") {
-          router.push("/login");
+        if (isMounted) {
+          if (pathnameRef.current !== "/login") {
+            router.push("/login");
+          }
+          setLoading(false);
         }
-        setLoading(false);
       }
     };
 
     getSession();
 
-    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, currentSession) => {
-      setLoading(true);
-      await handleSession(currentSession);
+    const { data: listener } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+      if (event === 'INITIAL_SESSION' && sessionHandled) {
+        return; // Already handled by getSession
+      }
+      sessionHandled = true;
+      if (isMounted) {
+        setLoading(true);
+        await handleSession(currentSession);
+      }
     });
 
     return () => {
+      isMounted = false;
       listener.subscription.unsubscribe();
       cleanupInactivityTimer();
     };
