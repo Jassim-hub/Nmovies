@@ -25,10 +25,15 @@ export async function POST(request: NextRequest) {
     const origin = request.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL || 'https://nextfi.vercel.app';
     const defaultIconUrl = `${origin.replace(/\/$/, '')}/icon.jpeg`;
 
+    let finalImageUrl = imageUrl;
+    if (finalImageUrl && finalImageUrl.startsWith('/')) {
+      finalImageUrl = `${origin.replace(/\/$/, '')}${finalImageUrl}`;
+    }
+
     const notificationData: PushNotificationData = {
       title,
       message,
-      imageUrl,
+      imageUrl: finalImageUrl,
       iconUrl: defaultIconUrl,
       data,
     };

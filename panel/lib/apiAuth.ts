@@ -50,13 +50,13 @@ export async function verifyAdminRequest(request: NextRequest): Promise<
   }
 
   // Verify user has admin-level access
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('subscription')
-    .eq('id', user.id)
-    .single();
+  const { data: adminData } = await supabase
+    .from('admins')
+    .select('user_id')
+    .eq('user_id', user.id)
+    .maybeSingle();
 
-  if (profile?.subscription !== 'admin') {
+  if (!adminData) {
     return {
       authorized: false,
       response: NextResponse.json({ error: 'Forbidden' }, { status: 403 }),

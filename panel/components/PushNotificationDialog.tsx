@@ -8,6 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 
@@ -87,7 +88,7 @@ export default function PushNotificationDialog({
       if (response.ok) {
         // Extract useful info from OneSignal response
         const onesignalData = result.data || {};
-        const recipients = onesignalData.recipients || 'unknown';
+        const recipients = onesignalData.recipients ?? 'unknown';
         const notificationId = onesignalData.id || 'N/A';
         
         const successMessage = `📱 Recipients: ${recipients} users | ID: ${notificationId}`;
@@ -137,6 +138,7 @@ export default function PushNotificationDialog({
       <DialogContent className="mx-4 max-w-md">
         <DialogHeader>
           <DialogTitle>Send Push Notification</DialogTitle>
+          <DialogDescription className="sr-only">Send a push notification to users</DialogDescription>
         </DialogHeader>
         
         <div className="space-y-4">
