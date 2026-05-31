@@ -150,8 +150,17 @@ export async function GET(request: NextRequest) {
       proxiedUrl = `https://${proxiedUrl}`;
     }
 
-    // Route through our secure stream proxy
-    const streamUrl = `/api/stream?url=${encodeURIComponent(proxiedUrl)}`;
+    // Check if this is an embed URL (should be used directly, not proxied)
+    const isEmbedUrl = proxiedUrl.includes('/embed/') || 
+                       proxiedUrl.includes('vidsrc') || 
+                       proxiedUrl.includes('2embed') ||
+                       proxiedUrl.includes('embedsu') ||
+                       proxiedUrl.includes('multiembed') ||
+                       proxiedUrl.includes('autoembed');
+
+    // Route through our secure stream proxy ONLY for direct video files
+    // Embed URLs should be used directly
+    const streamUrl = isEmbedUrl ? proxiedUrl : `/api/stream?url=${encodeURIComponent(proxiedUrl)}`;
 
     // Trailer can be sent directly (promotional content)
     let safeTrailerUrl = null;
