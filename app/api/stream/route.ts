@@ -14,12 +14,18 @@ function isAllowedVideoUrl(urlString: string): boolean {
     .map(h => h.trim().toLowerCase())
     .filter(Boolean);
 
+  console.log('isAllowedVideoUrl: Checking URL:', urlString);
+  console.log('isAllowedVideoUrl: ALLOWED_VIDEO_HOSTS:', envHosts || '(not set)');
+
   // If no allowlist is configured, only block obviously dangerous targets
   // (private IPs, metadata endpoints, localhost). In production you should
   // set ALLOWED_VIDEO_HOSTS for a strict allowlist.
   try {
     const url = new URL(urlString);
     const hostname = url.hostname.toLowerCase();
+    
+    console.log('isAllowedVideoUrl: Parsed hostname:', hostname);
+    console.log('isAllowedVideoUrl: Protocol:', url.protocol);
 
     // Always block private/internal addresses
     const blockedPatterns = [
@@ -35,25 +41,32 @@ function isAllowedVideoUrl(urlString: string): boolean {
       /^internal\./i,
     ];
 
-    if (blockedPatterns.some(p => p.test(hostname))) {
+    const matchedBlockedPattern = blockedPatterns.find(p => p.test(hostname));
+    if (matchedBlockedPattern) {
+      console.log('isAllowedVideoUrl: BLOCKED by pattern:', matchedBlockedPattern);
       return false;
     }
 
     // Block non-http(s) schemes
     if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+      console.log('isAllowedVideoUrl: BLOCKED - invalid protocol:', url.protocol);
       return false;
     }
 
     // If an allowlist is configured, enforce it strictly
     if (allowedHosts.length > 0) {
-      return allowedHosts.some(
+      const allowed = allowedHosts.some(
         host => hostname === host || hostname.endsWith(`.${host}`)
       );
+      console.log('isAllowedVideoUrl: Allowlist check result:', allowed);
+      return allowed;
     }
 
     // No allowlist configured — allow (with blocked patterns filtered above)
+    console.log('isAllowedVideoUrl: ALLOWED (no allowlist configured)');
     return true;
-  } catch {
+  } catch (error) {
+    console.error('isAllowedVideoUrl: ERROR parsing URL:', error);
     return false;
   }
 }

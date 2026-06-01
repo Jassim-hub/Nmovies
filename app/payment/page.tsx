@@ -13,7 +13,7 @@ import Link from 'next/link';
 import { YoPaymentsService } from '@/lib/yopayments';
 
 function PaymentPageContent() {
-  const { user, loading: authLoading, refreshPremiumStatus } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null);
@@ -235,12 +235,6 @@ function PaymentPageContent() {
             }
 
             setPaymentStatus('success');
-            
-            // Manually refresh premium status to ensure immediate access
-            console.log('Payment successful - refreshing premium status');
-            await refreshPremiumStatus();
-            
-            // Redirect after a short delay to show success message
             setTimeout(() => { window.location.href = '/'; }, 3000);
             return; // exit polling loop
           }

@@ -16,7 +16,6 @@ interface AuthContextType {
   signOut: () => Promise<void>
   resetPassword: (email: string) => Promise<{ error: Error | null }>
   updatePassword: (password: string) => Promise<{ error: Error | null }>
-  refreshPremiumStatus: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -140,57 +139,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
-  // Realtime subscription to profile changes
-  useEffect(() => {
-    if (!user) return
-
-    console.log('AuthProvider: Setting up realtime subscription for user:', user.id)
-
-    // Subscribe to changes in the user's profile
-    const channel = supabase
-      .channel(`profile-${user.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'profiles',
-          filter: `id=eq.${user.id}`
-        },
-        (payload) => {
-          console.log('AuthProvider: Profile updated via realtime:', payload)
-          
-          // Extract subscription data from the update
-          const newProfile = payload.new as any
-          
-          if (newProfile) {
-            const hasSubscription = newProfile.subscription && newProfile.subscription !== 'free'
-            const isNotExpired = newProfile.subscription_expiry_date && 
-                                new Date(newProfile.subscription_expiry_date) > new Date()
-            
-            const isPremiumUser = hasSubscription && isNotExpired
-            
-            console.log('AuthProvider: Realtime premium status update:', {
-              subscription: newProfile.subscription,
-              expiryDate: newProfile.subscription_expiry_date,
-              isPremium: isPremiumUser
-            })
-            
-            setIsPremium(isPremiumUser)
-          }
-        }
-      )
-      .subscribe((status) => {
-        console.log('AuthProvider: Realtime subscription status:', status)
-      })
-
-    // Cleanup subscription on unmount or user change
-    return () => {
-      console.log('AuthProvider: Cleaning up realtime subscription')
-      supabase.removeChannel(channel)
-    }
-  }, [user])
-
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({
       email,
@@ -250,13 +198,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error }
   }
 
-  const refreshPremiumStatus = async () => {
-    if (user) {
-      console.log('AuthProvider: Manually refreshing premium status')
-      await checkPremiumStatus(user)
-    }
-  }
-
   const value = {
     user,
     loading,
@@ -267,7 +208,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signOut,
     resetPassword,
     updatePassword,
-    refreshPremiumStatus,
   }
 
   return (

@@ -117,14 +117,17 @@ export async function GET(request: NextRequest) {
     if (isPremiumContent) {
       const { data: profile } = await supabaseAdmin
         .from('profiles')
-        .select('subscription')
+        .select('subscription, subscription_expiry_date')
         .eq('id', user.id)
         .single();
 
-      const premiumPlans = ['standard', 'premium', 'vip', 'admin'];
-      const userPlan = profile?.subscription || 'free';
+      // Dynamic check: any non-free subscription that hasn't expired grants access.
+      // This mirrors the logic in AuthProvider.tsx and lib/subscriptions.ts.
+      const hasSubscription = profile?.subscription && profile.subscription !== 'free';
+      const isNotExpired = profile?.subscription_expiry_date &&
+                          new Date(profile.subscription_expiry_date) > new Date();
 
-      if (!premiumPlans.includes(userPlan)) {
+      if (!hasSubscription || !isNotExpired) {
         return NextResponse.json(
           { error: 'Premium subscription required', requirePremium: true },
           { status: 403 }
@@ -150,17 +153,8 @@ export async function GET(request: NextRequest) {
       proxiedUrl = `https://${proxiedUrl}`;
     }
 
-    // Check if this is an embed URL (should be used directly, not proxied)
-    const isEmbedUrl = proxiedUrl.includes('/embed/') || 
-                       proxiedUrl.includes('vidsrc') || 
-                       proxiedUrl.includes('2embed') ||
-                       proxiedUrl.includes('embedsu') ||
-                       proxiedUrl.includes('multiembed') ||
-                       proxiedUrl.includes('autoembed');
-
-    // Route through our secure stream proxy ONLY for direct video files
-    // Embed URLs should be used directly
-    const streamUrl = isEmbedUrl ? proxiedUrl : `/api/stream?url=${encodeURIComponent(proxiedUrl)}`;
+    // Route through our secure stream proxy
+    const streamUrl = `/api/stream?url=${encodeURIComponent(proxiedUrl)}`;
 
     // Trailer can be sent directly (promotional content)
     let safeTrailerUrl = null;
