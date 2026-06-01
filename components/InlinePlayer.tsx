@@ -5,7 +5,7 @@ import { Play, Download } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { EpisodeWithSeason } from '@/lib/supabase';
 import AuthRequiredModal, { useAuthCheck } from './AuthRequiredModal';
-import { isStandardPremium } from '@/lib/isStandardPremium';
+import { canUserDownload } from '@/lib/subscriptions';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
@@ -88,11 +88,10 @@ const InlinePlayer: React.FC<InlinePlayerProps> = ({
       return;
     }
 
-    // Check if user has standard premium (downloads require standard premium)
-    const subscription = await (await import("@/lib/subscriptions")).getUserSubscription(user.id);
-    const hasStandardPremium = isStandardPremium(subscription);
+    // Check if user's plan allows downloads
+    const hasDownloadAccess = await canUserDownload(user.id);
 
-    if (!hasStandardPremium) {
+    if (!hasDownloadAccess) {
       router.push('/payment');
       return;
     }

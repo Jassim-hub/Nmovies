@@ -10,7 +10,7 @@ import AuthRequiredModal, { useAuthCheck } from '@/components/AuthRequiredModal'
 import { FullPageSpinner, InlineSpinner } from "@/components/LoadingSpinner";
 import { Button } from "@/components/ui/button";
 import { NetflixCard } from "@/components/NetflixCard";
-import { isStandardPremium } from "@/lib/isStandardPremium";
+import { canUserDownload } from "@/lib/subscriptions";
 import VideoPlayer from "@/components/VideoPlayer";
 import { normalizeVideoUrl } from "@/lib/utils";
 import { MovieCast } from "@/components/MovieCast";
@@ -26,7 +26,7 @@ export default function MovieDetailsPage() {
   const { checkAuth } = useAuthCheck();
 
   const [movie, setMovie] = useState<MovieWithVJ | null>(null);
-  const [isStandardPremiumUser, setIsStandardPremiumUser] = useState<boolean>(false);
+  const [canDownload, setCanDownload] = useState<boolean>(false);
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -54,10 +54,9 @@ export default function MovieDetailsPage() {
 
   useEffect(() => {
     (async () => {
-      if (!user) { setIsStandardPremiumUser(false); return; }
-      const subscription = await (await import("@/lib/subscriptions")).getUserSubscription(user.id);
-      const { isStandardPremium: checkStandard } = await import("@/lib/isStandardPremium");
-      setIsStandardPremiumUser(checkStandard(subscription));
+      if (!user) { setCanDownload(false); return; }
+      const allowed = await canUserDownload(user.id);
+      setCanDownload(allowed);
     })();
   }, [user]);
 
@@ -225,7 +224,7 @@ export default function MovieDetailsPage() {
   const handleDownload = async () => {
     if (!user?.id) { setAuthAction('download'); setShowAuthModal(true); return; }
     if (movie?.premium && !isPremium) { router.push('/payment'); return; }
-    if (!isStandardPremiumUser) { router.push('/payment'); return; }
+    if (!canDownload) { router.push('/payment'); return; }
     setShowDownloadModal(true);
   };
 

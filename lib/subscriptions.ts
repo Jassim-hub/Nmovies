@@ -181,6 +181,47 @@ export async function forceRefreshSubscription(userId: string): Promise<boolean>
   }
 }
 
+// Check if user's current plan allows downloads (based on admin-configured plans table)
+export async function canUserDownload(userId: string): Promise<boolean> {
+  try {
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .select('subscription, subscription_expiry_date')
+      .eq('id', userId)
+      .single()
+
+    if (error || !profile) {
+      return false
+    }
+
+    // Must have an active, non-expired subscription
+    const hasSubscription = profile.subscription && profile.subscription !== 'free'
+    const isNotExpired = profile.subscription_expiry_date && 
+                        new Date(profile.subscription_expiry_date) > new Date()
+
+    if (!hasSubscription || !isNotExpired) {
+      return false
+    }
+
+    // Look up the plan in the plans table to check allow_downloads
+    const { data: plan, error: planError } = await supabase
+      .from('plans')
+      .select('allow_downloads')
+      .ilike('name', profile.subscription)
+      .single()
+
+    if (planError || !plan) {
+      console.warn('canUserDownload: Could not find plan:', profile.subscription)
+      return false
+    }
+
+    return plan.allow_downloads === true
+  } catch (error) {
+    console.error('Error checking download permission:', error)
+    return false
+  }
+}
+
 // Get all subscriptions
 export async function getAllSubscriptions(): Promise<Subscription[]> {
   const { data, error } = await supabase

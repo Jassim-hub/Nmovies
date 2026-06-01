@@ -12,7 +12,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { getProfile, Profile } from '@/lib/profiles';
 import AuthRequiredModal, { useAuthCheck } from '@/components/AuthRequiredModal';
 
-import { isStandardPremium } from "@/lib/isStandardPremium";
+import { canUserDownload } from "@/lib/subscriptions";
 import { normalizeVideoUrl } from "@/lib/utils";
 import { MovieCast } from "@/components/MovieCast";
 import { StreamitHoverCard } from "@/components/StreamitHoverCard";
@@ -40,7 +40,7 @@ export default function SeriesDetailsPage() {
   const [selectedEpisode, setSelectedEpisode] = useState<EpisodeWithSeason | null>(null);
   
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [isStandardPremiumUser, setIsStandardPremiumUser] = useState<boolean>(false);
+  const [canDownload, setCanDownload] = useState<boolean>(false);
 
   // Video Player States
   const [streamUrl, setStreamUrl] = useState<string>('');
@@ -64,9 +64,9 @@ export default function SeriesDetailsPage() {
 
   useEffect(() => {
     (async () => {
-      if (!user) { setIsStandardPremiumUser(false); return; }
-      const subscription = await (await import("@/lib/subscriptions")).getUserSubscription(user.id);
-      setIsStandardPremiumUser(isStandardPremium(subscription));
+      if (!user) { setCanDownload(false); return; }
+      const allowed = await canUserDownload(user.id);
+      setCanDownload(allowed);
     })();
   }, [user]);
 
@@ -284,7 +284,7 @@ export default function SeriesDetailsPage() {
     setSelectedEpisode(episode);
     if (!user?.id) { setAuthAction('download'); setShowAuthModal(true); return; }
     if (episode.premium && !isPremium) { router.push('/payment'); return; }
-    if (!isStandardPremiumUser) { router.push('/payment'); return; }
+    if (!canDownload) { router.push('/payment'); return; }
     setShowDownloadModal(true);
   };
 

@@ -121,6 +121,7 @@ export interface SubscriptionPlan {
   sort_order: number
   features: string[]
   active: boolean
+  allow_downloads: boolean
 }
 
 // Extended Movie type with VJ relation for queries that join VJ data

@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { Loader2, Plus, Pencil, Trash2, Star, Eye, EyeOff, GripVertical, X } from "lucide-react";
+import { Loader2, Plus, Pencil, Trash2, Star, Eye, EyeOff, GripVertical, X, Download } from "lucide-react";
 
 interface Plan {
   id: string;
@@ -24,6 +24,7 @@ interface Plan {
   sort_order: number;
   features: string[];
   active: boolean;
+  allow_downloads: boolean;
   created_at: string;
 }
 
@@ -38,6 +39,7 @@ const emptyPlan = {
   sort_order: 0,
   features: [] as string[],
   active: true,
+  allow_downloads: false,
 };
 
 export default function PlansPage() {
@@ -107,6 +109,7 @@ export default function PlansPage() {
       sort_order: plan.sort_order || 0,
       features: plan.features || [],
       active: plan.active !== false,
+      allow_downloads: plan.allow_downloads || false,
     });
     setNewFeature('');
     setIsModalOpen(true);
@@ -162,6 +165,7 @@ export default function PlansPage() {
         sort_order: formData.sort_order,
         features: formData.features,
         active: formData.active,
+        allow_downloads: formData.allow_downloads,
       };
 
       if (editingPlan) {
@@ -559,7 +563,7 @@ export default function PlansPage() {
             </div>
 
             {/* Toggles Row */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <label className="flex items-center gap-3 p-4 rounded-lg border border-gray-800 bg-black cursor-pointer hover:border-yellow-600/50 transition-colors">
                 <input
                   type="checkbox"
@@ -586,6 +590,20 @@ export default function PlansPage() {
                     <Eye className="w-3.5 h-3.5 text-green-500" /> Active
                   </div>
                   <div className="text-[10px] text-gray-500">Visible on payment page</div>
+                </div>
+              </label>
+              <label className="flex items-center gap-3 p-4 rounded-lg border border-gray-800 bg-black cursor-pointer hover:border-blue-600/50 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={formData.allow_downloads}
+                  onChange={(e) => setFormData({ ...formData, allow_downloads: e.target.checked })}
+                  className="w-4 h-4 accent-blue-500"
+                />
+                <div>
+                  <div className="text-sm font-bold text-white flex items-center gap-1.5">
+                    <Download className="w-3.5 h-3.5 text-blue-500" /> Downloads
+                  </div>
+                  <div className="text-[10px] text-gray-500">Allow users to download</div>
                 </div>
               </label>
             </div>
