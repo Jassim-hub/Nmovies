@@ -140,7 +140,7 @@ export default function MovieDetailsPage() {
         );
       }
       if (data.vj_id || data.vjs) {
-         setVj(data.vjs || { id: data.vj_id || '', name: data.vj_id || 'Unknown VJ' });
+         setVj(data.vjs ? { id: (data.vjs as any).id || '', name: data.vjs.name } : { id: data.vj_id || '', name: data.vj_id || 'Unknown VJ' });
       }
       await Promise.all(promises);
     }

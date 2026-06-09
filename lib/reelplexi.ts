@@ -80,7 +80,6 @@ export function normalizeReelplexiMovie(raw: any): any {
     duration: raw.duration_mins || raw.runtime || 120, // Default to 120 mins if unknown
     published: true,
     premium: raw.premium !== false, // All content is paid for by default
-    duration: raw.duration_mins || raw.runtime || 120, // Default to 120 mins if unknown
     recommend: raw.recommend === true,
     popular: raw.popular === true,
     latest: raw.latest === true,

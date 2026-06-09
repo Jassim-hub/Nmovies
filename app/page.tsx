@@ -139,8 +139,8 @@ export default function HomePage() {
     async function fetchCriticalData() {
       try {
         const vjData = await getVJContent(8);
-        setFeaturedContent(vjData.slice(0, 5));
-        setVJContent(vjData);
+        setFeaturedContent(vjData.slice(0, 5) as any);
+        setVJContent(vjData as any);
         setLoading(false); 
 
         const [latestMoviesData, latestSeriesData, genreRowsData] = await Promise.all([

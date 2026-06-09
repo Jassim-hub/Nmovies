@@ -70,6 +70,7 @@ export default function SeriesDetailsPage() {
     })();
   }, [user]);
 
+  useEffect(() => {
     async function fetchSeriesData() {
       if (!params.id) return;
 
@@ -182,7 +183,7 @@ export default function SeriesDetailsPage() {
         }
 
         if (seriesData?.vj_id || seriesData?.vjs) {
-          setVj(seriesData.vjs || { id: seriesData.vj_id || '', name: seriesData.vj_id || 'Unknown VJ' });
+          setVj(seriesData.vjs ? { id: (seriesData.vjs as any).id || '', name: seriesData.vjs.name } : { id: seriesData.vj_id || '', name: seriesData.vj_id || 'Unknown VJ' });
         }
 
       } catch (error) {

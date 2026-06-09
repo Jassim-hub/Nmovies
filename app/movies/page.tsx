@@ -55,7 +55,7 @@ export default function MoviesPage() {
     try {
       const api = await import('@/lib/api');
       const moviesData = await api.getMovies(moviesPerPage, page);
-      setMovies(moviesData);
+      setMovies(moviesData as any);
       
       // We don't get exact total count from the lightweight Reelplexi API wrapper currently,
       // so we assume if we got a full page, there's more.
@@ -77,7 +77,7 @@ export default function MoviesPage() {
       const allMovies = await api.getMovies(100, 1);
       const filteredMovies = allMovies.filter(m => m.vj_id === vjId);
       
-      setMovies(filteredMovies);
+      setMovies(filteredMovies as any);
       setTotalMovies(filteredMovies.length);
     } catch (error) {
       console.error('Error filtering movies by VJ:', error);
@@ -93,7 +93,7 @@ export default function MoviesPage() {
         const api = await import('@/lib/api');
         const searchResults = await api.searchMovies(query, 50);
         
-        setMovies(searchResults);
+        setMovies(searchResults as any);
         setTotalMovies(searchResults.length);
       } catch (error) {
         console.error('Error searching movies:', error);

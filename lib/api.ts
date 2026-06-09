@@ -51,17 +51,7 @@ export async function getPopularMovies(limit = 6) {
   }
 }
 
-// Series API
-export async function getRelatedMoviesByGenre(id: string, genreIds: string[], limit = 6) {
-  try {
-    const movies = await getMovies(50, 1);
-    // Simple mock implementation of related movies by genre matching
-    return movies.filter(m => m.id !== id && m.genre_ids?.some((g: string) => genreIds.includes(g))).slice(0, limit);
-  } catch (error) {
-    console.error('Error fetching related movies:', error);
-    return [];
-  }
-}
+
 
 export async function getSeries(limit = 24, page = 1) {
   try {
@@ -73,15 +63,7 @@ export async function getSeries(limit = 24, page = 1) {
   }
 }
 
-export async function getRelatedSeriesByGenre(id: string, genreIds: string[], limit = 6) {
-  try {
-    const series = await getSeries(50, 1);
-    return series.filter(s => s.id !== id && s.genre_ids?.some((g: string) => genreIds.includes(g))).slice(0, limit);
-  } catch (error) {
-    console.error('Error fetching related series:', error);
-    return [];
-  }
-}
+
 
 export async function getSeriesById(id: string) {
   try {

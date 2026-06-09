@@ -17,7 +17,7 @@ const mapMovieToTMDB = (r: any): TMDBMovie => ({
   original_title: r.title,
   genre_ids: [1], // Mock
   video: true,
-  runtime: r.duration,
+  runtime: r.duration || 120,
   media_type: 'movie'
 });
 
@@ -106,6 +106,7 @@ export async function getTMDBMovieDetails(movieId: string): Promise<TMDBMovieDet
   
   return {
     ...mapMovieToTMDB(movie),
+    runtime: movie.duration || 120,
     belongs_to_collection: null,
     budget: 0,
     homepage: '',

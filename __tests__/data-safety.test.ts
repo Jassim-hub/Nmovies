@@ -138,6 +138,6 @@ describe('MakyPay Credential Isolation', () => {
   it('payment routes do not expose MakyPay credentials to client', () => {
     const initiate = readFile('app/api/makypay/initiate/route.ts');
     // Should not return credentials in response
-    expect(initiate).not.toMatch(/MAKYPAY_BASE64_AUTH.*NextResponse\.json/s);
+    expect(initiate).not.toMatch(/MAKYPAY_BASE64_AUTH[\s\S]*NextResponse\.json/);
   });
 });
