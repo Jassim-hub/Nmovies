@@ -1,7 +1,8 @@
 import { Movie, Series, Genre, EpisodeWithSeason, Season, Episode } from './supabase';
 
-const REELPLEXI_API_KEY = process.env.NEXT_PUBLIC_REELPLEXI_API_KEY || '';
-const REELPLEXI_BASE_URL = 'https://api.reelplexi.com';
+const REELPLEXI_API_KEY = process.env.REELPLEXI_API_KEY || process.env.NEXT_PUBLIC_REELPLEXI_API_KEY || '';
+const isServer = typeof window === 'undefined';
+const REELPLEXI_BASE_URL = isServer ? 'https://api.reelplexi.com' : '/api/reelplexi';
 
 class ReelplexiError extends Error {
   constructor(public status: number, message: string) {
@@ -11,16 +12,22 @@ class ReelplexiError extends Error {
 }
 
 async function fetchReelplexi(endpoint: string, params: Record<string, string | number> = {}) {
-  const url = new URL(`${REELPLEXI_BASE_URL}${endpoint}`);
+  const urlString = isServer ? `${REELPLEXI_BASE_URL}${endpoint}` : `${window.location.origin}${REELPLEXI_BASE_URL}${endpoint}`;
+  const url = new URL(urlString);
   for (const [key, value] of Object.entries(params)) {
     url.searchParams.set(key, String(value));
   }
 
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json'
+  };
+
+  if (isServer && REELPLEXI_API_KEY) {
+    headers['X-API-Key'] = REELPLEXI_API_KEY;
+  }
+
   const res = await fetch(url.toString(), {
-    headers: {
-      'X-API-Key': REELPLEXI_API_KEY,
-      'Content-Type': 'application/json'
-    },
+    headers,
     // We can use Next.js fetch caching here if desired, e.g. next: { revalidate: 3600 }
   });
 

@@ -56,7 +56,7 @@ export function useOneSignal(): UseOneSignalReturn {
     if (!document.getElementById('onesignal-sdk')) {
       const script = document.createElement('script');
       script.id = 'onesignal-sdk';
-      script.src = 'https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js';
+      script.src = 'https://cdn.onesignal.com/sdks/OneSignalSDK.js';
       script.async = true;
       document.head.appendChild(script);
     }
