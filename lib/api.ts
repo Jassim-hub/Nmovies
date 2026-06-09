@@ -166,27 +166,59 @@ export async function getGenres() {
 export async function getGenreRowsForHome(limit = 12) {
   try {
     const genres = await getGenres();
-    if (!genres || genres.length === 0) return [];
-
-    // Take top 3 genres
-    const topGenres = genres.slice(0, 3);
+    let genreRows: any[] = [];
     
-    const genreRows = await Promise.all(
-      topGenres.map(async (genre) => {
-        try {
-          const movies = await Reelplexi.getReelplexiMoviesByGenre(genre.id, 1, limit);
-          return {
-            name: genre.name,
-            movies: movies || []
-          };
-        } catch (error) {
-          console.error(`Error fetching movies for genre ${genre.name}:`, error);
-          return { name: genre.name, movies: [] };
+    if (genres && genres.length > 0) {
+      // Take top 3 genres
+      const topGenres = genres.slice(0, 3);
+      
+      const fetchedRows = await Promise.all(
+        topGenres.map(async (genre) => {
+          try {
+            const movies = await Reelplexi.getReelplexiMoviesByGenre(genre.id, 1, limit);
+            return {
+              name: genre.name,
+              movies: movies || []
+            };
+          } catch (error) {
+            console.error(`Error fetching movies for genre ${genre.name}:`, error);
+            return { name: genre.name, movies: [] };
+          }
+        })
+      );
+      
+      genreRows = fetchedRows.filter(row => row.movies.length > 0);
+    }
+    
+    // Fallback: If API returned no genres, build them from recent content like blog_site
+    if (!genreRows || genreRows.length === 0) {
+      console.log('Using fallback genre row generation from recent content');
+      const allMovies = await getMovies(limit * 2);
+      const allSeries = await getSeries(limit * 2);
+      const allContent = [...allMovies, ...allSeries];
+      
+      const genreMap = new Map<string, any[]>();
+      allContent.forEach(item => {
+        if (item.genre_ids && Array.isArray(item.genre_ids)) {
+          item.genre_ids.forEach((g: string) => {
+            const prettyName = g.charAt(0).toUpperCase() + g.slice(1);
+            if (!genreMap.has(prettyName)) genreMap.set(prettyName, []);
+            if (!genreMap.get(prettyName)!.find(existing => existing.id === item.id)) {
+              genreMap.get(prettyName)!.push(item);
+            }
+          });
         }
-      })
-    );
+      });
+      
+      const extractedGenres = Array.from(genreMap.entries())
+        .map(([name, movies]) => ({ name, movies }))
+        .sort((a, b) => b.movies.length - a.movies.length)
+        .slice(0, 3);
+        
+      genreRows = extractedGenres.filter(g => g.movies.length >= 2);
+    }
     
-    return genreRows.filter(row => row.movies.length > 0);
+    return genreRows;
   } catch (error) {
     console.error('Error fetching genre rows for home:', error);
     return [];
@@ -226,7 +258,17 @@ export async function searchSeries(query: string, limit = 20) {
 export async function getRelatedMoviesByGenre(movieId: string, genreIds: string[], limit = 6) {
   try {
     const movies = await Reelplexi.getReelplexiRelatedMoviesByGenre(movieId, 1, limit);
-    return movies as Movie[];
+    if (movies && movies.length > 0) {
+      return movies as Movie[];
+    }
+    
+    // Fallback logic if API returns empty
+    const allMovies = await getMovies(50, 1);
+    const related = allMovies
+      .filter(m => m.id !== movieId)
+      .sort(() => Math.random() - 0.5)
+      .slice(0, limit);
+    return related;
   } catch (error) {
     console.error('Error fetching related movies:', error);
     return [];
@@ -236,7 +278,17 @@ export async function getRelatedMoviesByGenre(movieId: string, genreIds: string[
 export async function getRelatedSeriesByGenre(seriesId: string, genreIds: string[], limit = 6) {
   try {
     const series = await Reelplexi.getReelplexiRelatedSeriesByGenre(seriesId, 1, limit);
-    return series as Series[];
+    if (series && series.length > 0) {
+      return series as Series[];
+    }
+    
+    // Fallback logic if API returns empty
+    const allSeries = await getSeries(50, 1);
+    const related = allSeries
+      .filter(s => s.id !== seriesId)
+      .sort(() => Math.random() - 0.5)
+      .slice(0, limit);
+    return related;
   } catch (error) {
     console.error('Error fetching related series:', error);
     return [];

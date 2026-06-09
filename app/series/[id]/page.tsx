@@ -34,6 +34,7 @@ export default function SeriesDetailsPage() {
   const [relatedMovies, setRelatedMovies] = useState<MovieWithVJ[]>([]);
   const [genres, setGenres] = useState<{ id: string; name: string }[]>([]);
   const [vj, setVj] = useState<{ id: string; name: string } | null>(null);
+  const [relatedLoaded, setRelatedLoaded] = useState(false);
   
   const [seasons, setSeasons] = useState<Season[]>([]);
   const [allEpisodes, setAllEpisodes] = useState<EpisodeWithSeason[]>([]);
@@ -185,6 +186,8 @@ export default function SeriesDetailsPage() {
         if (seriesData?.vj_id || seriesData?.vjs) {
           setVj(seriesData.vjs ? { id: (seriesData.vjs as any).id || '', name: seriesData.vjs.name } : { id: seriesData.vj_id || '', name: seriesData.vj_id || 'Unknown VJ' });
         }
+        
+        setRelatedLoaded(true);
 
       } catch (error) {
         console.error('Error fetching series:', error);
@@ -599,32 +602,52 @@ export default function SeriesDetailsPage() {
 
 
       {/* Related Series */}
-      <div className="w-full px-4 md:px-8 lg:px-12 xl:px-16 mt-16 bg-[#141414]">
-        <h2 className="text-xl md:text-2xl font-bold mb-6 border-b border-gray-800 pb-3 tracking-wide">Related Series</h2>
-        <div className="flex overflow-x-auto gap-4 md:gap-5 pb-6 scrollbar-hide">
-          {relatedSeries.map((s) => (
-            <div key={s.id} className="flex-shrink-0 w-[120px] md:w-[150px] lg:w-[160px]">
-              <StreamitHoverCard content={{...s, type: 'series'}}>
-                <NetflixCard content={s} type="series" />
-              </StreamitHoverCard>
-            </div>
-          ))}
+      {(!relatedLoaded || relatedSeries.length > 0) && (
+        <div className="w-full px-4 md:px-8 lg:px-12 xl:px-16 mt-16 bg-[#141414]">
+          <h2 className="text-xl md:text-2xl font-bold mb-6 border-b border-gray-800 pb-3 tracking-wide">Related Series</h2>
+          <div className="flex overflow-x-auto gap-4 md:gap-5 pb-6 scrollbar-hide">
+            {relatedSeries.length > 0 ? (
+              relatedSeries.map((s) => (
+                <div key={s.id} className="flex-shrink-0 w-[120px] md:w-[150px] lg:w-[160px]">
+                  <StreamitHoverCard content={{...s, type: 'series'}}>
+                    <NetflixCard content={s} type="series" />
+                  </StreamitHoverCard>
+                </div>
+              ))
+            ) : (
+              Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="flex-shrink-0 w-[120px] md:w-[150px]">
+                  <div className="aspect-[2/3] rounded-lg bg-gray-800/30 animate-pulse"></div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Related Movies */}
-      <div className="w-full px-4 md:px-8 lg:px-12 xl:px-16 mt-12 mb-24 bg-[#141414]">
-        <h2 className="text-xl md:text-2xl font-bold mb-6 border-b border-gray-800 pb-3 tracking-wide">Related Movies</h2>
-        <div className="flex overflow-x-auto gap-4 md:gap-5 pb-6 scrollbar-hide">
-          {relatedMovies.map((m) => (
-            <div key={m.id} className="flex-shrink-0 w-[120px] md:w-[150px] lg:w-[160px]">
-              <StreamitHoverCard content={{...m, type: 'movie'}}>
-                <NetflixCard content={m} type="movie" />
-              </StreamitHoverCard>
-            </div>
-          ))}
+      {(!relatedLoaded || relatedMovies.length > 0) && (
+        <div className="w-full px-4 md:px-8 lg:px-12 xl:px-16 mt-12 mb-24 bg-[#141414]">
+          <h2 className="text-xl md:text-2xl font-bold mb-6 border-b border-gray-800 pb-3 tracking-wide">Related Movies</h2>
+          <div className="flex overflow-x-auto gap-4 md:gap-5 pb-6 scrollbar-hide">
+            {relatedMovies.length > 0 ? (
+              relatedMovies.map((m) => (
+                <div key={m.id} className="flex-shrink-0 w-[120px] md:w-[150px] lg:w-[160px]">
+                  <StreamitHoverCard content={{...m, type: 'movie'}}>
+                    <NetflixCard content={m} type="movie" />
+                  </StreamitHoverCard>
+                </div>
+              ))
+            ) : (
+              Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="flex-shrink-0 w-[120px] md:w-[150px]">
+                  <div className="aspect-[2/3] rounded-lg bg-gray-800/30 animate-pulse"></div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Modals */}
       {showDownloadModal && selectedEpisode && (

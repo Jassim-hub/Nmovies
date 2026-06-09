@@ -96,6 +96,8 @@ export default function HomePage() {
     requirePremium?: boolean;
   }>({ isOpen: false, action: 'play' });
 
+  const [genresLoaded, setGenresLoaded] = useState(false);
+
   // Auth hook
   const { checkAuth } = useAuthCheck();
 
@@ -152,9 +154,11 @@ export default function HomePage() {
         setLatestMovies(latestMoviesData);
         setLatestSeries(latestSeriesData);
         setGenreRows(genreRowsData);
+        setGenresLoaded(true);
       } catch (error) {
         console.error('Error fetching data:', error);
         setLoading(false);
+        setGenresLoaded(true);
       }
     }
     fetchCriticalData();
@@ -507,11 +511,11 @@ export default function HomePage() {
                 )}
               </React.Fragment>
             ))
-          ) : (
+          ) : !genresLoaded ? (
             <div className="flex justify-center w-full py-12">
               <InlineSpinner text="Loading genre collections..." />
             </div>
-          )}
+          ) : null}
         </div>
       </div>
 
