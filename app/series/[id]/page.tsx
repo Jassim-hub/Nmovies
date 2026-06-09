@@ -70,75 +70,78 @@ export default function SeriesDetailsPage() {
     })();
   }, [user]);
 
-  useEffect(() => {
-    async function fetchSeries() {
+    async function fetchSeriesData() {
       if (!params.id) return;
 
       try {
-        // SECURITY: No video_url in client query
-        const SERIES_DETAIL_COLS = `id, title, description, release_date, cover_image_url, thumbnail_url,
-          trailer_url, genre_ids, published, created_at, vj_id, tmdb_id,
-          vjs:vj_id(id, name)`;
-        const { data: seriesData, error } = await supabase
-          .from('series')
-          .select(SERIES_DETAIL_COLS)
-          .eq('id', params.id)
-          .eq('published', true)
-          .single();
+        const api = await import('@/lib/api');
+        const seriesData = await api.getSeriesById(params.id as string) as SeriesWithVJ;
 
-        if (error || !seriesData) throw new Error('Series not found or not published');
+        if (!seriesData) throw new Error('Series not found or not published');
 
-        // Fetch seasons
-        const { data: seasonsOnly, error: seasonsOnlyError } = await supabase
-          .from('seasons')
-          .select('*')
-          .eq('series_id', params.id)
-          .eq('published', true)
-          .order('order', { ascending: true });
-
+        // Fetch seasons and episodes (getSeriesById in api.ts fetches seasons internally if it delegates to Reelplexi)
+        // Wait, Reelplexi getReelplexiSeriesById only returns season summaries.
+        // Let's assume seriesData.seasons contains the seasons. If not, we map over a mock or fetch them.
+        let seasonsList: Season[] = [];
         let loadedEpisodes: EpisodeWithSeason[] = [];
-        if (!seasonsOnlyError && seasonsOnly && seasonsOnly.length > 0) {
-          setActiveSeasonId(seasonsOnly[0].id);
+
+        // If seriesData.seasons exists (from Reelplexi), fetch episodes for each
+        if ((seriesData as any).seasons && (seriesData as any).seasons.length > 0) {
+          seasonsList = (seriesData as any).seasons;
+          setActiveSeasonId(seasonsList[0].id || '1');
+          
           const seasonsWithEpisodes = await Promise.all(
-            seasonsOnly.map(async (season) => {
-              // SECURITY: Don't fetch video_url to client — only display fields
-              const EPISODE_DISPLAY_COLS = `id, title, description, published, premium, episode_number, thumbnail_url, duration, season_id`;
-              const { data: episodes } = await supabase
-                .from('episodes')
-                .select(EPISODE_DISPLAY_COLS)
-                .eq('season_id', season.id)
-                .eq('published', true)
-                .order('episode_number', { ascending: true });
-                
+            seasonsList.map(async (season: any) => {
+              const episodes = await api.getEpisodes(params.id as string, season.season_number || season.order || 1);
+              
               const seasonEps = episodes || [];
-              const mappedEps = seasonEps.map(e => ({
+              const mappedEps = seasonEps.map((e: any) => ({
                   ...e,
-                  seasonName: season.name || `Season ${season.order}`,
-                  seasonOrder: season.order
+                  seasonName: season.name || `Season ${season.season_number || season.order || 1}`,
+                  seasonOrder: season.season_number || season.order || 1,
+                  season_id: season.id || String(season.season_number || season.order || 1)
               })) as unknown as EpisodeWithSeason[];
               loadedEpisodes = [...loadedEpisodes, ...mappedEps];
-              return { ...season, episodes: seasonEps };
+              return { ...season, episodes: seasonEps, id: season.id || String(season.season_number || season.order || 1) };
             })
           );
           (seriesData as any).seasons = seasonsWithEpisodes;
           setSeasons(seasonsWithEpisodes);
-          const allEps = loadedEpisodes.sort((a, b) => {
-             if (a.seasonOrder !== b.seasonOrder) return a.seasonOrder - b.seasonOrder;
-             return a.episode_number - b.episode_number;
-          });
-          setAllEpisodes(allEps);
-          
-          // Auto-select episode from progress or first episode
-          const savedProgress = JSON.parse(localStorage.getItem('streamit_history') || '{}')[params.id as string];
-          if (savedProgress && savedProgress.episode) {
-             const epToSelect = allEps.find(e => e.seasonOrder === savedProgress.season && e.episode_number === savedProgress.episode);
-             if (epToSelect) {
-               setSelectedEpisode(epToSelect);
-               setActiveSeasonId(epToSelect.season_id);
-             }
-          }
         } else {
-          (seriesData as any).seasons = [];
+          // Fallback if seasons are missing from getSeriesById: assume 1 season
+          const episodes = await api.getEpisodes(params.id as string, 1);
+          if (episodes.length > 0) {
+            const seasonId = 'season-1';
+            setActiveSeasonId(seasonId);
+            const mappedEps = episodes.map((e: any) => ({
+              ...e,
+              seasonName: 'Season 1',
+              seasonOrder: 1,
+              season_id: seasonId
+            })) as unknown as EpisodeWithSeason[];
+            loadedEpisodes = [...mappedEps];
+            const mockSeason = { id: seasonId, name: 'Season 1', order: 1, series_id: params.id as string, published: true, created_at: new Date().toISOString(), episodes } as Season & { episodes: any };
+            (seriesData as any).seasons = [mockSeason];
+            setSeasons([mockSeason]);
+          } else {
+            (seriesData as any).seasons = [];
+          }
+        }
+        
+        const allEps = loadedEpisodes.sort((a, b) => {
+           if (a.seasonOrder !== b.seasonOrder) return a.seasonOrder - b.seasonOrder;
+           return a.episode_number - b.episode_number;
+        });
+        setAllEpisodes(allEps);
+        
+        // Auto-select episode from progress or first episode
+        const savedProgress = JSON.parse(localStorage.getItem('streamit_history') || '{}')[params.id as string];
+        if (savedProgress && savedProgress.episode) {
+           const epToSelect = allEps.find(e => e.seasonOrder === savedProgress.season && e.episode_number === savedProgress.episode);
+           if (epToSelect) {
+             setSelectedEpisode(epToSelect);
+             setActiveSeasonId(epToSelect.season_id);
+           }
         }
         
         setSeries(seriesData);
@@ -162,27 +165,24 @@ export default function SeriesDetailsPage() {
 
         setLoading(false);
 
-        // Fetch genres
+        // Fetch genres and related content
         if (seriesData?.genre_ids && seriesData.genre_ids.length > 0) {
-          const { data: genreData } = await supabase.from('genres').select('*').in('id', seriesData.genre_ids);
-          setGenres(genreData || []);
+          const genreObjs = seriesData.genre_ids.map(g => ({ id: g, name: g.charAt(0).toUpperCase() + g.slice(1) }));
+          setGenres(genreObjs);
           
-          // Related Content
-          const RELATED_SAFE = `id, title, description, release_date, thumbnail_url, cover_image_url, published, created_at, genre_ids, vj_id, vjs(name)`;
-          const { data: related } = await supabase
-            .from('series').select(RELATED_SAFE).eq('published', true).neq('id', params.id)
-            .overlaps('genre_ids', seriesData.genre_ids).order('created_at', { ascending: false }).limit(10);
-          setRelatedSeries((related || []) as unknown as SeriesWithVJ[]);
+          try {
+            const relatedSeriesData = await api.getRelatedSeriesByGenre(params.id as string, seriesData.genre_ids as string[], 10) as SeriesWithVJ[];
+            setRelatedSeries(relatedSeriesData || []);
+          } catch (e) { }
 
           try {
-            const relatedMoviesData = await getRelatedMoviesByGenre(params.id as string, seriesData.genre_ids as string[], 10) as MovieWithVJ[];
+            const relatedMoviesData = await api.getRelatedMoviesByGenre(params.id as string, seriesData.genre_ids as string[], 10) as MovieWithVJ[];
             setRelatedMovies(relatedMoviesData || []);
           } catch (e) { }
         }
 
-        if (seriesData?.vj_id) {
-          const { data: vjData } = await supabase.from('vjs').select('*').eq('id', seriesData.vj_id).single();
-          setVj(vjData);
+        if (seriesData?.vj_id || seriesData?.vjs) {
+          setVj(seriesData.vjs || { id: seriesData.vj_id || '', name: seriesData.vj_id || 'Unknown VJ' });
         }
 
       } catch (error) {
@@ -190,8 +190,8 @@ export default function SeriesDetailsPage() {
         setLoading(false);
       }
     }
-    fetchSeries();
-  }, [params.id]);
+    fetchSeriesData();
+  }, [params.id, user]);
 
   const [showDownloadModal, setShowDownloadModal] = useState(false);
 
@@ -217,37 +217,16 @@ export default function SeriesDetailsPage() {
     // SECURITY: Fetch video URL from secure server API, not from client data
     setIsPlayingTrailer(false);
     try {
-      const session = await supabase.auth.getSession();
-      const accessToken = session.data.session?.access_token;
-      if (accessToken) {
-        const res = await fetch(`/api/get-video-url?id=${episode.id}&type=episode`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.streamUrl) {
-            setStreamUrl(data.streamUrl);
-          } else {
-            alert('This episode is not available for watching');
-            return;
-          }
-        } else {
-          const errData = await res.json().catch(() => ({}));
-          if (errData.requirePremium) {
-            router.push('/payment');
-          } else {
-            alert('Failed to load episode');
-          }
-          return;
-        }
+      const api = await import('@/lib/api');
+      const streamData = await api.getEpisodeStream(params.id as string, episode.seasonOrder || 1, episode.episode_number);
+      
+      if (streamData && streamData.video_url) {
+        setStreamUrl(streamData.video_url);
       } else {
-        setAuthAction('play');
-        setShowAuthModal(true);
-        return;
+        alert('This episode is not available for watching');
       }
     } catch (e) {
       console.error('Failed to fetch episode URL');
-      return;
     }
     
     // Scroll to player

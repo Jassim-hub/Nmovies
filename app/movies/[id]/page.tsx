@@ -70,27 +70,17 @@ export default function MovieDetailsPage() {
         return;
       }
 
-      // 1. Fetch movie display data (SECURITY: no video_url in client query)
-      const MOVIE_DETAIL_COLS = `id, title, description, release_date, cover_image_url, thumbnail_url,
-        trailer_url, genre_ids, duration, published, premium, created_at, recommend, popular,
-        latest, vj_id, tmdb_id, vjs(name)`;
-      const { data, error } = await supabase
-        .from("movies")
-        .select(MOVIE_DETAIL_COLS)
-        .eq("id", params.id)
-        .single();
+      // 1. Fetch movie display data from Reelplexi
+      const api = await import('@/lib/api');
+      const data = await api.getMovieById(params.id as string) as MovieWithVJ;
 
-      if (error || !data) {
+      if (!data) {
         setError("Movie not found");
         setLoading(false);
         return;
       }
-      // Normalize vjs from array to single object (Supabase returns array for joins)
-      const movieData = {
-        ...data,
-        vjs: Array.isArray(data.vjs) ? data.vjs[0] || null : data.vjs,
-      } as MovieWithVJ;
-      setMovie(movieData);
+      
+      setMovie(data);
 
       // Track view (fire-and-forget)
       fetch('/api/track-view', {
@@ -119,24 +109,15 @@ export default function MovieDetailsPage() {
             setStreamUrl(normalizeVideoUrl(data.trailer_url));
             setIsPlayingTrailer(true);
          }
-         // Fetch the actual video URL from the secure server-side endpoint
+         // Fetch the actual video URL from Reelplexi
          try {
-           const session = await supabase.auth.getSession();
-           const accessToken = session.data.session?.access_token;
-           if (accessToken) {
-             const videoRes = await fetch(`/api/get-video-url?id=${params.id}&type=movie`, {
-               headers: { Authorization: `Bearer ${accessToken}` },
-             });
-             if (videoRes.ok) {
-               const videoData = await videoRes.json();
-               if (!data.trailer_url && videoData.streamUrl) {
-                 setStreamUrl(videoData.streamUrl);
-                 setIsPlayingTrailer(false);
-               }
-             }
+           const streamData = await api.getMovieStream(params.id as string);
+           if (streamData && streamData.video_url && !data.trailer_url) {
+             setStreamUrl(streamData.video_url);
+             setIsPlayingTrailer(false);
            }
          } catch (e) {
-           console.error('Failed to fetch secure video URL');
+           console.error('Failed to fetch Reelplexi video URL');
          }
       }
 
@@ -145,28 +126,21 @@ export default function MovieDetailsPage() {
       // 3. Progressive background fetches
       const promises = [];
       if (data.genre_ids && data.genre_ids.length > 0) {
+        // Mock genres if needed or fetch actual genre names. Reelplexi genres are usually already strings mapped.
+        const genreObjs = data.genre_ids.map(g => ({ id: g, name: g.charAt(0).toUpperCase() + g.slice(1) }));
+        setGenres(genreObjs);
+
         promises.push(
-          supabase.from('genres').select('*').in('id', data.genre_ids)
-            .then(({ data: genreData }) => setGenres(genreData || []))
-        );
-        const RELATED_MOVIE_COLS = `id, title, description, release_date, thumbnail_url, cover_image_url, premium, created_at, genre_ids, vj_id, vjs(name)`;
-        const RELATED_SERIES_COLS = `id, title, description, release_date, thumbnail_url, cover_image_url, published, created_at, genre_ids, vj_id, vjs(name)`;
-        promises.push(
-          supabase.from("movies").select(RELATED_MOVIE_COLS).neq("id", params.id)
-            .overlaps("genre_ids", data.genre_ids).order("created_at", { ascending: false }).limit(6)
-            .then(({ data: relatedMovies }) => setRelated((relatedMovies || []) as unknown as MovieWithVJ[]))
+          api.getRelatedMoviesByGenre(params.id as string, data.genre_ids, 6)
+            .then(relatedMovies => setRelated((relatedMovies || []) as unknown as MovieWithVJ[]))
         );
         promises.push(
-          supabase.from("series").select(RELATED_SERIES_COLS)
-            .overlaps("genre_ids", data.genre_ids).order("created_at", { ascending: false }).limit(6)
-            .then(({ data: relatedSeriesData }) => setRelatedSeries((relatedSeriesData || []) as any[]))
+          api.getRelatedSeriesByGenre(params.id as string, data.genre_ids, 6)
+            .then(relatedSeriesData => setRelatedSeries((relatedSeriesData || []) as any[]))
         );
       }
-      if (data.vj_id) {
-        promises.push(
-          supabase.from('vjs').select('*').eq('id', data.vj_id).single()
-            .then(({ data: vjData }) => setVj(vjData))
-        );
+      if (data.vj_id || data.vjs) {
+         setVj(data.vjs || { id: data.vj_id || '', name: data.vj_id || 'Unknown VJ' });
       }
       await Promise.all(promises);
     }
@@ -187,33 +161,19 @@ export default function MovieDetailsPage() {
         return;
      }
      if (movie) {
-        // Use stored secure URL, or fetch it fresh
-        if ((movie as any)._secureStreamUrl) {
-           setIsPlayingTrailer(false);
-           setStreamUrl((movie as any)._secureStreamUrl);
-        } else {
-           // Fetch from secure API
-           try {
-             const session = await supabase.auth.getSession();
-             const accessToken = session.data.session?.access_token;
-             if (accessToken) {
-               const res = await fetch(`/api/get-video-url?id=${movie.id}&type=movie`, {
-                 headers: { Authorization: `Bearer ${accessToken}` },
-               });
-               if (res.ok) {
-                 const data = await res.json();
-                 if (data.streamUrl) {
-                   setIsPlayingTrailer(false);
-                   setStreamUrl(data.streamUrl);
-                 }
-               }
-             }
-           } catch (e) {
-             console.error('Failed to fetch video URL');
-           }
+        // Fetch from secure API
+        try {
+          const api = await import('@/lib/api');
+          const streamData = await api.getMovieStream(movie.id);
+          if (streamData && streamData.video_url) {
+            setIsPlayingTrailer(false);
+            setStreamUrl(streamData.video_url);
+          }
+        } catch (e) {
+          console.error('Failed to fetch video URL');
         }
      }
-  }, [hasRights, movie, checkAuth]);
+  }, [hasRights, movie, checkAuth, router]);
 
   const handleVideoEnded = useCallback(() => {
      if (isPlayingTrailer && hasRights) {

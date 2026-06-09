@@ -1,41 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-// TMDB API configuration
-const TMDB_BASE_URL = 'https://api.themoviedb.org/3'
-const TMDB_API_KEY = process.env.NEXT_PUBLIC_TMDB_API_KEY || process.env.TMDB_API_KEY
-
-if (!TMDB_API_KEY) {
-  throw new Error('TMDB_API_KEY is not defined in environment variables')
-}
-
-// Helper function to fetch from TMDB
-async function fetchFromTMDB(endpoint: string, params: Record<string, string> = {}) {
-  const queryParams = new URLSearchParams()
-  queryParams.append('api_key', TMDB_API_KEY!)
-
-  Object.entries(params).forEach(([key, value]) => {
-    queryParams.append(key, value)
-  })
-
-  const url = `${TMDB_BASE_URL}${endpoint}?${queryParams}`
-
-  try {
-    const response = await fetch(url, {
-      next: { revalidate: 3600 }, // Cache for 1 hour
-    })
-
-    if (!response.ok) {
-      console.error(`TMDB API error: ${response.status} ${response.statusText}`)
-      console.error(`URL: ${url}`)
-      throw new Error(`TMDB API error: ${response.status} ${response.statusText}`)
-    }
-
-    return await response.json()
-  } catch (error) {
-    console.error('Error fetching from TMDB:', error)
-    throw error
-  }
-}
+import { searchTMDBTV } from '@/lib/tmdb-fetchers'
 
 export async function GET(request: NextRequest) {
   try {
@@ -43,31 +7,43 @@ export async function GET(request: NextRequest) {
     const query = searchParams.get('q')
 
     if (!query) {
-      return NextResponse.json({ results: [] })
+      return NextResponse.json(
+        { error: 'Search query is required' },
+        { status: 400 }
+      )
     }
 
-    // Search for anime (TV shows with animation genre)
-    const data = await fetchFromTMDB('/search/tv', {
-      query: query,
-      include_adult: 'false',
-      language: 'en-US',
-      page: '1'
-    })
+    // Search via Reelplexi
+    const data = await searchTMDBTV(query)
 
-    // Filter results to only include anime (shows with genre 16 - Animation)
-    const animeResults = data.results?.filter((show: any) =>
-      show.genre_ids?.includes(16) &&
-      show.origin_country?.includes('JP')
-    ) || []
+    // Transform data
+    const animes = (data.results || [])
+      .slice(0, 20)
+      .map((item: any) => ({
+        id: item.id,
+        title: item.name,
+        description: item.overview,
+        poster_url: item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : null,
+        backdrop_url: item.backdrop_path ? `https://image.tmdb.org/t/p/original${item.backdrop_path}` : null,
+        thumbnail_medium: item.poster_path ? `https://image.tmdb.org/t/p/w342${item.poster_path}` : null,
+        rating: item.vote_average,
+        release_date: item.first_air_date,
+        genre: item.genre_ids || [],
+        year: item.first_air_date ? new Date(item.first_air_date).getFullYear().toString() : null,
+        published: true,
+        trending: false,
+        popular: true,
+        recommend: false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        media_type: 'anime' as const
+      }))
 
-    return NextResponse.json({
-      results: animeResults,
-      total_results: animeResults.length
-    })
+    return NextResponse.json(animes)
   } catch (error) {
-    console.error('Error searching anime:', error)
+    console.error('Error in anime search API:', error)
     return NextResponse.json(
-      { error: 'Failed to search anime', results: [] },
+      { error: 'Failed to search anime' },
       { status: 500 }
     )
   }

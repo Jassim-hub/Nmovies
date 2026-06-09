@@ -50,43 +50,13 @@ export default function SeriesPage() {
   const fetchSeries = useCallback(async (page: number) => {
     setLoading(true);
     try {
-      const from = (page - 1) * seriesPerPage;
-      const to = from + seriesPerPage - 1;
-
-      // Get total count
-      const { count } = await supabase
-        .from('series')
-        .select('*', { count: 'exact', head: true })
-        .eq('published', true);
-
-      // Get series for current page with VJ info
-      const { data: seriesData, error } = await supabase
-        .from('series')
-        .select(`*, vjs (id, name)`)
-        .eq('published', true)
-        .range(from, to)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      // Get season counts for each series
-      const seriesWithSeasons = await Promise.all(
-        (seriesData || []).map(async (show) => {
-          const { data: seasonsData } = await supabase
-            .from('seasons')
-            .select('id')
-            .eq('series_id', show.id)
-            .eq('published', true);
-
-          return {
-            ...show,
-            season_count: seasonsData?.length || 0
-          };
-        })
-      );
-
-      setSeries(seriesWithSeasons);
-      setTotalSeries(count || 0);
+      const api = await import('@/lib/api');
+      const seriesData = await api.getSeries(seriesPerPage, page);
+      setSeries(seriesData as any[]);
+      
+      // We don't get exact total count from the lightweight Reelplexi API wrapper currently,
+      // so we assume if we got a full page, there's more.
+      setTotalSeries(seriesData.length === seriesPerPage ? page * seriesPerPage + 1 : (page - 1) * seriesPerPage + seriesData.length);
     } catch (error) {
       console.error('Error fetching series:', error);
     } finally {
@@ -98,31 +68,12 @@ export default function SeriesPage() {
     setCurrentPage(1);
     setLoading(true);
     try {
-      const { data: filteredSeries, error } = await supabase
-        .from('series')
-        .select(`*, vjs (id, name)`)
-        .eq('published', true)
-        .eq('vj_id', vjId)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      const seriesWithSeasons = await Promise.all(
-        (filteredSeries || []).map(async (show) => {
-          const { data: seasonsData } = await supabase
-            .from('seasons')
-            .select('id')
-            .eq('series_id', show.id)
-            .eq('published', true);
-          return {
-            ...show,
-            season_count: seasonsData?.length || 0
-          };
-        })
-      );
-
-      setSeries(seriesWithSeasons);
-      setTotalSeries(seriesWithSeasons.length);
+      const api = await import('@/lib/api');
+      const allSeries = await api.getSeries(100, 1);
+      const filteredSeries = allSeries.filter(s => s.vj_id === vjId);
+      
+      setSeries(filteredSeries as any[]);
+      setTotalSeries(filteredSeries.length);
     } catch (error) {
       console.error('Error filtering series by VJ:', error);
     } finally {
@@ -134,31 +85,11 @@ export default function SeriesPage() {
     if (query.trim()) {
       setLoading(true);
       try {
-        const { data: searchResults, error } = await supabase
-          .from('series')
-          .select(`*, vjs (id, name)`)
-          .eq('published', true)
-          .ilike('title', `%${query}%`)
-          .order('created_at', { ascending: false });
-
-        if (error) throw error;
-
-        const seriesWithSeasons = await Promise.all(
-          (searchResults || []).map(async (show) => {
-            const { data: seasonsData } = await supabase
-              .from('seasons')
-              .select('id')
-              .eq('series_id', show.id)
-              .eq('published', true);
-            return {
-              ...show,
-              season_count: seasonsData?.length || 0
-            };
-          })
-        );
-
-        setSeries(seriesWithSeasons);
-        setTotalSeries(seriesWithSeasons.length);
+        const api = await import('@/lib/api');
+        const searchResults = await api.searchSeries(query, 50);
+        
+        setSeries(searchResults as any[]);
+        setTotalSeries(searchResults.length);
       } catch (error) {
         console.error('Error searching series:', error);
       } finally {

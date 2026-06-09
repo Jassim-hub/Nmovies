@@ -34,6 +34,10 @@ export default function MoviesPage() {
   // Fetch functions with useCallback to prevent recreation
   const fetchAvailableVJs = useCallback(async () => {
     try {
+      // In streamit we fetch VJs directly from Supabase historically,
+      // but since we want to move to Reelplexi entirely, we can extract
+      // unique VJs from a large fetch, or use the existing vjs table just for the dropdown names.
+      // For now, let's keep the existing VJ list from supabase as it only contains names/ids.
       const { data: vjData, error } = await supabase
         .from('vjs')
         .select('id, name')
@@ -49,32 +53,13 @@ export default function MoviesPage() {
   const fetchMovies = useCallback(async (page: number) => {
     setLoading(true);
     try {
-      const from = (page - 1) * moviesPerPage;
-      const to = from + moviesPerPage - 1;
-
-      // Get total count
-      const { count } = await supabase
-        .from('movies')
-        .select('*', { count: 'exact', head: true })
-        .eq('published', true);
-
-      // Get movies for current page
-      const { data: moviesData, error } = await supabase
-        .from('movies')
-        .select(`
-          *,
-          vjs (
-            id,
-            name
-          )
-        `)
-        .eq('published', true)
-        .range(from, to)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setMovies(moviesData || []);
-      setTotalMovies(count || 0);
+      const api = await import('@/lib/api');
+      const moviesData = await api.getMovies(moviesPerPage, page);
+      setMovies(moviesData);
+      
+      // We don't get exact total count from the lightweight Reelplexi API wrapper currently,
+      // so we assume if we got a full page, there's more.
+      setTotalMovies(moviesData.length === moviesPerPage ? page * moviesPerPage + 1 : (page - 1) * moviesPerPage + moviesData.length);
     } catch (error) {
       console.error('Error fetching movies:', error);
     } finally {
@@ -86,22 +71,14 @@ export default function MoviesPage() {
     setCurrentPage(1);
     setLoading(true);
     try {
-      const { data: filteredMovies, error } = await supabase
-        .from('movies')
-        .select(`
-          *,
-          vjs (
-            id,
-            name
-          )
-        `)
-        .eq('published', true)
-        .eq('vj_id', vjId)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setMovies(filteredMovies || []);
-      setTotalMovies(filteredMovies?.length || 0);
+      // API currently handles VJ filtering by fetching and local filtering, 
+      // or we can just fetch movies and filter by vj_id
+      const api = await import('@/lib/api');
+      const allMovies = await api.getMovies(100, 1);
+      const filteredMovies = allMovies.filter(m => m.vj_id === vjId);
+      
+      setMovies(filteredMovies);
+      setTotalMovies(filteredMovies.length);
     } catch (error) {
       console.error('Error filtering movies by VJ:', error);
     } finally {
@@ -113,22 +90,11 @@ export default function MoviesPage() {
     if (query.trim()) {
       setLoading(true);
       try {
-        const { data: searchResults, error } = await supabase
-          .from('movies')
-          .select(`
-            *,
-            vjs (
-              id,
-              name
-            )
-          `)
-          .eq('published', true)
-          .ilike('title', `%${query}%`)
-          .order('created_at', { ascending: false });
-
-        if (error) throw error;
-        setMovies(searchResults || []);
-        setTotalMovies(searchResults?.length || 0);
+        const api = await import('@/lib/api');
+        const searchResults = await api.searchMovies(query, 50);
+        
+        setMovies(searchResults);
+        setTotalMovies(searchResults.length);
       } catch (error) {
         console.error('Error searching movies:', error);
       } finally {

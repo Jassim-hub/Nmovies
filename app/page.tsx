@@ -111,19 +111,23 @@ export default function HomePage() {
         return;
       }
       try {
-        const MOVIE_SAFE_COLS = `id, title, description, release_date, thumbnail_url, cover_image_url, premium, created_at, genre_ids, vj_id, vjs:vj_id(id, name)`;
-        const SERIES_SAFE_COLS = `id, title, description, release_date, thumbnail_url, cover_image_url, published, created_at, genre_ids, vj_id, vjs:vj_id(id, name)`;
-        const { data: movies } = await supabase.from('movies').select(MOVIE_SAFE_COLS).in('id', watchlist);
-        const { data: series } = await supabase.from('series').select(SERIES_SAFE_COLS).in('id', watchlist);
+        // Fetch all items from Reelplexi instead of Supabase
+        const itemPromises = watchlist.map(async (id) => {
+          let item = await (await import('@/lib/api')).getMovieById(id);
+          if (item) return { ...item, type: 'movie' as const };
+          
+          item = await (await import('@/lib/api')).getSeriesById(id) as any;
+          if (item) return { ...item, type: 'series' as const };
+          
+          return null;
+        });
         
-        const combined = [
-          ...(movies || []).map(m => ({ ...m, type: 'movie' })),
-          ...(series || []).map(s => ({ ...s, type: 'series' }))
-        ];
+        const results = await Promise.all(itemPromises);
+        const validItems = results.filter(Boolean);
         
-        // Sort by the order they appear in the watchlist array (most recently added last)
-        combined.sort((a, b) => watchlist.indexOf(a.id) - watchlist.indexOf(b.id));
-        setWatchlistItems(combined.reverse());
+        // Items are already in the order of the promises (which matches the watchlist array order).
+        // Since we want the most recently added last (or first, depending on design), we'll just reverse the validItems
+        setWatchlistItems(validItems.reverse());
       } catch (e) {
         console.error("Failed to fetch watchlist details", e);
       }

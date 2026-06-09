@@ -1,17 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import * as Reelplexi from '@/lib/reelplexi';
 
 /**
- * Secure Video URL Endpoint
+ * Secure Video URL Endpoint using Reelplexi
  * 
  * Returns the video URL for a given content ID, but ONLY after verifying:
  * 1. User is authenticated (valid Supabase session)
  * 2. User has access (premium check for premium content)
- * 
- * The returned URL is proxied through /api/stream — the raw video URL
- * is NEVER sent to the client.
- * 
- * Usage: GET /api/get-video-url?id=<content_id>&type=movie|episode
  */
 export async function GET(request: NextRequest) {
   try {
@@ -59,70 +55,75 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // --- Use service role to fetch video URL (bypasses RLS) ---
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!serviceRoleKey) {
-      console.error('get-video-url: SUPABASE_SERVICE_ROLE_KEY not configured');
-      return NextResponse.json(
-        { error: 'Server configuration error' },
-        { status: 500 }
-      );
-    }
-
-    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
-
-    let videoUrl: string | null = null;
     let isPremiumContent = false;
     let trailerUrl: string | null = null;
+    let streamUrl: string | null = null;
 
     if (contentType === 'movie') {
-      const { data: movie, error } = await supabaseAdmin
-        .from('movies')
-        .select('video_url, videolink_url, trailer_url, premium, published')
-        .eq('id', contentId)
-        .eq('published', true)
-        .single();
+      const movie = await Reelplexi.getReelplexiMovieById(contentId);
 
-      if (error || !movie) {
+      if (!movie) {
         return NextResponse.json(
           { error: 'Content not found' },
           { status: 404 }
         );
       }
 
-      videoUrl = movie.video_url || movie.videolink_url || null;
-      trailerUrl = movie.trailer_url || null;
       isPremiumContent = movie.premium;
-    } else {
-      // Episode
-      const { data: episode, error } = await supabaseAdmin
-        .from('episodes')
-        .select('video_url, premium, published')
-        .eq('id', contentId)
-        .eq('published', true)
-        .single();
+      trailerUrl = movie.trailer_url || null;
 
-      if (error || !episode) {
+      // Reelplexi provides a secure proxy or stream URL
+      const streamData = await Reelplexi.getReelplexiMovieStream(contentId);
+      if (streamData && streamData.stream_url) {
+        streamUrl = streamData.stream_url;
+      } else if (movie.video_url) {
+        streamUrl = movie.video_url; // fallback to the one in metadata
+      }
+    } else {
+      // Episode (id format: seriesId:season:X:episode:Y)
+      const parts = contentId.split(':');
+      if (parts.length < 5) {
+        return NextResponse.json({ error: 'Invalid episode ID format' }, { status: 400 });
+      }
+      const seriesId = parts[0];
+      const seasonNum = parseInt(parts[2], 10);
+      const episodeNum = parseInt(parts[4], 10);
+
+      const episodes = await Reelplexi.getReelplexiEpisodes(seriesId, seasonNum);
+      const episode = episodes.find((ep: any) => ep.episode_number === episodeNum);
+
+      if (!episode) {
         return NextResponse.json(
           { error: 'Episode not found' },
           { status: 404 }
         );
       }
 
-      videoUrl = episode.video_url || null;
       isPremiumContent = episode.premium;
+
+      const streamData = await Reelplexi.getReelplexiEpisodeStream(seriesId, seasonNum, episodeNum);
+      if (streamData && streamData.stream_url) {
+        streamUrl = streamData.stream_url;
+      } else if (episode.video_url) {
+        streamUrl = episode.video_url;
+      }
     }
 
     // --- Premium access check ---
     if (isPremiumContent) {
+      // Create admin client to check subscription securely
+      const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      if (!serviceRoleKey) {
+        return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+      }
+      const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
+
       const { data: profile } = await supabaseAdmin
         .from('profiles')
         .select('subscription, subscription_expiry_date')
         .eq('id', user.id)
         .single();
 
-      // Dynamic check: any non-free subscription that hasn't expired grants access.
-      // This mirrors the logic in AuthProvider.tsx and lib/subscriptions.ts.
       const hasSubscription = profile?.subscription && profile.subscription !== 'free';
       const isNotExpired = profile?.subscription_expiry_date &&
                           new Date(profile.subscription_expiry_date) > new Date();
@@ -135,40 +136,17 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    if (!videoUrl) {
+    if (!streamUrl) {
       return NextResponse.json(
         { error: 'No video available for this content' },
         { status: 404 }
       );
     }
 
-    // --- Build proxied URL (never expose raw video URL) ---
-    let proxiedUrl = videoUrl;
-
-    // Normalize URL
-    if (proxiedUrl.startsWith('encrypted://') || proxiedUrl.startsWith('auth://')) {
-      const urlPath = proxiedUrl.split('://')[1];
-      proxiedUrl = `https://${urlPath}`;
-    } else if (!proxiedUrl.startsWith('http://') && !proxiedUrl.startsWith('https://')) {
-      proxiedUrl = `https://${proxiedUrl}`;
-    }
-
-    // Route through our secure stream proxy
-    const streamUrl = `/api/stream?url=${encodeURIComponent(proxiedUrl)}`;
-
-    // Trailer can be sent directly (promotional content)
-    let safeTrailerUrl = null;
-    if (trailerUrl) {
-      if (!trailerUrl.startsWith('http://') && !trailerUrl.startsWith('https://')) {
-        safeTrailerUrl = `https://${trailerUrl}`;
-      } else {
-        safeTrailerUrl = trailerUrl;
-      }
-    }
-
+    // Return the stream URL provided by Reelplexi directly (it's already proxied and secure)
     return NextResponse.json({
-      streamUrl,
-      trailerUrl: safeTrailerUrl,
+      streamUrl: streamUrl,
+      trailerUrl: trailerUrl,
       isPremium: isPremiumContent,
     });
 

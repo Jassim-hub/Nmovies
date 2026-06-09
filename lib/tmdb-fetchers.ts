@@ -1,295 +1,202 @@
-import { fetchFromTMDB, fetchMultiplePagesFromTMDB } from '@/lib/tmdb'
-import type { TMDBMovie, TMDBTVShow, TMDBTrendingItem, TMDBSeason } from '@/lib/types/tmdb'
+import * as Reelplexi from './reelplexi'
+import type { TMDBMovie, TMDBTVShow, TMDBTrendingItem, TMDBSeason, TMDBMovieDetails, TMDBTVDetails, TMDBEpisode } from './types/tmdb'
 
-// Fetch popular movies
+// Mappers to convert Reelplexi types to TMDB types
+const mapMovieToTMDB = (r: any): TMDBMovie => ({
+  id: r.id,
+  title: r.title,
+  overview: r.description,
+  poster_path: r.thumbnail_url?.replace('https://image.tmdb.org/t/p/w500', '') || null,
+  backdrop_path: r.cover_image_url?.replace('https://image.tmdb.org/t/p/original', '') || null,
+  release_date: r.release_date,
+  vote_average: 8.0, // Mock
+  vote_count: 1000,
+  popularity: 100,
+  adult: false,
+  original_language: 'en',
+  original_title: r.title,
+  genre_ids: [1], // Mock
+  video: true,
+  runtime: r.duration,
+  media_type: 'movie'
+});
+
+const mapSeriesToTMDB = (r: any): TMDBTVShow => ({
+  id: r.id,
+  name: r.title,
+  overview: r.description,
+  poster_path: r.thumbnail_url?.replace('https://image.tmdb.org/t/p/w500', '') || null,
+  backdrop_path: r.cover_image_url?.replace('https://image.tmdb.org/t/p/original', '') || null,
+  first_air_date: r.release_date,
+  vote_average: 8.0, // Mock
+  vote_count: 1000,
+  popularity: 100,
+  adult: false,
+  original_language: 'en',
+  original_name: r.title,
+  genre_ids: [1], // Mock
+  origin_country: ['US'],
+  number_of_seasons: r.seasons?.length || 1,
+  media_type: 'tv'
+});
+
 export async function getPopularMovies() {
-  return await fetchFromTMDB('/movie/popular')
+  const data = await Reelplexi.getReelplexiTrendingMovies(1, 20);
+  return { results: data.map(mapMovieToTMDB) };
 }
 
-// Fetch popular TV shows
 export async function getPopularTV() {
-  return await fetchFromTMDB('/tv/popular')
+  const data = await Reelplexi.getReelplexiTrendingSeries(1, 20);
+  return { results: data.map(mapSeriesToTMDB) };
 }
 
-// Fetch popular animations (movies with genre 16) (up to 1000 items)
 export async function getPopularAnimations() {
-  // Fetch animations from multiple discovery queries to get variety
-  const [popularAnimations, topRatedAnimations, recentAnimations] = await Promise.all([
-    fetchMultiplePagesFromTMDB('/discover/movie', { 
-      with_genres: 16,
-      sort_by: 'popularity.desc'
-    }, 20), // ~400 items
-    fetchMultiplePagesFromTMDB('/discover/movie', { 
-      with_genres: 16,
-      sort_by: 'vote_average.desc',
-      'vote_count.gte': 100
-    }, 15), // ~300 items
-    fetchMultiplePagesFromTMDB('/discover/movie', { 
-      with_genres: 16,
-      sort_by: 'release_date.desc',
-      'primary_release_date.gte': '2020-01-01'
-    }, 15), // ~300 items
-  ])
-  
-  // Combine and deduplicate by ID
-  const allAnimations = [...popularAnimations, ...topRatedAnimations, ...recentAnimations]
-  const uniqueAnimations = allAnimations.filter((animation, index, self) => 
-    index === self.findIndex(a => a.id === animation.id)
-  )
-  
-  // Limit to 1000 items and return without detailed runtime fetching for performance
-  return uniqueAnimations.slice(0, 1000)
+  const data = await Reelplexi.getReelplexiMoviesByGenre('animation', 1, 50);
+  return data.map(mapMovieToTMDB);
 }
 
-// Fetch more popular animations for slider (20 items)
 export async function getPopularAnimationsForSlider() {
-  const results = await fetchFromTMDB('/discover/movie', { with_genres: 16 })
-  
-  // Fetch runtime for each animation movie
-  const detailedResults = await Promise.all(
-    results.slice(0, 20).map(async (movie: TMDBMovie) => {
-      try {
-        const details = await fetchFromTMDB(`/movie/${movie.id}`)
-        return { ...movie, runtime: details.runtime }
-      } catch {
-        return movie
-      }
-    })
-  )
-  
-  return detailedResults
+  const data = await getPopularAnimations();
+  return data.slice(0, 20);
 }
 
-// Fetch trending content (all media types) with detailed info
 export async function getTrending() {
-  const results = await fetchFromTMDB('/trending/all/week')
-  
-  // Fetch detailed info for each item
-  const detailedResults = await Promise.all(
-    results.slice(0, 10).map(async (item: TMDBTrendingItem) => {
-      try {
-        if (item.media_type === 'movie') {
-          const details = await fetchFromTMDB(`/movie/${item.id}`)
-          return { ...item, runtime: details.runtime }
-        } else if (item.media_type === 'tv') {
-          const details = await fetchFromTMDB(`/tv/${item.id}`)
-          return { ...item, number_of_seasons: details.number_of_seasons }
-        }
-        return item
-      } catch {
-        return item
-      }
-    })
-  )
-  
-  return detailedResults
+  const data = await Reelplexi.getReelplexiTrendingAll(1, 20);
+  return data.map((item: any) => item.type === 'movie' ? mapMovieToTMDB(item) : mapSeriesToTMDB(item));
 }
 
-// Fetch more trending content for slider (20 items)
 export async function getTrendingForSlider() {
-  const results = await fetchFromTMDB('/trending/all/week')
-  
-  // Fetch detailed info for each item
-  const detailedResults = await Promise.all(
-    results.slice(0, 20).map(async (item: TMDBTrendingItem) => {
-      try {
-        if (item.media_type === 'movie') {
-          const details = await fetchFromTMDB(`/movie/${item.id}`)
-          return { ...item, runtime: details.runtime }
-        } else if (item.media_type === 'tv') {
-          const details = await fetchFromTMDB(`/tv/${item.id}`)
-          return { ...item, number_of_seasons: details.number_of_seasons }
-        }
-        return item
-      } catch {
-        return item
-      }
-    })
-  )
-  
-  return detailedResults
+  const data = await getTrending();
+  return data.slice(0, 20);
 }
 
-// Fetch latest movies with runtime (up to 1000 items)
 export async function getLatestMovies() {
-  // Fetch from multiple endpoints to get variety
-  const [nowPlaying, popular, topRated, upcoming] = await Promise.all([
-    fetchMultiplePagesFromTMDB('/movie/now_playing', {}, 15), // ~300 items
-    fetchMultiplePagesFromTMDB('/movie/popular', {}, 15), // ~300 items
-    fetchMultiplePagesFromTMDB('/movie/top_rated', {}, 10), // ~200 items
-    fetchMultiplePagesFromTMDB('/movie/upcoming', {}, 10), // ~200 items
-  ])
-  
-  // Combine and deduplicate by ID
-  const allMovies = [...nowPlaying, ...popular, ...topRated, ...upcoming]
-  const uniqueMovies = allMovies.filter((movie, index, self) => 
-    index === self.findIndex(m => m.id === movie.id)
-  )
-  
-  // Limit to 1000 items and return without detailed runtime fetching for performance
-  return uniqueMovies.slice(0, 1000)
+  const data = await Reelplexi.getReelplexiMovies(1, 50);
+  return data.map(mapMovieToTMDB);
 }
 
-// Fetch more latest movies for slider (20 items)
 export async function getLatestMoviesForSlider() {
-  const results = await fetchFromTMDB('/movie/now_playing')
-  
-  // Fetch runtime for each movie
-  const detailedResults = await Promise.all(
-    results.slice(0, 20).map(async (movie: TMDBMovie) => {
-      try {
-        const details = await fetchFromTMDB(`/movie/${movie.id}`)
-        return { ...movie, runtime: details.runtime }
-      } catch {
-        return movie
-      }
-    })
-  )
-  
-  return detailedResults
+  const data = await getLatestMovies();
+  return data.slice(0, 20);
 }
 
-// Fetch latest TV series with season count (up to 1000 items)
 export async function getLatestSeries() {
-  // Fetch from multiple endpoints to get variety
-  const [onTheAir, popular, topRated, airingToday] = await Promise.all([
-    fetchMultiplePagesFromTMDB('/tv/on_the_air', {}, 15), // ~300 items
-    fetchMultiplePagesFromTMDB('/tv/popular', {}, 15), // ~300 items
-    fetchMultiplePagesFromTMDB('/tv/top_rated', {}, 10), // ~200 items
-    fetchMultiplePagesFromTMDB('/tv/airing_today', {}, 10), // ~200 items
-  ])
-  
-  // Combine and deduplicate by ID
-  const allSeries = [...onTheAir, ...popular, ...topRated, ...airingToday]
-  const uniqueSeries = allSeries.filter((series, index, self) => 
-    index === self.findIndex(s => s.id === series.id)
-  )
-  
-  // Limit to 1000 items and return without detailed season count fetching for performance
-  return uniqueSeries.slice(0, 1000)
+  const data = await Reelplexi.getReelplexiSeries(1, 50);
+  return data.map(mapSeriesToTMDB);
 }
 
-// Fetch more latest series for slider (20 items)
 export async function getLatestSeriesForSlider() {
-  const results = await fetchFromTMDB('/tv/on_the_air')
-  
-  // Fetch season count for each series
-  const detailedResults = await Promise.all(
-    results.slice(0, 20).map(async (series: TMDBTVShow) => {
-      try {
-        const details = await fetchFromTMDB(`/tv/${series.id}`)
-        return { ...series, number_of_seasons: details.number_of_seasons }
-      } catch {
-        return series
-      }
-    })
-  )
-  
-  return detailedResults
+  const data = await getLatestSeries();
+  return data.slice(0, 20);
 }
 
-// Fetch anime content (TV shows with anime genre from Japan only) (up to 1000 items)
 export async function getAnime() {
-  // Fetch anime from multiple discovery queries to get variety
-  const [japaneseAnime, popularAnime, topRatedAnime] = await Promise.all([
-    fetchMultiplePagesFromTMDB('/discover/tv', { 
-      with_genres: 16, // Animation genre
-      with_origin_country: 'JP' // Only Japanese content
-    }, 25), // ~500 items
-    fetchMultiplePagesFromTMDB('/discover/tv', { 
-      with_genres: 16,
-      sort_by: 'popularity.desc'
-    }, 15), // ~300 items
-    fetchMultiplePagesFromTMDB('/discover/tv', { 
-      with_genres: 16,
-      sort_by: 'vote_average.desc',
-      'vote_count.gte': 100
-    }, 10), // ~200 items
-  ])
-  
-  // Combine all anime and filter for Japanese content
-  const allAnime = [...japaneseAnime, ...popularAnime, ...topRatedAnime]
-  const filteredAnime = allAnime.filter((anime: TMDBTVShow) => 
-    anime.origin_country && (anime.origin_country.includes('JP') || anime.origin_country.includes('KR'))
-  )
-  
-  // Deduplicate by ID
-  const uniqueAnime = filteredAnime.filter((anime, index, self) => 
-    index === self.findIndex(a => a.id === anime.id)
-  )
-  
-  // Limit to 1000 items
-  return uniqueAnime.slice(0, 1000)
+  const data = await Reelplexi.getReelplexiSeriesByGenre('anime', 1, 50);
+  return data.map(mapSeriesToTMDB);
 }
 
-// Fetch more anime for slider (20 items)
 export async function getAnimeForSlider() {
-  const results = await fetchFromTMDB('/discover/tv', { with_genres: 16 })
+  const data = await getAnime();
+  return data.slice(0, 20);
+}
+
+export async function getTMDBMovieDetails(movieId: string): Promise<TMDBMovieDetails> {
+  const movie = await Reelplexi.getReelplexiMovieById(movieId);
+  if (!movie) throw new Error("Movie not found");
   
-  // Fetch season count for each anime
-  const detailedResults = await Promise.all(
-    results.slice(0, 20).map(async (anime: TMDBTVShow) => {
-      try {
-        const details = await fetchFromTMDB(`/tv/${anime.id}`)
-        return { ...anime, number_of_seasons: details.number_of_seasons }
-      } catch {
-        return anime
-      }
-    })
-  )
+  return {
+    ...mapMovieToTMDB(movie),
+    belongs_to_collection: null,
+    budget: 0,
+    homepage: '',
+    imdb_id: '',
+    production_companies: [],
+    production_countries: [],
+    revenue: 0,
+    spoken_languages: [],
+    status: 'Released',
+    tagline: '',
+    genres: (movie.genre_ids || []).map((g: string, i: number) => ({ id: i, name: g }))
+  };
+}
+
+export async function getTMDBTVDetails(tvId: string): Promise<TMDBTVDetails> {
+  const tv = await Reelplexi.getReelplexiSeriesById(tvId);
+  if (!tv) throw new Error("Series not found");
   
-  return detailedResults
+  // We'll mock the seasons using a single season for now
+  // Real implementation would fetch seasons if Reelplexi provided them
+  const episodes = await Reelplexi.getReelplexiEpisodes(tvId, 1);
+  const tmdbEpisodes: TMDBEpisode[] = episodes.map((ep: any) => ({
+    id: ep.id,
+    name: ep.title,
+    overview: ep.description,
+    vote_average: 8.0,
+    vote_count: 100,
+    air_date: ep.created_at,
+    episode_number: ep.episode_number,
+    production_code: '',
+    runtime: ep.duration || 45,
+    season_number: 1,
+    show_id: tvId as any,
+    still_path: ep.thumbnail_url?.replace('https://image.tmdb.org/t/p/original', '') || null
+  }));
+
+  const seasons: TMDBSeason[] = [{
+    id: `${tvId}:season:1`,
+    name: "Season 1",
+    overview: "",
+    poster_path: null,
+    season_number: 1,
+    episode_count: episodes.length,
+    air_date: tv.release_date,
+    episodes: tmdbEpisodes
+  }];
+
+  return {
+    ...mapSeriesToTMDB(tv),
+    created_by: [],
+    episode_run_time: [45],
+    homepage: '',
+    in_production: false,
+    languages: ['en'],
+    last_air_date: tv.release_date,
+    last_episode_to_air: tmdbEpisodes[tmdbEpisodes.length - 1] || null,
+    next_episode_to_air: null,
+    networks: [],
+    production_companies: [],
+    production_countries: [],
+    seasons: seasons,
+    spoken_languages: [],
+    status: 'Returning Series',
+    tagline: '',
+    type: 'Scripted',
+    genres: (tv.genre_ids || []).map((g: string, i: number) => ({ id: i, name: g }))
+  };
 }
 
-// Fetch individual movie details
-export async function getTMDBMovieDetails(movieId: string) {
-  return await fetchFromTMDB(`/movie/${movieId}`, { append_to_response: 'credits,videos,similar' })
-}
-
-// Fetch individual TV show details
-export async function getTMDBTVDetails(tvId: string) {
-  const tvDetails = await fetchFromTMDB(`/tv/${tvId}`, { append_to_response: 'credits,videos,similar' })
-
-  // Fetch episodes for each season
-  if (tvDetails.seasons && tvDetails.seasons.length > 0) {
-    const seasonsWithEpisodes = await Promise.all(
-      tvDetails.seasons.map(async (season: TMDBSeason) => {
-        try {
-          const seasonDetails = await fetchFromTMDB(`/tv/${tvId}/season/${season.season_number}`)
-          return {
-            ...season,
-            episodes: seasonDetails.episodes || []
-          }
-        } catch (error) {
-          console.error(`Error fetching episodes for season ${season.season_number}:`, error)
-          return {
-            ...season,
-            episodes: []
-          }
-        }
-      })
-    )
-    tvDetails.seasons = seasonsWithEpisodes
-  }
-
-  return tvDetails
-}
-
-// Fetch similar movies
 export async function getSimilarMovies(movieId: string) {
-  return await fetchFromTMDB(`/movie/${movieId}/similar`)
+  const data = await Reelplexi.getReelplexiRelatedMoviesByGenre(movieId, 1, 10);
+  return data.map(mapMovieToTMDB);
 }
 
-// Fetch similar TV shows
 export async function getSimilarTV(tvId: string) {
-  return await fetchFromTMDB(`/tv/${tvId}/similar`)
+  const data = await Reelplexi.getReelplexiRelatedSeriesByGenre(tvId, 1, 10);
+  return data.map(mapSeriesToTMDB);
 }
 
-// Example search for movies or TV
 export async function searchTMDBMovies(query: string) {
-  return await fetchFromTMDB('/search/movie', { query })
+  const data = await Reelplexi.getReelplexiMovies(1, 50);
+  const filtered = data.filter((m: any) => 
+    m.title.toLowerCase().includes(query.toLowerCase())
+  );
+  return { results: filtered.map(mapMovieToTMDB) };
 }
 
 export async function searchTMDBTV(query: string) {
-  return await fetchFromTMDB('/search/tv', { query })
+  const data = await Reelplexi.getReelplexiSeries(1, 50);
+  const filtered = data.filter((s: any) => 
+    s.title.toLowerCase().includes(query.toLowerCase())
+  );
+  return { results: filtered.map(mapSeriesToTMDB) };
 }

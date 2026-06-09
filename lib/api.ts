@@ -1,294 +1,284 @@
-import { supabase, Movie, Series, Genre } from './supabase'
-
-// Helper to normalize vjs field (Supabase returns array, but type expects object or null)
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const normalizeVjs = (item: any) => ({
-  ...item,
-  vjs: Array.isArray(item.vjs) ? item.vjs[0] || null : item.vjs || null
-});
-
-// SECURITY: Display-only columns — NEVER include video_url, videolink_url, or trailer_url
-// in client-side listing queries. Video URLs are fetched server-side on playback.
-const MOVIE_DISPLAY_COLS = `
-  id, title, description, release_date, thumbnail_url, cover_image_url,
-  duration, premium, created_at, recommend, popular, latest, tmdb_id,
-  genre_ids, vj_id,
-  vjs:vj_id (id, name)
-`;
-
-const SERIES_DISPLAY_COLS = `
-  id, title, description, release_date, thumbnail_url, cover_image_url,
-  published, created_at, tmdb_id, genre_ids, vj_id,
-  vjs:vj_id (id, name)
-`;
+import { Movie, Series, Genre } from './supabase'
+import * as Reelplexi from './reelplexi'
 
 // Movies API
-export async function getMovies(limit = 20) {
-  const { data, error } = await supabase
-    .from('movies')
-    .select(MOVIE_DISPLAY_COLS)
-    .eq('published', true)
-    .not('video_url', 'is', null)
-    .order('created_at', { ascending: false })
-    .limit(limit)
+export async function getMovies(limit = 20, page = 1) {
+  try {
+    const movies = await Reelplexi.getReelplexiMovies(page, limit);
+    return movies as Movie[];
+  } catch (error) {
+    console.error('Error fetching movies from Reelplexi:', error);
+    return [];
+}
+}
 
-  if (error) { console.error('Error fetching movies:', error); return [] }
-  return (data || []).map(normalizeVjs) as Movie[]
+export async function getMovieById(id: string) {
+  try {
+    const movie = await Reelplexi.getReelplexiMovieById(id);
+    return movie as Movie | null;
+  } catch (error) {
+    console.error(`Error fetching movie ${id}:`, error);
+    return null;
+  }
+}
+
+export async function getMovieStream(id: string) {
+  try {
+    return await Reelplexi.getReelplexiMovieStream(id);
+  } catch (error) {
+    console.error(`Error fetching movie stream ${id}:`, error);
+    return null;
+  }
 }
 
 export async function getFeaturedMovie() {
-  const { data, error } = await supabase
-    .from('movies')
-    .select(MOVIE_DISPLAY_COLS)
-    .eq('published', true)
-    .eq('recommend', true)
-    .not('video_url', 'is', null)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .single()
-
-  if (error) { console.error('Error fetching featured movie:', error); return null }
-  return normalizeVjs(data) as Movie
+  try {
+    const movies = await Reelplexi.getReelplexiTrendingMovies(1, 1);
+    return (movies[0] || null) as Movie | null;
+  } catch (error) {
+    console.error('Error fetching featured movie from Reelplexi:', error);
+    return null;
+  }
 }
 
 export async function getPopularMovies(limit = 6) {
-  const { data, error } = await supabase
-    .from('movies')
-    .select(MOVIE_DISPLAY_COLS)
-    .eq('published', true)
-    .eq('popular', true)
-    .not('video_url', 'is', null)
-    .order('created_at', { ascending: false })
-    .limit(limit)
-
-  if (error) { console.error('Error fetching popular movies:', error); return [] }
-  return (data || []).map(normalizeVjs) as Movie[]
+  try {
+    const movies = await Reelplexi.getReelplexiTrendingMovies(1, limit);
+    return movies as Movie[];
+  } catch (error) {
+    console.error('Error fetching popular movies:', error);
+    return [];
+  }
 }
 
-// Series API - Simple queries without mandatory episode inner joins
-export async function getSeries(limit = 20) {
-  const { data, error } = await supabase
-    .from('series')
-    .select(SERIES_DISPLAY_COLS)
-    .eq('published', true)
-    .order('created_at', { ascending: false })
-    .limit(limit)
-
-  if (error) { console.error('Error fetching series:', error); return [] }
-  return (data || []).map(normalizeVjs) as Series[]
+// Series API
+export async function getRelatedMoviesByGenre(id: string, genreIds: string[], limit = 6) {
+  try {
+    const movies = await getMovies(50, 1);
+    // Simple mock implementation of related movies by genre matching
+    return movies.filter(m => m.id !== id && m.genre_ids?.some((g: string) => genreIds.includes(g))).slice(0, limit);
+  } catch (error) {
+    console.error('Error fetching related movies:', error);
+    return [];
+  }
 }
 
+export async function getSeries(limit = 24, page = 1) {
+  try {
+    const series = await Reelplexi.getReelplexiSeries(page, limit);
+    return series as Series[];
+  } catch (error) {
+    console.error('Error fetching series from Reelplexi:', error);
+    return [];
+  }
+}
+
+export async function getRelatedSeriesByGenre(id: string, genreIds: string[], limit = 6) {
+  try {
+    const series = await getSeries(50, 1);
+    return series.filter(s => s.id !== id && s.genre_ids?.some((g: string) => genreIds.includes(g))).slice(0, limit);
+  } catch (error) {
+    console.error('Error fetching related series:', error);
+    return [];
+  }
+}
+
+export async function getSeriesById(id: string) {
+  try {
+    const series = await Reelplexi.getReelplexiSeriesById(id);
+    return series as Series | null;
+  } catch (error) {
+    console.error(`Error fetching series ${id}:`, error);
+    return null;
+  }
+}
+
+export async function getEpisodes(seriesId: string, season: number) {
+  try {
+    return await Reelplexi.getReelplexiEpisodes(seriesId, season);
+  } catch (error) {
+    console.error(`Error fetching episodes for series ${seriesId} season ${season}:`, error);
+    return [];
+  }
+}
+
+export async function getEpisodeStream(seriesId: string, season: number, episode: number) {
+  try {
+    return await Reelplexi.getReelplexiEpisodeStream(seriesId, season, episode);
+  } catch (error) {
+    console.error(`Error fetching stream for series ${seriesId} season ${season} episode ${episode}:`, error);
+    return null;
+  }
+}
+
+// Translated in Streamit previously meant NO VJ_ID (original language)
 export async function getTranslatedMovies(limit = 6) {
-  const { data, error } = await supabase
-    .from('movies')
-    .select(MOVIE_DISPLAY_COLS)
-    .eq('published', true)
-    .is('vj_id', null)
-    .not('video_url', 'is', null)
-    .order('created_at', { ascending: false })
-    .limit(limit)
-
-  if (error) { console.error('Error fetching translated movies:', error); return [] }
-  return (data || []).map(normalizeVjs) as Movie[]
+  try {
+    // Fetch a larger batch to filter
+    const movies = await Reelplexi.getReelplexiMovies(1, 50);
+    return movies.filter((m: any) => !m.vj_id).slice(0, limit) as Movie[];
+  } catch (error) {
+    console.error('Error fetching translated movies:', error);
+    return [];
+  }
 }
 
 export async function getTranslatedSeries(limit = 6) {
-  const { data, error } = await supabase
-    .from('series')
-    .select(SERIES_DISPLAY_COLS)
-    .eq('published', true)
-    .is('vj_id', null)
-    .order('created_at', { ascending: false })
-    .limit(limit)
-
-  if (error) { console.error('Error fetching translated series:', error); return [] }
-  return (data || []).map(normalizeVjs) as Series[]
+  try {
+    const series = await Reelplexi.getReelplexiSeries(1, 50);
+    return series.filter((s: any) => !s.vj_id).slice(0, limit) as Series[];
+  } catch (error) {
+    console.error('Error fetching translated series:', error);
+    return [];
+  }
 }
 
 export async function getTranslatedContent(limit = 12) {
-  const movies = await getTranslatedMovies(limit / 2)
-  const series = await getTranslatedSeries(limit / 2)
-  const combined = [
-    ...movies.map(item => ({ ...item, type: 'movie' as const })),
-    ...series.map(item => ({ ...item, type: 'series' as const }))
-  ]
+  const movies = await getTranslatedMovies(limit);
+  const series = await getTranslatedSeries(limit);
+  const combined = [...movies, ...series];
   return combined.sort((a, b) =>
     new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-  ).slice(0, limit)
+  ).slice(0, limit);
 }
 
 export async function getVJMovies(limit = 6) {
-  const { data, error } = await supabase
-    .from('movies')
-    .select(MOVIE_DISPLAY_COLS)
-    .eq('published', true)
-    .not('vj_id', 'is', null)
-    .not('video_url', 'is', null)
-    .order('created_at', { ascending: false })
-    .limit(limit)
-
-  if (error) { console.error('Error fetching VJ movies:', error); return [] }
-  return (data || []).map(normalizeVjs) as (Movie & { vjs: { id: string; name: string } | null })[]
+  try {
+    const movies = await Reelplexi.getReelplexiMovies(1, 50);
+    return movies.filter((m: any) => !!m.vj_id).slice(0, limit) as (Movie & { vjs: { id: string; name: string } | null })[];
+  } catch (error) {
+    console.error('Error fetching VJ movies:', error);
+    return [];
+  }
 }
 
 export async function getVJSeries(limit = 6) {
-  const { data, error } = await supabase
-    .from('series')
-    .select(SERIES_DISPLAY_COLS)
-    .eq('published', true)
-    .not('vj_id', 'is', null)
-    .order('created_at', { ascending: false })
-    .limit(limit)
-
-  if (error) { console.error('Error fetching VJ series:', error); return [] }
-  return (data || []).map(normalizeVjs) as (Series & { vjs: { id: string; name: string } | null })[]
+  try {
+    const series = await Reelplexi.getReelplexiSeries(1, 50);
+    return series.filter((s: any) => !!s.vj_id).slice(0, limit) as (Series & { vjs: { id: string; name: string } | null })[];
+  } catch (error) {
+    console.error('Error fetching VJ series:', error);
+    return [];
+  }
 }
 
 export async function getVJContent(limit = 12) {
-  const movies = await getVJMovies(limit / 2)
-  const series = await getVJSeries(limit / 2)
-  const combined = [
-    ...movies.map(item => ({ ...item, type: 'movie' as const })),
-    ...series.map(item => ({ ...item, type: 'series' as const }))
-  ]
+  const movies = await getVJMovies(limit);
+  const series = await getVJSeries(limit);
+  const combined = [...movies, ...series];
   return combined.sort((a, b) =>
     new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-  ).slice(0, limit)
+  ).slice(0, limit);
 }
 
 // Genres API
 export async function getGenres() {
-  const { data, error } = await supabase
-    .from('genres')
-    .select('*')
-    .order('name')
-
-  if (error) { console.error('Error fetching genres:', error); return [] }
-  return data as Genre[]
+  try {
+    return await Reelplexi.getReelplexiGenres() as Genre[];
+  } catch (error) {
+    console.error('Error fetching genres from Reelplexi:', error);
+    return [];
+  }
 }
 
-// Search API
+// Search API (simulated via local filter as Reelplexi API has no explicit /v1/search endpoint documented)
 export async function searchMovies(query: string, limit = 20) {
-  const { data, error } = await supabase
-    .from('movies')
-    .select(MOVIE_DISPLAY_COLS)
-    .eq('published', true)
-    .not('video_url', 'is', null)
-    .ilike('title', `%${query}%`)
-    .order('created_at', { ascending: false })
-    .limit(limit)
-
-  if (error) { console.error('Error searching movies:', error); return [] }
-  return (data || []).map(normalizeVjs) as Movie[]
+  try {
+    const movies = await Reelplexi.getReelplexiMovies(1, 50);
+    const lowerQuery = query.toLowerCase();
+    return movies.filter((m: any) => 
+      m.title.toLowerCase().includes(lowerQuery) || 
+      (m.description && m.description.toLowerCase().includes(lowerQuery))
+    ).slice(0, limit) as Movie[];
+  } catch (error) {
+    console.error('Error searching movies:', error);
+    return [];
+  }
 }
 
 export async function searchSeries(query: string, limit = 20) {
-  const { data, error } = await supabase
-    .from('series')
-    .select(SERIES_DISPLAY_COLS)
-    .eq('published', true)
-    .ilike('title', `%${query}%`)
-    .order('created_at', { ascending: false })
-    .limit(limit)
-
-  if (error) { console.error('Error searching series:', error); return [] }
-  return (data || []).map(normalizeVjs) as Series[]
+  try {
+    const series = await Reelplexi.getReelplexiSeries(1, 50);
+    const lowerQuery = query.toLowerCase();
+    return series.filter((s: any) => 
+      s.title.toLowerCase().includes(lowerQuery) || 
+      (s.description && s.description.toLowerCase().includes(lowerQuery))
+    ).slice(0, limit) as Series[];
+  } catch (error) {
+    console.error('Error searching series:', error);
+    return [];
+  }
 }
 
 // Related content by genre
 export async function getRelatedMoviesByGenre(movieId: string, genreIds: string[], limit = 6) {
-  const { data, error } = await supabase
-    .from('movies')
-    .select(MOVIE_DISPLAY_COLS)
-    .eq('published', true)
-    .not('video_url', 'is', null)
-    .neq('id', movieId)
-    .overlaps('genre_ids', genreIds)
-    .order('created_at', { ascending: false })
-    .limit(limit)
-
-  if (error) { console.error('Error fetching related movies:', error); return [] }
-  return (data || []).map(normalizeVjs) as Movie[]
+  try {
+    const movies = await Reelplexi.getReelplexiRelatedMoviesByGenre(movieId, 1, limit);
+    return movies as Movie[];
+  } catch (error) {
+    console.error('Error fetching related movies:', error);
+    return [];
+  }
 }
 
 export async function getRelatedSeriesByGenre(seriesId: string, genreIds: string[], limit = 6) {
-  const { data, error } = await supabase
-    .from('series')
-    .select(SERIES_DISPLAY_COLS)
-    .eq('published', true)
-    .neq('id', seriesId)
-    .overlaps('genre_ids', genreIds)
-    .order('created_at', { ascending: false })
-    .limit(limit)
-
-  if (error) { console.error('Error fetching related series:', error); return [] }
-  return (data || []).map(normalizeVjs) as unknown as Series[]
+  try {
+    const series = await Reelplexi.getReelplexiRelatedSeriesByGenre(seriesId, 1, limit);
+    return series as Series[];
+  } catch (error) {
+    console.error('Error fetching related series:', error);
+    return [];
+  }
 }
 
-// Kilax Exclusive Content API
+// Kilax Exclusive Content API - Mapping to Trending for now since Reelplexi is the source
 export async function getKilaxExclusiveMovies(limit = 6) {
-  const { data, error } = await supabase
-    .from('movies')
-    .select(MOVIE_DISPLAY_COLS)
-    .eq('published', true)
-    .eq('exclusive_from_kilax_movies', true)
-    .not('video_url', 'is', null)
-    .order('created_at', { ascending: false })
-    .limit(limit)
-
-  if (error) { console.error('Error fetching Kilax exclusive movies:', error); return [] }
-  return (data || []).map(normalizeVjs) as Movie[]
+  try {
+    const movies = await Reelplexi.getReelplexiTrendingMovies(1, limit);
+    return movies as Movie[];
+  } catch (error) {
+    console.error('Error fetching Kilax exclusive movies:', error);
+    return [];
+  }
 }
 
 export async function getKilaxExclusiveSeries(limit = 6) {
-  const { data, error } = await supabase
-    .from('series')
-    .select(SERIES_DISPLAY_COLS)
-    .eq('published', true)
-    .eq('exclusive_from_kilax', true)
-    .order('created_at', { ascending: false })
-    .limit(limit)
-
-  if (error) { console.error('Error fetching Kilax exclusive series:', error); return [] }
-  return (data || []).map(normalizeVjs) as unknown as Series[]
+  try {
+    const series = await Reelplexi.getReelplexiTrendingSeries(1, limit);
+    return series as Series[];
+  } catch (error) {
+    console.error('Error fetching Kilax exclusive series:', error);
+    return [];
+  }
 }
 
 export async function getKilaxExclusiveContent(limit = 12) {
-  const movies = await getKilaxExclusiveMovies(limit / 2)
-  const series = await getKilaxExclusiveSeries(limit / 2)
-  const combined = [
-    ...movies.map(item => ({ ...item, type: 'movie' as const })),
-    ...series.map(item => ({ ...item, type: 'series' as const }))
-  ]
-  return combined.sort((a, b) =>
-    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-  ).slice(0, limit) as Array<(Movie | Series) & { type: 'movie' | 'series'; vjs: { id: string; name: string } | null }>
+  try {
+    const all = await Reelplexi.getReelplexiTrendingAll(1, limit);
+    return all as Array<(Movie | Series) & { type: 'movie' | 'series'; vjs: { id: string; name: string } | null }>;
+  } catch (error) {
+    console.error('Error fetching Kilax exclusive content:', error);
+    return [];
+  }
 }
 
 // Category API
 export async function getMoviesByCategory(category: string, limit = 20) {
-  const { data, error } = await supabase
-    .from('movies')
-    .select(MOVIE_DISPLAY_COLS)
-    .eq('published', true)
-    .not('video_url', 'is', null)
-    .eq('category', category)
-    .order('created_at', { ascending: false })
-    .limit(limit)
-
-  if (error) { console.error('Error fetching movies by category:', error); return [] }
-  return (data || []).map(normalizeVjs) as Movie[]
+  try {
+    const movies = await Reelplexi.getReelplexiMoviesByGenre(category.toLowerCase(), 1, limit);
+    return movies as Movie[];
+  } catch (error) {
+    console.error('Error fetching movies by category:', error);
+    return [];
+  }
 }
 
 export async function getSeriesByCategory(category: string, limit = 20) {
-  const { data, error } = await supabase
-    .from('series')
-    .select(SERIES_DISPLAY_COLS)
-    .eq('published', true)
-    .eq('category', category)
-    .order('created_at', { ascending: false })
-    .limit(limit)
-
-  if (error) { console.error('Error fetching series by category:', error); return [] }
-  return (data || []).map(normalizeVjs) as unknown as Series[]
+  try {
+    const series = await Reelplexi.getReelplexiSeriesByGenre(category.toLowerCase(), 1, limit);
+    return series as Series[];
+  } catch (error) {
+    console.error('Error fetching series by category:', error);
+    return [];
+  }
 }

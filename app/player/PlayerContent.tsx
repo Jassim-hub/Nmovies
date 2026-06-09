@@ -84,17 +84,13 @@ export default function PlayerContent() {
       try {
         let contentTitle = '';
         let contentInfo: any = null;
+        const api = await import('@/lib/api');
 
         if (contentType === 'movie') {
-          // Fetch movie display data only (NO video_url)
-          const { data: movie, error } = await supabase
-            .from('movies')
-            .select('id, title, published, premium')
-            .eq('id', contentId)
-            .eq('published', true)
-            .single();
+          // Fetch movie display data from API
+          const movie = await api.getMovieById(contentId);
 
-          if (error || !movie) {
+          if (!movie) {
             throw new Error('Movie not found or not published');
           }
 
@@ -106,70 +102,49 @@ export default function PlayerContent() {
             throw new Error('Episode ID required for series streaming');
           }
 
-          // Fetch episode display data (NO video_url)
-          const { data: episode, error: episodeError } = await supabase
-            .from('episodes')
-            .select(`
-              id,
-              title,
-              published,
-              premium,
-              episode_number,
-              season_id
-            `)
-            .eq('id', episodeId)
-            .eq('published', true)
-            .single();
+          // In our API, episodeId is a synthetic string like "seriesId:season:1:episode:1"
+          // We can parse it, or we can just fetch the series and find the episode
+          let actualSeriesId = contentId;
+          let seasonNum = 1;
+          let episodeNum = 1;
+          
+          if (episodeId.includes(':season:')) {
+            const parts = episodeId.split(':');
+            actualSeriesId = parts[0];
+            seasonNum = parseInt(parts[2], 10);
+            episodeNum = parseInt(parts[4], 10);
+          } else {
+            // fallback if it's somehow a different format
+          }
 
-          if (episodeError || !episode) {
-            console.error('Episode fetch error:', episodeError);
+          const seriesData = await api.getSeriesById(actualSeriesId);
+          if (!seriesData) {
+            throw new Error('Series not found or not published');
+          }
+
+          const episodes = await api.getEpisodes(actualSeriesId, seasonNum);
+          const episode = episodes.find((e: any) => e.episode_number === episodeNum);
+
+          if (!episode) {
             throw new Error('Episode not found or not published');
           }
 
-          // Then fetch the season information
-          const { data: season, error: seasonError } = await supabase
-            .from('seasons')
-            .select(`
-              id,
-              name,
-              order,
-              series_id
-            `)
-            .eq('id', episode.season_id)
-            .single();
-
-          let seriesData = null;
-          let seriesId = null;
-
-          if (season && !seasonError) {
-            // Fetch series information separately
-            const { data: series, error: seriesError } = await supabase
-              .from('series')
-              .select('id, title')
-              .eq('id', season.series_id)
-              .single();
-
-          if (series && !seriesError) {
-              seriesData = series;
-              seriesId = series.id;
-            } else {
-              seriesId = season.series_id;
-            }
-          }
-
-          contentInfo = episode;
-          contentTitle = `${seriesData?.title || 'Series'} - ${season?.name || 'Season'} - ${episode.title}`;
+          contentInfo = { ...episode, seasonOrder: seasonNum };
+          contentTitle = `${seriesData.title || 'Series'} - Season ${seasonNum} - ${episode.title}`;
 
           // Store series ID for episode navigation
-          setSeriesId(seriesId);
+          setSeriesId(actualSeriesId);
 
-          // Fetch all episodes for navigation if we have a series ID
-          if (seriesId) {
-            await fetchAllEpisodes(seriesId, episodeId);
-          } else if (contentId) {
-            // Fallback: try using contentId as seriesId
-            await fetchAllEpisodes(contentId, episodeId);
-          }
+          // Set all episodes for navigation
+          const allEps = episodes.map((e: any) => ({
+             ...e,
+             seasonName: `Season ${seasonNum}`,
+             seasonOrder: seasonNum,
+             season_id: `${actualSeriesId}:season:${seasonNum}`
+          })) as unknown as EpisodeWithSeason[];
+          setAllEpisodes(allEps);
+          const currentIndex = allEps.findIndex(e => e.id === episode.id);
+          setCurrentEpisodeIndex(currentIndex);
         }
 
         setContentData(contentInfo);
@@ -182,34 +157,23 @@ export default function PlayerContent() {
           return;
         }
 
-        // SECURITY: Fetch video URL from secure server-side API
-        const session = await supabase.auth.getSession();
-        const accessToken = session.data.session?.access_token;
-        if (!accessToken) {
-          setShowAuthModal(true);
-          setLoading(false);
-          return;
+        let finalStreamUrl = null;
+        if (contentType === 'movie') {
+           const streamData = await api.getMovieStream(contentId);
+           finalStreamUrl = streamData?.video_url;
+        } else {
+           const streamData = await api.getEpisodeStream(seriesId || contentId, contentInfo.seasonOrder, contentInfo.episode_number);
+           finalStreamUrl = streamData?.video_url;
         }
 
-        const videoType = contentType === 'movie' ? 'movie' : 'episode';
-        const videoId = contentType === 'movie' ? contentId : episodeId;
-        const videoRes = await fetch(`/api/get-video-url?id=${videoId}&type=${videoType}`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
-
-        if (!videoRes.ok) {
-          throw new Error('Failed to load video');
-        }
-
-        const videoData = await videoRes.json();
-        if (!videoData.streamUrl) {
+        if (!finalStreamUrl) {
           throw new Error('No video URL available');
         }
 
         // Mark this content as successfully fetched so the guard above
         // blocks any subsequent redundant re-fetches from auth state changes.
         streamFetchedRef.current = fetchKey;
-        setStreamUrl(videoData.streamUrl);
+        setStreamUrl(finalStreamUrl);
         setTitle(contentTitle);
         setLoading(false);
 
@@ -331,37 +295,23 @@ export default function PlayerContent() {
       window.history.replaceState({}, '', newUrl);
 
       // SECURITY: Fetch video URL from secure API
-      const session = await supabase.auth.getSession();
-      const accessToken = session.data.session?.access_token;
-      if (!accessToken) {
-        setShowAuthModal(true);
-        setSwitchingEpisode(false);
-        return;
-      }
+      const api = await import('@/lib/api');
+      const streamData = await api.getEpisodeStream(seriesId || contentId || '', episode.seasonOrder || 1, episode.episode_number);
 
-      const videoRes = await fetch(`/api/get-video-url?id=${episode.id}&type=episode`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-
-      if (!videoRes.ok) {
-        setError('Failed to load episode');
-        setSwitchingEpisode(false);
-        return;
-      }
-
-      const videoData = await videoRes.json();
-      if (!videoData.streamUrl) {
+      if (!streamData || !streamData.video_url) {
         setError('This episode is not available for watching');
         setSwitchingEpisode(false);
         return;
       }
+      
+      const videoUrl = streamData.video_url;
 
       // Update current episode index
       const newIndex = allEpisodes.findIndex(ep => ep.id === episode.id);
       setCurrentEpisodeIndex(newIndex);
 
       // Update stream URL and title
-      setStreamUrl(videoData.streamUrl);
+      setStreamUrl(videoUrl);
       setTitle(`${contentData?.title || 'Series'} - ${episode.seasonName} - ${episode.title}`);
       setSwitchingEpisode(false);
 
