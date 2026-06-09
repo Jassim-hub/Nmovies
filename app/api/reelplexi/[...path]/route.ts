@@ -13,6 +13,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ path
     const res = await fetch(url, {
       headers: {
         'X-API-Key': REELPLEXI_API_KEY,
+        'Authorization': `Bearer ${REELPLEXI_API_KEY}`,
         'Content-Type': 'application/json'
       }
     });

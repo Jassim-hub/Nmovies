@@ -24,6 +24,7 @@ async function fetchReelplexi(endpoint: string, params: Record<string, string | 
 
   if (isServer && REELPLEXI_API_KEY) {
     headers['X-API-Key'] = REELPLEXI_API_KEY;
+    headers['Authorization'] = `Bearer ${REELPLEXI_API_KEY}`;
   }
 
   const res = await fetch(url.toString(), {
