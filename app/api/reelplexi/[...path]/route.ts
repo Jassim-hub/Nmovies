@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const REELPLEXI_API_KEY = process.env.REELPLEXI_API_KEY || process.env.NEXT_PUBLIC_REELPLEXI_API_KEY || '';
+const REELPLEXI_API_KEY = (process.env.REELPLEXI_API_KEY || process.env.NEXT_PUBLIC_REELPLEXI_API_KEY || '').replace(/[^\x20-\x7E]/g, '').trim();
 const REELPLEXI_BASE_URL = 'https://api.reelplexi.com';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {

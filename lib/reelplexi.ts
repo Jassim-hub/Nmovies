@@ -1,6 +1,6 @@
 import { Movie, Series, Genre, EpisodeWithSeason, Season, Episode } from './supabase';
 
-const REELPLEXI_API_KEY = process.env.REELPLEXI_API_KEY || process.env.NEXT_PUBLIC_REELPLEXI_API_KEY || '';
+const REELPLEXI_API_KEY = (process.env.REELPLEXI_API_KEY || process.env.NEXT_PUBLIC_REELPLEXI_API_KEY || '').replace(/[^\x20-\x7E]/g, '').trim();
 const isServer = typeof window === 'undefined';
 const REELPLEXI_BASE_URL = isServer ? 'https://api.reelplexi.com' : '/api/reelplexi';
 
