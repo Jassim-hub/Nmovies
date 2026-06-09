@@ -146,7 +146,7 @@ export default function HomePage() {
         const [latestMoviesData, latestSeriesData, genreRowsData] = await Promise.all([
           (await import('@/lib/api')).getMovies(12),
           (await import('@/lib/api')).getSeries(12),
-          (await import('@/lib/genre-home-supabase')).getGenreRowsForHomeSupabase(12)
+          (await import('@/lib/api')).getGenreRowsForHome(12)
         ]);
 
         setLatestMovies(latestMoviesData);

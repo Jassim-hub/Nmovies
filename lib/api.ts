@@ -163,6 +163,36 @@ export async function getGenres() {
   }
 }
 
+export async function getGenreRowsForHome(limit = 12) {
+  try {
+    const genres = await getGenres();
+    if (!genres || genres.length === 0) return [];
+
+    // Take top 3 genres
+    const topGenres = genres.slice(0, 3);
+    
+    const genreRows = await Promise.all(
+      topGenres.map(async (genre) => {
+        try {
+          const movies = await Reelplexi.getReelplexiMoviesByGenre(genre.id, 1, limit);
+          return {
+            name: genre.name,
+            movies: movies || []
+          };
+        } catch (error) {
+          console.error(`Error fetching movies for genre ${genre.name}:`, error);
+          return { name: genre.name, movies: [] };
+        }
+      })
+    );
+    
+    return genreRows.filter(row => row.movies.length > 0);
+  } catch (error) {
+    console.error('Error fetching genre rows for home:', error);
+    return [];
+  }
+}
+
 // Search API (simulated via local filter as Reelplexi API has no explicit /v1/search endpoint documented)
 export async function searchMovies(query: string, limit = 20) {
   try {
