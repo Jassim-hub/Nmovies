@@ -2,14 +2,14 @@ import { Movie, Series, Genre } from './supabase'
 import * as Reelplexi from './reelplexi'
 
 // Movies API
-export async function getMovies(limit = 20, page = 1) {
+export async function getMovies(limit = 20, page = 1, genre?: string) {
   try {
-    const movies = await Reelplexi.getReelplexiMovies(page, limit);
+    const movies = await Reelplexi.getReelplexiMovies(page, limit, genre);
     return movies as Movie[];
   } catch (error) {
     console.error('Error fetching movies from Reelplexi:', error);
     return [];
-}
+  }
 }
 
 export async function getMovieById(id: string) {
@@ -53,9 +53,9 @@ export async function getPopularMovies(limit = 6) {
 
 
 
-export async function getSeries(limit = 24, page = 1) {
+export async function getSeries(limit = 24, page = 1, genre?: string) {
   try {
-    const series = await Reelplexi.getReelplexiSeries(page, limit);
+    const series = await Reelplexi.getReelplexiSeries(page, limit, genre);
     return series as Series[];
   } catch (error) {
     console.error('Error fetching series from Reelplexi:', error);
@@ -225,31 +225,50 @@ export async function getGenreRowsForHome(limit = 12) {
   }
 }
 
-// Search API (simulated via local filter as Reelplexi API has no explicit /v1/search endpoint documented)
-export async function searchMovies(query: string, limit = 20) {
+// Search API using Reelplexi API filters
+export async function searchMovies(query: string, limit = 20, page = 1, vjName?: string, genre?: string) {
   try {
-    const movies = await Reelplexi.getReelplexiMovies(1, 50);
-    const lowerQuery = query.toLowerCase();
-    return movies.filter((m: any) => 
-      m.title.toLowerCase().includes(lowerQuery) || 
-      (m.description && m.description.toLowerCase().includes(lowerQuery))
-    ).slice(0, limit) as Movie[];
+    if (!query.trim() && !vjName) {
+      return await getMovies(limit, page, genre);
+    }
+    const q = query.trim() || (vjName as string);
+    const movies = await Reelplexi.searchReelplexiMovies(q, page, limit, undefined, genre);
+    return movies as Movie[];
   } catch (error) {
     console.error('Error searching movies:', error);
     return [];
   }
 }
 
-export async function searchSeries(query: string, limit = 20) {
+export async function searchSeries(query: string, limit = 20, page = 1, vjName?: string, genre?: string) {
   try {
-    const series = await Reelplexi.getReelplexiSeries(1, 50);
-    const lowerQuery = query.toLowerCase();
-    return series.filter((s: any) => 
-      s.title.toLowerCase().includes(lowerQuery) || 
-      (s.description && s.description.toLowerCase().includes(lowerQuery))
-    ).slice(0, limit) as Series[];
+    if (!query.trim() && !vjName) {
+      return await getSeries(limit, page, genre);
+    }
+    const q = query.trim() || (vjName as string);
+    const series = await Reelplexi.searchReelplexiSeries(q, page, limit, undefined, genre);
+    return series as Series[];
   } catch (error) {
     console.error('Error searching series:', error);
+    return [];
+  }
+}
+
+export async function searchAllContent(query: string, limit = 50, page = 1, vjName?: string, genre?: string) {
+  try {
+    if (!query.trim() && !vjName) {
+      const [m, s] = await Promise.all([
+        getMovies(limit, page, genre),
+        getSeries(limit, page, genre)
+      ]);
+      const combined = [...m, ...s].sort((a: any, b: any) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+      return combined.slice(0, limit);
+    }
+    const q = query.trim() || (vjName as string);
+    const items = await Reelplexi.searchReelplexiAll(q, page, limit, undefined, genre);
+    return items as any[];
+  } catch (error) {
+    console.error('Error searching all content:', error);
     return [];
   }
 }
@@ -345,4 +364,13 @@ export async function getSeriesByCategory(category: string, limit = 20) {
     console.error('Error fetching series by category:', error);
     return [];
   }
+}
+
+// Download API
+export async function getMovieDownload(id: string) {
+  return await Reelplexi.getReelplexiMovieDownloadUrl(id);
+}
+
+export async function getEpisodeDownload(seriesId: string, season: number, episode: number) {
+  return await Reelplexi.getReelplexiEpisodeDownloadUrl(seriesId, season, episode);
 }

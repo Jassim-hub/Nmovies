@@ -50,11 +50,12 @@ export default function MoviesPage() {
     }
   }, []);
 
-  const fetchMovies = useCallback(async (page: number) => {
+  const fetchMovies = useCallback(async (page: number, query = "", vjId = "") => {
     setLoading(true);
     try {
       const api = await import('@/lib/api');
-      const moviesData = await api.getMovies(moviesPerPage, page);
+      const vjName = availableVJs.find(v => v.id === vjId)?.name;
+      const moviesData = await api.searchMovies(query, moviesPerPage, page, vjName);
       setMovies(moviesData as any);
       
       // We don't get exact total count from the lightweight Reelplexi API wrapper currently,
@@ -65,46 +66,7 @@ export default function MoviesPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
-
-  const handleVJFilter = useCallback(async (vjId: string) => {
-    setCurrentPage(1);
-    setLoading(true);
-    try {
-      // API currently handles VJ filtering by fetching and local filtering, 
-      // or we can just fetch movies and filter by vj_id
-      const api = await import('@/lib/api');
-      const allMovies = await api.getMovies(100, 1);
-      const filteredMovies = allMovies.filter(m => m.vj_id === vjId);
-      
-      setMovies(filteredMovies as any);
-      setTotalMovies(filteredMovies.length);
-    } catch (error) {
-      console.error('Error filtering movies by VJ:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const performSearch = useCallback(async (query: string) => {
-    if (query.trim()) {
-      setLoading(true);
-      try {
-        const api = await import('@/lib/api');
-        const searchResults = await api.searchMovies(query, 50);
-        
-        setMovies(searchResults as any);
-        setTotalMovies(searchResults.length);
-      } catch (error) {
-        console.error('Error searching movies:', error);
-      } finally {
-        setLoading(false);
-      }
-    } else {
-      // Reset to paginated view
-      fetchMovies(1);
-    }
-  }, [fetchMovies]);
+  }, [moviesPerPage, availableVJs]);
 
   // Initial load
   useEffect(() => {
@@ -112,37 +74,39 @@ export default function MoviesPage() {
     fetchAvailableVJs();
   }, [fetchMovies, fetchAvailableVJs]);
 
-  // Handle pagination changes (only when not filtering)
+  // Handle pagination changes
   useEffect(() => {
-    if (!searchQuery && !selectedVJ && currentPage > 1) {
-      fetchMovies(currentPage);
+    if (currentPage > 1) {
+      fetchMovies(currentPage, searchQuery, selectedVJ);
     }
   }, [currentPage, searchQuery, selectedVJ, fetchMovies]);
 
   // Handle search with debounce
   useEffect(() => {
     const handler = setTimeout(() => {
-      if (searchQuery.trim()) {
-        setCurrentPage(1);
-        setSelectedVJ(""); // Reset VJ filter when searching
-        performSearch(searchQuery);
-      } else if (!selectedVJ) {
-        setCurrentPage(1);
-        fetchMovies(1);
+      if (searchQuery !== undefined) {
+        // Only trigger if this is an actual change after initial load
+        if (currentPage !== 1) {
+          setCurrentPage(1);
+        } else {
+          fetchMovies(1, searchQuery, selectedVJ);
+        }
       }
     }, 400);
     return () => clearTimeout(handler);
-  }, [searchQuery, selectedVJ, performSearch, fetchMovies]);
+  }, [searchQuery, selectedVJ, fetchMovies]);
 
   // Handle VJ filter
   useEffect(() => {
-    if (selectedVJ) {
-      handleVJFilter(selectedVJ);
-    } else if (!searchQuery) {
-      setCurrentPage(1);
-      fetchMovies(1);
+    // Only trigger if this is an actual change after initial load
+    if (selectedVJ !== undefined) {
+      if (currentPage !== 1) {
+        setCurrentPage(1);
+      } else {
+        fetchMovies(1, searchQuery, selectedVJ);
+      }
     }
-  }, [selectedVJ, searchQuery, handleVJFilter, fetchMovies]);
+  }, [selectedVJ]);
 
   const clearFilters = () => {
     setSelectedVJ("");
@@ -269,7 +233,7 @@ export default function MoviesPage() {
         )}
 
         {/* Pagination */}
-        {!isFiltering && totalPages > 1 && (
+        {totalPages > 1 && (
           <div className="flex justify-center items-center mt-12 gap-2">
             <Button
               variant="outline"

@@ -32,110 +32,69 @@ export default function SearchPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [movies, setMovies] = useState<ContentItem[]>([])
   const [series, setSeries] = useState<ContentItem[]>([])
-  const [allMovies, setAllMovies] = useState<ContentItem[]>([])
-  const [allSeries, setAllSeries] = useState<ContentItem[]>([])
+
+  const [loading, setLoading] = useState(true)
   const [vjs, setVjs] = useState<VJ[]>([])
   const [genres, setGenres] = useState<Genre[]>([])
-  const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<"all" | "movies" | "series">("all")
+  
   const [selectedVJ, setSelectedVJ] = useState<string>("")
   const [selectedGenre, setSelectedGenre] = useState<string>("")
   const [vjDropdownOpen, setVjDropdownOpen] = useState(false)
   const [genreDropdownOpen, setGenreDropdownOpen] = useState(false)
-
-  // Load VJs, Genres, and all content on mount
+  const [activeTab, setActiveTab] = useState<"all" | "movies" | "series">("all")
+  // Load VJs and Genres on mount
   useEffect(() => {
     const loadInitialData = async () => {
-      setLoading(true)
       try {
-        const [vjRes, genreRes, movieRes, seriesRes] = await Promise.all([
+        const [vjRes, genreRes] = await Promise.all([
           supabase.from("vjs").select("id, name").order("name"),
-          supabase.from("genres").select("id, name").order("name"),
-          supabase
-            .from("movies")
-            .select("id, title, thumbnail_url, cover_image_url, description, release_date, genre_ids, vj_id, premium, vjs:vj_id (id, name)")
-            .eq("published", true)
-            .order("created_at", { ascending: false })
-            .limit(200),
-          supabase
-            .from("series")
-            .select("id, title, thumbnail_url, cover_image_url, description, release_date, genre_ids, vj_id, premium, vjs:vj_id (id, name)")
-            .eq("published", true)
-            .order("created_at", { ascending: false })
-            .limit(200),
+          supabase.from("genres").select("id, name").order("name")
         ])
-
         setVjs(vjRes.data || [])
         setGenres(genreRes.data || [])
-
-        const normMovies = (movieRes.data || []).map((m: any) => ({
-          ...m,
-          vjs: Array.isArray(m.vjs) ? m.vjs[0] || null : m.vjs || null,
-        }))
-        const normSeries = (seriesRes.data || []).map((s: any) => ({
-          ...s,
-          vjs: Array.isArray(s.vjs) ? s.vjs[0] || null : s.vjs || null,
-        }))
-
-        setAllMovies(normMovies)
-        setAllSeries(normSeries)
-        setMovies(normMovies)
-        setSeries(normSeries)
       } catch (error) {
         console.error("Error loading initial data:", error)
-      } finally {
-        setLoading(false)
       }
     }
     loadInitialData()
   }, [])
 
-  // Filter content whenever query, VJ, or genre changes
-  const filterContent = useCallback(() => {
-    let filteredMovies = [...allMovies]
-    let filteredSeries = [...allSeries]
+  // Fetch content whenever query, VJ, or genre changes using the backend Search API
+  const fetchResults = useCallback(async () => {
+    setLoading(true)
+    try {
+      const api = await import("@/lib/api")
+      const limit = 50
 
-    // Text search filter (use original query with spaces for proper matching)
-    if (searchQuery.trim()) {
-      const q = searchQuery.trim().toLowerCase()
-      filteredMovies = filteredMovies.filter(
-        (m) =>
-          m.title.toLowerCase().includes(q) ||
-          m.description?.toLowerCase().includes(q) ||
-          m.vjs?.name?.toLowerCase().includes(q)
-      )
-      filteredSeries = filteredSeries.filter(
-        (s) =>
-          s.title.toLowerCase().includes(q) ||
-          s.description?.toLowerCase().includes(q) ||
-          s.vjs?.name?.toLowerCase().includes(q)
-      )
+      const selectedVJName = vjs.find((v) => v.id === selectedVJ)?.name
+      const selectedGenreName = genres.find((g) => g.id === selectedGenre)?.name
+
+      // We can use the new searchAllContent if there is a query, or fetch movies/series if no query
+      if (searchQuery.trim() || selectedVJName) {
+        const items = await api.searchAllContent(searchQuery.trim(), limit, 1, selectedVJName, selectedGenreName)
+        setMovies(items.filter((item: any) => item.type === 'movie'))
+        setSeries(items.filter((item: any) => item.type === 'series'))
+      } else {
+        const [mRes, sRes] = await Promise.all([
+          api.searchMovies("", limit, 1, undefined, selectedGenreName),
+          api.searchSeries("", limit, 1, undefined, selectedGenreName)
+        ])
+        setMovies(mRes as any[])
+        setSeries(sRes as any[])
+      }
+    } catch (error) {
+      console.error("Error fetching search results:", error)
+    } finally {
+      setLoading(false)
     }
-
-    // VJ filter
-    if (selectedVJ) {
-      filteredMovies = filteredMovies.filter((m) => m.vj_id === selectedVJ)
-      filteredSeries = filteredSeries.filter((s) => s.vj_id === selectedVJ)
-    }
-
-    // Genre filter
-    if (selectedGenre) {
-      filteredMovies = filteredMovies.filter(
-        (m) => m.genre_ids && m.genre_ids.includes(selectedGenre)
-      )
-      filteredSeries = filteredSeries.filter(
-        (s) => s.genre_ids && s.genre_ids.includes(selectedGenre)
-      )
-    }
-
-    setMovies(filteredMovies)
-    setSeries(filteredSeries)
-  }, [searchQuery, selectedVJ, selectedGenre, allMovies, allSeries])
+  }, [searchQuery, selectedVJ, selectedGenre, vjs, genres])
 
   useEffect(() => {
-    const timer = setTimeout(filterContent, 150)
+    const timer = setTimeout(fetchResults, 400) // 400ms debounce
     return () => clearTimeout(timer)
-  }, [filterContent])
+  }, [fetchResults])
+
+
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -332,13 +291,14 @@ export default function SearchPage() {
             {displayMovies.length > 0 && (
               <div>
                 <h2 className="text-lg font-semibold text-blue-400 mb-4">Movies</h2>
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-10 gap-1 sm:gap-2">
+                <div className="flex overflow-x-auto gap-3 pb-4 scrollbar-hide snap-x scroll-smooth">
                   {displayMovies.map((movie) => (
-                    <NetflixCard
-                      key={movie.id}
-                      content={movie as any}
-                      type="movie"
-                    />
+                    <div key={movie.id} className="flex-none w-[140px] sm:w-[160px] md:w-[180px] lg:w-[200px] snap-start">
+                      <NetflixCard
+                        content={movie as any}
+                        type="movie"
+                      />
+                    </div>
                   ))}
                 </div>
               </div>
@@ -348,13 +308,14 @@ export default function SearchPage() {
             {displaySeries.length > 0 && (
               <div>
                 <h2 className="text-lg font-semibold text-green-400 mb-4">Series</h2>
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-10 gap-1 sm:gap-2">
+                <div className="flex overflow-x-auto gap-3 pb-4 scrollbar-hide snap-x scroll-smooth">
                   {displaySeries.map((s) => (
-                    <NetflixCard
-                      key={s.id}
-                      content={s as any}
-                      type="series"
-                    />
+                    <div key={s.id} className="flex-none w-[140px] sm:w-[160px] md:w-[180px] lg:w-[200px] snap-start">
+                      <NetflixCard
+                        content={s as any}
+                        type="series"
+                      />
+                    </div>
                   ))}
                 </div>
               </div>

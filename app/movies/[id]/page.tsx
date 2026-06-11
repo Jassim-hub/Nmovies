@@ -440,21 +440,20 @@ export default function MovieDetailsPage() {
               className="w-full bg-[#E50914] hover:bg-[#b80710] text-white mb-3"
               onClick={async () => {
                 try {
-                  const session = await supabase.auth.getSession();
-                  const accessToken = session.data.session?.access_token;
-                  if (!accessToken) return;
-                  const res = await fetch(`/api/get-video-url?id=${movie.id}&type=movie`, {
-                    headers: { Authorization: `Bearer ${accessToken}` },
-                  });
-                  if (!res.ok) return;
-                  const data = await res.json();
-                  if (!data.streamUrl) return;
+                  const api = await import('@/lib/api');
+                  const downloadUrl = await api.getMovieDownload(movie.id);
+                  
+                  if (!downloadUrl) {
+                    alert('Download link currently unavailable.');
+                    return;
+                  }
+                  
                   const cleanTitle = movie.title.replace(/[^a-zA-Z0-9\s\-_.]/g, '').trim();
                   const filename = `${cleanTitle}.mp4`;
-                  const downloadUrl = `${data.streamUrl}&filename=${encodeURIComponent(filename)}`;
+                  
                   const a = document.createElement('a');
                   a.href = downloadUrl;
-                  a.download = movie.title + '.mp4';
+                  a.download = filename;
                   document.body.appendChild(a);
                   a.click();
                   document.body.removeChild(a);

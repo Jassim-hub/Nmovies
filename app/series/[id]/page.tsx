@@ -274,19 +274,18 @@ export default function SeriesDetailsPage() {
   const handleDownloadNow = async () => {
     if (!selectedEpisode) return;
     try {
-      const session = await supabase.auth.getSession();
-      const accessToken = session.data.session?.access_token;
-      if (!accessToken) return;
-      const res = await fetch(`/api/get-video-url?id=${selectedEpisode.id}&type=episode`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-      if (!res.ok) return;
-      const data = await res.json();
-      if (!data.streamUrl) return;
+      const api = await import('@/lib/api');
+      const downloadUrl = await api.getEpisodeDownload(params.id as string, selectedEpisode.seasonOrder || 1, selectedEpisode.episode_number);
+      
+      if (!downloadUrl) {
+        alert('Download link currently unavailable.');
+        return;
+      }
+      
       const cleanSeriesTitle = series?.title.replace(/[^a-zA-Z0-9\s\-_.]/g, '').trim() || 'Series';
       const cleanEpisodeTitle = selectedEpisode.title.replace(/[^a-zA-Z0-9\s\-_.]/g, '').trim();
       const filename = `${cleanSeriesTitle} - S${selectedEpisode.seasonOrder}E${selectedEpisode.episode_number} - ${cleanEpisodeTitle}.mp4`;
-      const downloadUrl = `${data.streamUrl}&filename=${encodeURIComponent(filename)}`;
+      
       const a = document.createElement('a');
       a.href = downloadUrl;
       a.download = filename;

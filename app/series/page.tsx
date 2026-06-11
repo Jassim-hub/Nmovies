@@ -47,11 +47,12 @@ export default function SeriesPage() {
     }
   }, []);
 
-  const fetchSeries = useCallback(async (page: number) => {
+  const fetchSeries = useCallback(async (page: number, query = "", vjId = "") => {
     setLoading(true);
     try {
       const api = await import('@/lib/api');
-      const seriesData = await api.getSeries(seriesPerPage, page);
+      const vjName = availableVJs.find(v => v.id === vjId)?.name;
+      const seriesData = await api.searchSeries(query, seriesPerPage, page, vjName);
       setSeries(seriesData as any[]);
       
       // We don't get exact total count from the lightweight Reelplexi API wrapper currently,
@@ -62,44 +63,7 @@ export default function SeriesPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
-
-  const handleVJFilter = useCallback(async (vjId: string) => {
-    setCurrentPage(1);
-    setLoading(true);
-    try {
-      const api = await import('@/lib/api');
-      const allSeries = await api.getSeries(100, 1);
-      const filteredSeries = allSeries.filter(s => s.vj_id === vjId);
-      
-      setSeries(filteredSeries as any[]);
-      setTotalSeries(filteredSeries.length);
-    } catch (error) {
-      console.error('Error filtering series by VJ:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const performSearch = useCallback(async (query: string) => {
-    if (query.trim()) {
-      setLoading(true);
-      try {
-        const api = await import('@/lib/api');
-        const searchResults = await api.searchSeries(query, 50);
-        
-        setSeries(searchResults as any[]);
-        setTotalSeries(searchResults.length);
-      } catch (error) {
-        console.error('Error searching series:', error);
-      } finally {
-        setLoading(false);
-      }
-    } else {
-      // Reset to paginated view
-      fetchSeries(1);
-    }
-  }, [fetchSeries]);
+  }, [seriesPerPage, availableVJs]);
 
   // Initial load
   useEffect(() => {
@@ -107,37 +71,37 @@ export default function SeriesPage() {
     fetchAvailableVJs();
   }, [fetchSeries, fetchAvailableVJs]);
 
-  // Handle pagination changes (only when not filtering)
+  // Handle pagination changes
   useEffect(() => {
-    if (!searchQuery && !selectedVJ && currentPage > 1) {
-      fetchSeries(currentPage);
+    if (currentPage > 1) {
+      fetchSeries(currentPage, searchQuery, selectedVJ);
     }
   }, [currentPage, searchQuery, selectedVJ, fetchSeries]);
 
   // Handle search with debounce
   useEffect(() => {
     const handler = setTimeout(() => {
-      if (searchQuery.trim()) {
-        setCurrentPage(1);
-        setSelectedVJ(""); // Reset VJ filter when searching
-        performSearch(searchQuery);
-      } else if (!selectedVJ) {
-        setCurrentPage(1);
-        fetchSeries(1);
+      if (searchQuery !== undefined) {
+        if (currentPage !== 1) {
+          setCurrentPage(1);
+        } else {
+          fetchSeries(1, searchQuery, selectedVJ);
+        }
       }
     }, 400);
     return () => clearTimeout(handler);
-  }, [searchQuery, selectedVJ, performSearch, fetchSeries]);
+  }, [searchQuery, selectedVJ, fetchSeries]);
 
   // Handle VJ filter
   useEffect(() => {
-    if (selectedVJ) {
-      handleVJFilter(selectedVJ);
-    } else if (!searchQuery) {
-      setCurrentPage(1);
-      fetchSeries(1);
+    if (selectedVJ !== undefined) {
+      if (currentPage !== 1) {
+        setCurrentPage(1);
+      } else {
+        fetchSeries(1, searchQuery, selectedVJ);
+      }
     }
-  }, [selectedVJ, searchQuery, handleVJFilter, fetchSeries]);
+  }, [selectedVJ]);
 
 
   const clearFilters = () => {
@@ -258,7 +222,7 @@ export default function SeriesPage() {
         )}
 
         {/* Pagination */}
-        {!isFiltering && totalPages > 1 && (
+        {totalPages > 1 && (
           <div className="flex justify-center items-center mt-12 gap-2">
             <Button
               variant="outline"

@@ -151,9 +151,34 @@ export function normalizeReelplexiEpisode(seriesId: string, seasonNumber: number
 }
 
 // API Methods
-export async function getReelplexiMovies(page = 1, perPage = 50) {
-  const res = await fetchReelplexi('/v1/movies', { page, per_page: perPage });
+export async function getReelplexiMovies(page = 1, perPage = 50, genre?: string) {
+  const params: Record<string, string | number> = { page, per_page: perPage };
+  if (genre) params.genre = genre;
+  const res = await fetchReelplexi('/v1/movies', params);
   return (res.data || []).map(normalizeReelplexiMovie);
+}
+
+export async function searchReelplexiMovies(query: string, page = 1, perPage = 50, vj?: string, genre?: string, year?: string) {
+  const params: Record<string, string | number> = { q: query, page, per_page: perPage };
+  if (vj) params.vj = vj;
+  if (genre) params.genre = genre;
+  if (year) params.year = year;
+  const res = await fetchReelplexi('/v1/movies/search', params);
+  return (res.data || []).map(normalizeReelplexiMovie);
+}
+
+export async function searchReelplexiAll(query: string, page = 1, perPage = 50, vj?: string, genre?: string, year?: string) {
+  const params: Record<string, string | number> = { q: query, page, per_page: perPage };
+  if (vj) params.vj = vj;
+  if (genre) params.genre = genre;
+  if (year) params.year = year;
+  const res = await fetchReelplexi('/v1/search', params);
+  return (res.data || []).map((item: any) => {
+    if (item.type === 'series' || item.first_air_date != null) {
+      return normalizeReelplexiSeries(item);
+    }
+    return normalizeReelplexiMovie(item);
+  });
 }
 
 export async function getReelplexiMovieById(id: string) {
@@ -166,8 +191,19 @@ export async function getReelplexiMovieById(id: string) {
   }
 }
 
-export async function getReelplexiSeries(page = 1, perPage = 50) {
-  const res = await fetchReelplexi('/v1/series', { page, per_page: perPage });
+export async function getReelplexiSeries(page = 1, perPage = 50, genre?: string) {
+  const params: Record<string, string | number> = { page, per_page: perPage };
+  if (genre) params.genre = genre;
+  const res = await fetchReelplexi('/v1/series', params);
+  return (res.data || []).map(normalizeReelplexiSeries);
+}
+
+export async function searchReelplexiSeries(query: string, page = 1, perPage = 50, vj?: string, genre?: string, year?: string) {
+  const params: Record<string, string | number> = { q: query, page, per_page: perPage };
+  if (vj) params.vj = vj;
+  if (genre) params.genre = genre;
+  if (year) params.year = year;
+  const res = await fetchReelplexi('/v1/series/search', params);
   return (res.data || []).map(normalizeReelplexiSeries);
 }
 
@@ -260,6 +296,26 @@ export async function getReelplexiEpisodeStream(seriesId: string, season: number
   try {
     return await fetchReelplexi(`/v1/series/${seriesId}/seasons/${season}/episodes/${episode}/stream`);
   } catch {
+    return null;
+  }
+}
+
+export async function getReelplexiMovieDownloadUrl(id: string) {
+  try {
+    const res = await fetchReelplexi(`/v1/download/movie/${id}`);
+    return res.download_url as string;
+  } catch (e) {
+    console.error('Error fetching movie download URL:', e);
+    return null;
+  }
+}
+
+export async function getReelplexiEpisodeDownloadUrl(seriesId: string, season: number, episode: number) {
+  try {
+    const res = await fetchReelplexi(`/v1/download/tv/${seriesId}/${season}/${episode}`);
+    return res.download_url as string;
+  } catch (e) {
+    console.error('Error fetching episode download URL:', e);
     return null;
   }
 }
