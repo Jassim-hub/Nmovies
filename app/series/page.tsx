@@ -55,8 +55,6 @@ export default function SeriesPage() {
       const seriesData = await api.searchSeries(query, seriesPerPage, page, vjName);
       setSeries(seriesData as any[]);
       
-      // We don't get exact total count from the lightweight Reelplexi API wrapper currently,
-      // so we assume if we got a full page, there's more.
       setTotalSeries(seriesData.length === seriesPerPage ? page * seriesPerPage + 1 : (page - 1) * seriesPerPage + seriesData.length);
     } catch (error) {
       console.error('Error fetching series:', error);
@@ -69,14 +67,16 @@ export default function SeriesPage() {
   useEffect(() => {
     fetchSeries(1);
     fetchAvailableVJs();
-  }, [fetchSeries, fetchAvailableVJs]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Handle pagination changes
   useEffect(() => {
     if (currentPage > 1) {
       fetchSeries(currentPage, searchQuery, selectedVJ);
     }
-  }, [currentPage, searchQuery, selectedVJ, fetchSeries]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage]);
 
   // Handle search with debounce
   useEffect(() => {
@@ -90,19 +90,8 @@ export default function SeriesPage() {
       }
     }, 400);
     return () => clearTimeout(handler);
-  }, [searchQuery, selectedVJ, fetchSeries]);
-
-  // Handle VJ filter
-  useEffect(() => {
-    if (selectedVJ !== undefined) {
-      if (currentPage !== 1) {
-        setCurrentPage(1);
-      } else {
-        fetchSeries(1, searchQuery, selectedVJ);
-      }
-    }
-  }, [selectedVJ]);
-
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery, selectedVJ]);
 
   const clearFilters = () => {
     setSelectedVJ("");

@@ -54,38 +54,42 @@ export default function MoviesPage() {
     setLoading(true);
     try {
       const api = await import('@/lib/api');
+      // Fix: since availableVJs changes, just fetch the VJ name directly from supabase if we don't have it, or ignore.
+      // Better: let's just pass vjId, because we already changed the API to use selectedVJName.
+      // Wait, in app/movies/page.tsx the API requires vjName. 
+      // Let's just use availableVJs inside without adding it to deps, or use a ref.
+      // Actually, since we already fetch the vj list, we can just find it:
       const vjName = availableVJs.find(v => v.id === vjId)?.name;
       const moviesData = await api.searchMovies(query, moviesPerPage, page, vjName);
       setMovies(moviesData as any);
       
-      // We don't get exact total count from the lightweight Reelplexi API wrapper currently,
-      // so we assume if we got a full page, there's more.
       setTotalMovies(moviesData.length === moviesPerPage ? page * moviesPerPage + 1 : (page - 1) * moviesPerPage + moviesData.length);
     } catch (error) {
       console.error('Error fetching movies:', error);
     } finally {
       setLoading(false);
     }
-  }, [moviesPerPage, availableVJs]);
+  }, [moviesPerPage, availableVJs]); // We keep it in deps but remove fetchMovies from initial load
 
   // Initial load
   useEffect(() => {
     fetchMovies(1);
     fetchAvailableVJs();
-  }, [fetchMovies, fetchAvailableVJs]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Handle pagination changes
   useEffect(() => {
     if (currentPage > 1) {
       fetchMovies(currentPage, searchQuery, selectedVJ);
     }
-  }, [currentPage, searchQuery, selectedVJ, fetchMovies]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage]);
 
   // Handle search with debounce
   useEffect(() => {
     const handler = setTimeout(() => {
       if (searchQuery !== undefined) {
-        // Only trigger if this is an actual change after initial load
         if (currentPage !== 1) {
           setCurrentPage(1);
         } else {
@@ -94,19 +98,8 @@ export default function MoviesPage() {
       }
     }, 400);
     return () => clearTimeout(handler);
-  }, [searchQuery, selectedVJ, fetchMovies]);
-
-  // Handle VJ filter
-  useEffect(() => {
-    // Only trigger if this is an actual change after initial load
-    if (selectedVJ !== undefined) {
-      if (currentPage !== 1) {
-        setCurrentPage(1);
-      } else {
-        fetchMovies(1, searchQuery, selectedVJ);
-      }
-    }
-  }, [selectedVJ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery, selectedVJ]); // Removed fetchMovies to prevent loop
 
   const clearFilters = () => {
     setSelectedVJ("");
