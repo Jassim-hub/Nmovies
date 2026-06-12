@@ -42,17 +42,38 @@ export default function SearchPage() {
   const [vjDropdownOpen, setVjDropdownOpen] = useState(false)
   const [genreDropdownOpen, setGenreDropdownOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<"all" | "movies" | "series">("all")
+  const [page, setPage] = useState(1)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(true)
+
+  const HARDCODED_GENRES = [
+    { id: "Action", name: "Action" },
+    { id: "Comedy", name: "Comedy" },
+    { id: "Drama", name: "Drama" },
+    { id: "Horror", name: "Horror" },
+    { id: "Science Fiction", name: "Science Fiction" },
+    { id: "Fantasy", name: "Fantasy" },
+    { id: "Romance", name: "Romance" },
+    { id: "Thriller", name: "Thriller" },
+    { id: "Mystery", name: "Mystery" },
+    { id: "Documentary", name: "Documentary" },
+    { id: "Western", name: "Western" },
+    { id: "Musical", name: "Musical" },
+    { id: "Crime", name: "Crime" },
+    { id: "Adventure", name: "Adventure" },
+    { id: "Animation", name: "Animation" }
+  ]
   // Load VJs and Genres on mount
   useEffect(() => {
     const loadInitialData = async () => {
       try {
         const api = await import("@/lib/api")
         const [vjRes, genreRes] = await Promise.all([
-          api.getVJs(),
+          supabase.from('vjs').select('id, name').order('name').then(res => res.data || []),
           api.getGenres()
         ])
         setVjs(vjRes || [])
-        setGenres(genreRes || [])
+        setGenres(genreRes && genreRes.length > 0 ? genreRes : HARDCODED_GENRES)
       } catch (error) {
         console.error("Error loading initial data:", error)
       }
@@ -61,8 +82,11 @@ export default function SearchPage() {
   }, [])
 
   // Fetch content whenever query, VJ, or genre changes using the backend Search API
-  const fetchResults = useCallback(async () => {
-    setLoading(true)
+  const fetchResults = useCallback(async (pageNum: number) => {
+    const isLoadMore = pageNum > 1
+    if (isLoadMore) setLoadingMore(true)
+    else setLoading(true)
+    
     try {
       const api = await import("@/lib/api")
       const limit = 50
@@ -70,30 +94,73 @@ export default function SearchPage() {
       const selectedVJName = vjs.find((v) => v.id === selectedVJ)?.name
       const selectedGenreName = genres.find((g) => g.id === selectedGenre)?.name
 
+      let newMovies: any[] = []
+      let newSeries: any[] = []
+
       // We can use the new searchAllContent if there is a query, or fetch movies/series if no query
-      if (searchQuery.trim() || selectedVJName) {
-        const items = await api.searchAllContent(searchQuery.trim(), limit, 1, selectedVJName, selectedGenreName)
-        setMovies(items.filter((item: any) => item.type === 'movie'))
-        setSeries(items.filter((item: any) => item.type === 'series'))
+      if (searchQuery.trim() || selectedVJName || selectedGenreName) {
+        const items = await api.searchAllContent(searchQuery.trim(), limit, pageNum, selectedVJName, selectedGenreName)
+        newMovies = items.filter((item: any) => item.type === 'movie')
+        newSeries = items.filter((item: any) => item.type === 'series')
       } else {
         const [mRes, sRes] = await Promise.all([
-          api.searchMovies("", limit, 1, undefined, selectedGenreName),
-          api.searchSeries("", limit, 1, undefined, selectedGenreName)
+          api.searchMovies("", limit, pageNum, undefined, selectedGenreName),
+          api.searchSeries("", limit, pageNum, undefined, selectedGenreName)
         ])
-        setMovies(mRes as any[])
-        setSeries(sRes as any[])
+        newMovies = mRes as any[]
+        newSeries = sRes as any[]
+      }
+
+      if (isLoadMore) {
+        setMovies(prev => {
+          const existingIds = new Set(prev.map(m => m.id));
+          const uniqueNew = newMovies.filter(m => !existingIds.has(m.id));
+          return [...prev, ...uniqueNew];
+        })
+        setSeries(prev => {
+          const existingIds = new Set(prev.map(s => s.id));
+          const uniqueNew = newSeries.filter(s => !existingIds.has(s.id));
+          return [...prev, ...uniqueNew];
+        })
+      } else {
+        setMovies(newMovies)
+        setSeries(newSeries)
+      }
+
+      if (newMovies.length === 0 && newSeries.length === 0) {
+        setHasMore(false)
+      } else {
+        setHasMore(true)
       }
     } catch (error) {
       console.error("Error fetching search results:", error)
     } finally {
-      setLoading(false)
+      if (isLoadMore) setLoadingMore(false)
+      else setLoading(false)
     }
   }, [searchQuery, selectedVJ, selectedGenre, vjs, genres])
 
   useEffect(() => {
-    const timer = setTimeout(fetchResults, 400) // 400ms debounce
+    setPage(1)
+    setHasMore(true)
+    const timer = setTimeout(() => fetchResults(1), 400) // 400ms debounce
     return () => clearTimeout(timer)
-  }, [fetchResults])
+  }, [searchQuery, selectedVJ, selectedGenre, fetchResults])
+
+  useEffect(() => {
+    if (page > 1) {
+      fetchResults(page)
+    }
+  }, [page, fetchResults])
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    if (loading || loadingMore || !hasMore) return;
+    const { scrollLeft, scrollWidth, clientWidth } = e.currentTarget;
+    // Load more if we are within 500px of the end
+    if (scrollWidth - scrollLeft <= clientWidth + 500) {
+      setPage(prev => prev + 1);
+    }
+  };
 
 
 
@@ -292,7 +359,10 @@ export default function SearchPage() {
             {displayMovies.length > 0 && (
               <div>
                 <h2 className="text-lg font-semibold text-blue-400 mb-4">Movies</h2>
-                <div className="flex overflow-x-auto gap-3 pb-4 scrollbar-hide snap-x scroll-smooth">
+                <div 
+                  className="flex overflow-x-auto gap-3 pb-4 scrollbar-hide snap-x scroll-smooth"
+                  onScroll={handleScroll}
+                >
                   {displayMovies.map((movie) => (
                     <div key={movie.id} className="flex-none w-[140px] sm:w-[160px] md:w-[180px] lg:w-[200px] snap-start">
                       <NetflixCard
@@ -301,6 +371,11 @@ export default function SearchPage() {
                       />
                     </div>
                   ))}
+                  {loadingMore && (
+                    <div className="flex-none w-[140px] sm:w-[160px] md:w-[180px] lg:w-[200px] flex items-center justify-center">
+                      <div className="w-8 h-8 border-2 border-[#E50914] border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -309,7 +384,10 @@ export default function SearchPage() {
             {displaySeries.length > 0 && (
               <div>
                 <h2 className="text-lg font-semibold text-green-400 mb-4">Series</h2>
-                <div className="flex overflow-x-auto gap-3 pb-4 scrollbar-hide snap-x scroll-smooth">
+                <div 
+                  className="flex overflow-x-auto gap-3 pb-4 scrollbar-hide snap-x scroll-smooth"
+                  onScroll={handleScroll}
+                >
                   {displaySeries.map((s) => (
                     <div key={s.id} className="flex-none w-[140px] sm:w-[160px] md:w-[180px] lg:w-[200px] snap-start">
                       <NetflixCard
@@ -318,6 +396,11 @@ export default function SearchPage() {
                       />
                     </div>
                   ))}
+                  {loadingMore && (
+                    <div className="flex-none w-[140px] sm:w-[160px] md:w-[180px] lg:w-[200px] flex items-center justify-center">
+                      <div className="w-8 h-8 border-2 border-[#E50914] border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  )}
                 </div>
               </div>
             )}
