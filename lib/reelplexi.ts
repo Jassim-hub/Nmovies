@@ -159,7 +159,8 @@ export async function getReelplexiMovies(page = 1, perPage = 50, genre?: string)
 }
 
 export async function searchReelplexiMovies(query: string, page = 1, perPage = 50, vj?: string, genre?: string, year?: string) {
-  const params: Record<string, string | number> = { q: query, page, per_page: perPage };
+  const params: Record<string, string | number> = { page, per_page: perPage };
+  if (query) params.q = query;
   if (vj) params.vj = vj;
   if (genre) params.genre = genre;
   if (year) params.year = year;
@@ -167,18 +168,29 @@ export async function searchReelplexiMovies(query: string, page = 1, perPage = 5
   return (res.data || []).map(normalizeReelplexiMovie);
 }
 
-export async function searchReelplexiAll(query: string, page = 1, perPage = 50, vj?: string, genre?: string, year?: string) {
-  const params: Record<string, string | number> = { q: query, page, per_page: perPage };
+export async function searchReelplexiAll(query: string, page = 1, perPage = 50, vj?: string, genre?: string) {
+  const params: Record<string, string | number> = { page, per_page: perPage };
+  if (query) params.q = query;
   if (vj) params.vj = vj;
   if (genre) params.genre = genre;
-  if (year) params.year = year;
   const res = await fetchReelplexi('/v1/search', params);
+  
+  // The search endpoint returns mixed content (movies and series)
   return (res.data || []).map((item: any) => {
-    if (item.type === 'series' || item.first_air_date != null) {
-      return normalizeReelplexiSeries(item);
+    if (item.type === 'movie' || item.type === undefined) { // fallback
+      return { ...normalizeReelplexiMovie(item), type: 'movie' };
+    } else {
+      return { ...normalizeReelplexiSeries(item), type: 'series' };
     }
-    return normalizeReelplexiMovie(item);
   });
+}
+
+
+
+export async function getReelplexiVJs(page = 1, perPage = 100) {
+  const params = { page, per_page: perPage };
+  const res = await fetchReelplexi('/v1/vj', params);
+  return res.data || [];
 }
 
 export async function getReelplexiMovieById(id: string) {
@@ -199,7 +211,8 @@ export async function getReelplexiSeries(page = 1, perPage = 50, genre?: string)
 }
 
 export async function searchReelplexiSeries(query: string, page = 1, perPage = 50, vj?: string, genre?: string, year?: string) {
-  const params: Record<string, string | number> = { q: query, page, per_page: perPage };
+  const params: Record<string, string | number> = { page, per_page: perPage };
+  if (query) params.q = query;
   if (vj) params.vj = vj;
   if (genre) params.genre = genre;
   if (year) params.year = year;

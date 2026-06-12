@@ -46,12 +46,13 @@ export default function SearchPage() {
   useEffect(() => {
     const loadInitialData = async () => {
       try {
+        const api = await import("@/lib/api")
         const [vjRes, genreRes] = await Promise.all([
-          supabase.from("vjs").select("id, name").order("name"),
-          supabase.from("genres").select("id, name").order("name")
+          api.getVJs(),
+          api.getGenres()
         ])
-        setVjs(vjRes.data || [])
-        setGenres(genreRes.data || [])
+        setVjs(vjRes || [])
+        setGenres(genreRes || [])
       } catch (error) {
         console.error("Error loading initial data:", error)
       }

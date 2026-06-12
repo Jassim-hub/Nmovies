@@ -231,8 +231,8 @@ export async function searchMovies(query: string, limit = 20, page = 1, vjName?:
     if (!query.trim() && !vjName) {
       return await getMovies(limit, page, genre);
     }
-    const q = query.trim() || (vjName as string);
-    const movies = await Reelplexi.searchReelplexiMovies(q, page, limit, undefined, genre);
+    const q = query.trim();
+    const movies = await Reelplexi.searchReelplexiMovies(q, page, limit, vjName, genre);
     return movies as Movie[];
   } catch (error) {
     console.error('Error searching movies:', error);
@@ -245,8 +245,8 @@ export async function searchSeries(query: string, limit = 20, page = 1, vjName?:
     if (!query.trim() && !vjName) {
       return await getSeries(limit, page, genre);
     }
-    const q = query.trim() || (vjName as string);
-    const series = await Reelplexi.searchReelplexiSeries(q, page, limit, undefined, genre);
+    const q = query.trim();
+    const series = await Reelplexi.searchReelplexiSeries(q, page, limit, vjName, genre);
     return series as Series[];
   } catch (error) {
     console.error('Error searching series:', error);
@@ -264,11 +264,23 @@ export async function searchAllContent(query: string, limit = 50, page = 1, vjNa
       const combined = [...m, ...s].sort((a: any, b: any) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
       return combined.slice(0, limit);
     }
-    const q = query.trim() || (vjName as string);
-    const items = await Reelplexi.searchReelplexiAll(q, page, limit, undefined, genre);
+    const q = query.trim();
+    const items = await Reelplexi.searchReelplexiAll(q, page, limit, vjName, genre);
     return items as any[];
   } catch (error) {
     console.error('Error searching all content:', error);
+    return [];
+  }
+}
+
+
+
+export async function getVJs() {
+  try {
+    const vjs = await Reelplexi.getReelplexiVJs(1, 100);
+    return vjs.map((vj: any) => ({ id: vj.name, name: vj.name }));
+  } catch (error) {
+    console.error('Error fetching vjs:', error);
     return [];
   }
 }
