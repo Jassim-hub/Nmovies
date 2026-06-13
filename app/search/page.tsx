@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { supabase } from "@/lib/supabase"
 import { NetflixCard } from "@/components/NetflixCard"
 import { Search, X, ChevronDown } from "lucide-react"
@@ -45,6 +45,8 @@ export default function SearchPage() {
   const [page, setPage] = useState(1)
   const [loadingMore, setLoadingMore] = useState(false)
   const [hasMore, setHasMore] = useState(true)
+
+  const filtersRef = useRef<HTMLDivElement>(null)
 
   const HARDCODED_GENRES = [
     { id: "Action", name: "Action" },
@@ -166,12 +168,14 @@ export default function SearchPage() {
 
   // Close dropdowns when clicking outside
   useEffect(() => {
-    const handleClick = () => {
-      setVjDropdownOpen(false)
-      setGenreDropdownOpen(false)
+    const handleClickOutside = (event: MouseEvent) => {
+      if (filtersRef.current && !filtersRef.current.contains(event.target as Node)) {
+        setVjDropdownOpen(false)
+        setGenreDropdownOpen(false)
+      }
     }
-    document.addEventListener("click", handleClick)
-    return () => document.removeEventListener("click", handleClick)
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [])
 
   const totalResults = movies.length + series.length
@@ -215,9 +219,9 @@ export default function SearchPage() {
         </div>
 
         {/* Filters Row */}
-        <div className="flex flex-wrap items-center gap-3 mb-6">
+        <div className="flex flex-wrap items-center gap-3 mb-6" ref={filtersRef}>
           {/* VJ Filter Dropdown */}
-          <div className="relative" onClick={(e) => e.stopPropagation()}>
+          <div className="relative">
             <button
               onClick={() => {
                 setVjDropdownOpen(!vjDropdownOpen)
@@ -255,7 +259,7 @@ export default function SearchPage() {
           </div>
 
           {/* Genre Filter Dropdown */}
-          <div className="relative" onClick={(e) => e.stopPropagation()}>
+          <div className="relative">
             <button
               onClick={() => {
                 setGenreDropdownOpen(!genreDropdownOpen)
