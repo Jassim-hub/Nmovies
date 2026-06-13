@@ -14,7 +14,6 @@ import "swiper/css/effect-fade";
 import { NetflixCard } from "@/components/NetflixCard";
 import { StreamitHoverCard } from "@/components/StreamitHoverCard";
 import { Top10Card } from "@/components/Top10Card";
-import { BackdropSlider } from "@/components/BackdropSlider";
 import { PopularPersonalities } from "@/components/PopularPersonalities";
 import { InlineSpinner, FullPageSpinner } from "@/components/LoadingSpinner";
 
@@ -181,7 +180,7 @@ export default function HomePage() {
   const rowSwiperSettings = {
     modules: [Navigation],
     navigation: true,
-    spaceBetween: 20,
+    spaceBetween: 10,
     slidesPerView: 2.2,
     breakpoints: {
       480: { slidesPerView: 3.2 },
@@ -407,9 +406,6 @@ export default function HomePage() {
               </div>
             </section>
           )}
-
-          {/* Random Backdrop Slider - uses featuredContent or latest items for images */}
-          <BackdropSlider items={featuredContent.length > 0 ? featuredContent : latestMovies} />
 
           {/* VJ Movies & Series */}
           <section className="mb-12">
