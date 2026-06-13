@@ -306,6 +306,7 @@ export default function HomePage() {
                 
                 <Swiper 
                   {...rowSwiperSettings} 
+                  spaceBetween={5}
                   breakpoints={{
                     480: { slidesPerView: 2.5 },
                     768: { slidesPerView: 3.5 },

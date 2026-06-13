@@ -27,7 +27,7 @@ export function Top10Card({ content, index }: { content: any, index: number }) {
        </div>
        
        {/* Card Container */}
-       <div className="relative z-20 h-full w-[120px] md:w-[150px] lg:w-[160px] ml-auto">
+       <div className="relative z-20 h-full w-full ml-auto">
          <StreamitHoverCard content={content}>
            <NetflixCard content={content} type={content.type || 'movie'} />
          </StreamitHoverCard>
