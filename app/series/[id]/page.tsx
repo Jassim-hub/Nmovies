@@ -286,12 +286,9 @@ export default function SeriesDetailsPage() {
       const cleanEpisodeTitle = selectedEpisode.title.replace(/[^a-zA-Z0-9\s\-_.]/g, '').trim();
       const filename = `${cleanSeriesTitle} - S${selectedEpisode.seasonOrder}E${selectedEpisode.episode_number} - ${cleanEpisodeTitle}.mp4`;
       
-      const a = document.createElement('a');
-      a.href = downloadUrl;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      // Use our same-origin proxy to force download instead of inline playback
+      const proxyUrl = `/api/download?url=${encodeURIComponent(downloadUrl)}&filename=${encodeURIComponent(filename)}`;
+      window.open(proxyUrl, '_blank');
     } catch (e) {
       console.error('Download failed');
     }
