@@ -256,10 +256,18 @@ export default function HomePage() {
                           )}
                         </div>
 
-                        <div className="flex items-center gap-4">
+                        <div 
+                          className="flex items-center gap-4 relative z-50 swiper-no-swiping"
+                          onClick={(e) => e.stopPropagation()}
+                          onPointerDown={(e) => e.stopPropagation()}
+                        >
                           <button 
-                            onClick={() => isInWatchlist(content.id) ? removeFromWatchlist(content.id) : addToWatchlist(content.id)}
-                            className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all duration-300 backdrop-blur-md"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              isInWatchlist(content.id) ? removeFromWatchlist(content.id) : addToWatchlist(content.id);
+                            }}
+                            className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all duration-300 backdrop-blur-md cursor-pointer"
                             aria-label={isInWatchlist(content.id) ? "Remove from Watchlist" : "Add to Watchlist"}
                           >
                             {isInWatchlist(content.id) ? (
@@ -271,8 +279,10 @@ export default function HomePage() {
                           
                           <Button
                             size="lg"
-                            className="font-bold px-8 md:px-10 py-6 md:py-7 rounded bg-[#E50914] text-white hover:bg-[#b80710] transition-all duration-300 flex items-center shadow-[0_8px_25px_rgba(229,9,20,0.4)] hover:scale-105 active:scale-95"
-                            onClick={() => {
+                            className="font-bold px-8 md:px-10 py-6 md:py-7 rounded bg-[#E50914] text-white hover:bg-[#b80710] transition-all duration-300 flex items-center shadow-[0_8px_25px_rgba(229,9,20,0.4)] hover:scale-105 active:scale-95 cursor-pointer"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
                               const authCheck = checkAuth(content.is_premium || false);
                               if (!authCheck.allowed) {
                                 setAuthModal({
@@ -289,12 +299,14 @@ export default function HomePage() {
                             PLAY NOW
                           </Button>
 
-                          <ShareButton 
-                            title={content.title} 
-                            url={`${typeof window !== 'undefined' ? window.location.origin : ''}/${content.type === 'movie' ? 'movies' : 'series'}/${content.id}`}
-                            variant="icon" 
-                            className="!w-10 !h-10 md:!w-12 md:!h-12 backdrop-blur-md"
-                          />
+                          <div onClick={(e) => e.stopPropagation()} className="cursor-pointer">
+                            <ShareButton 
+                              title={content.title} 
+                              url={`${typeof window !== 'undefined' ? window.location.origin : ''}/${content.type === 'movie' ? 'movies' : 'series'}/${content.id}`}
+                              variant="icon" 
+                              className="!w-10 !h-10 md:!w-12 md:!h-12 backdrop-blur-md"
+                            />
+                          </div>
                         </div>
                       </div>
                     </div>
