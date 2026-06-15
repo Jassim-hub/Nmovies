@@ -55,9 +55,13 @@ export default function Footer() {
               <a href="mailto:nicholmoviesug@gmail.com" className="flex items-center gap-3 hover:text-[#E50914] transition-colors">
                 <Mail className="w-4 h-4" /> nicholmoviesug@gmail.com
               </a>
-              <a href="tel:+256757588585" className="flex items-center gap-3 hover:text-[#E50914] transition-colors">
-                <Phone className="w-4 h-4" /> +256757588585
-              </a>
+              <div className="flex items-start gap-3 text-gray-300">
+                <Phone className="w-4 h-4 mt-1" />
+                <div className="flex flex-col gap-1">
+                  <a href="tel:+256757588585" className="hover:text-[#E50914] transition-colors">+256 757 588 585</a>
+                  <a href="tel:+256768908155" className="hover:text-[#E50914] transition-colors">+256 768 908 155</a>
+                </div>
+              </div>
             </div>
             <div className="flex items-center gap-4 mt-6 text-gray-400">
               <a href="#" className="hover:text-white transition-colors"><Facebook className="w-5 h-5" /></a>

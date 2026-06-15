@@ -1,4 +1,4 @@
-import { Mail, MessageSquare, Clock, Send, Facebook, Twitter, Instagram } from "lucide-react";
+import { Mail, MessageSquare, Clock, Send, Facebook, Twitter, Instagram, Phone } from "lucide-react";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -116,6 +116,35 @@ export default function ContactPage() {
                       >
                         nicholmoviesug@gmail.com
                       </a>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Phone Block */}
+                <div className="p-6 bg-[#1a1c21] rounded-xl border border-gray-800 hover:border-[#E50914] transition-colors group">
+                  <div className="flex items-start gap-5">
+                    <div className="p-3 bg-black rounded-lg group-hover:bg-[#E50914] transition-colors">
+                      <Phone className="w-6 h-6 text-[#E50914] group-hover:text-white transition-colors" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold mb-1 uppercase tracking-wider">Phone & WhatsApp</h3>
+                      <p className="text-gray-400 mb-2 text-sm">
+                        Call or text us on WhatsApp for fast support.
+                      </p>
+                      <div className="flex flex-col gap-1">
+                        <a
+                          href="tel:+256757588585"
+                          className="text-[#E50914] hover:text-white transition-colors font-medium flex items-center gap-2"
+                        >
+                          +256 757 588 585
+                        </a>
+                        <a
+                          href="tel:+256768908155"
+                          className="text-[#E50914] hover:text-white transition-colors font-medium flex items-center gap-2"
+                        >
+                          +256 768 908 155
+                        </a>
+                      </div>
                     </div>
                   </div>
                 </div>
