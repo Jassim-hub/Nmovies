@@ -3,7 +3,7 @@ import React from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { Play, Info, Plus, Star, Calendar, Globe, Clock, Share2 } from "lucide-react";
+import { Play, Info, Plus, Star, Calendar, Globe, Clock, Share2, Heart } from "lucide-react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, Pagination, Autoplay, EffectFade } from "swiper/modules";
 import "swiper/css";
@@ -16,6 +16,7 @@ import { StreamitHoverCard } from "@/components/StreamitHoverCard";
 import { Top10Card } from "@/components/Top10Card";
 import { PopularPersonalities } from "@/components/PopularPersonalities";
 import { InlineSpinner, FullPageSpinner } from "@/components/LoadingSpinner";
+import { ShareButton } from "@/components/ShareButton";
 
 import { useEffect, useState } from "react";
 import { getVJContent } from "@/lib/api";
@@ -101,7 +102,7 @@ export default function HomePage() {
   const { checkAuth } = useAuthCheck();
 
   // User Preferences (Continue Watching & Watchlist)
-  const { getAllContinueWatching, watchlist } = useUserPreferences();
+  const { getAllContinueWatching, watchlist, isInWatchlist, addToWatchlist, removeFromWatchlist } = useUserPreferences();
   const continueWatching = getAllContinueWatching();
   const [watchlistItems, setWatchlistItems] = useState<any[]>([]);
 
@@ -256,8 +257,16 @@ export default function HomePage() {
                         </div>
 
                         <div className="flex items-center gap-4">
-                          <button className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all duration-300 backdrop-blur-md">
-                            <Plus className="w-5 h-5 md:w-6 md:h-6 text-white" />
+                          <button 
+                            onClick={() => isInWatchlist(content.id) ? removeFromWatchlist(content.id) : addToWatchlist(content.id)}
+                            className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all duration-300 backdrop-blur-md"
+                            aria-label={isInWatchlist(content.id) ? "Remove from Watchlist" : "Add to Watchlist"}
+                          >
+                            {isInWatchlist(content.id) ? (
+                              <Heart className="w-5 h-5 md:w-6 md:h-6 text-[#E50914] fill-current" />
+                            ) : (
+                              <Plus className="w-5 h-5 md:w-6 md:h-6 text-white" />
+                            )}
                           </button>
                           
                           <Button
@@ -280,9 +289,12 @@ export default function HomePage() {
                             PLAY NOW
                           </Button>
 
-                          <button className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all duration-300 backdrop-blur-md">
-                            <Share2 className="w-5 h-5 md:w-6 md:h-6 text-white" />
-                          </button>
+                          <ShareButton 
+                            title={content.title} 
+                            url={`${typeof window !== 'undefined' ? window.location.origin : ''}/${content.type === 'movie' ? 'movies' : 'series'}/${content.id}`}
+                            variant="icon" 
+                            className="!w-10 !h-10 md:!w-12 md:!h-12 backdrop-blur-md"
+                          />
                         </div>
                       </div>
                     </div>

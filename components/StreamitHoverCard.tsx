@@ -4,7 +4,8 @@ import { useState, useRef, ReactNode, useEffect } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Play, Plus, Star, Crown, Clock, Globe } from "lucide-react";
+import { Play, Plus, Star, Crown, Clock, Globe, Heart } from "lucide-react";
+import { useUserPreferences } from "@/lib/hooks/useUserPreferences";
 
 interface HoverCardProps {
   children: ReactNode;
@@ -13,6 +14,7 @@ interface HoverCardProps {
 
 function ExpandedCard({ content, rect, onMouseLeave, onMouseEnter }: { content: any, rect: DOMRect, onMouseLeave: () => void, onMouseEnter: () => void }) {
   const router = useRouter();
+  const { isInWatchlist, addToWatchlist, removeFromWatchlist } = useUserPreferences();
   const [mounted, setMounted] = useState(false);
   const [videoFailed, setVideoFailed] = useState(false);
   const expandedWidth = 280;
@@ -125,8 +127,19 @@ function ExpandedCard({ content, rect, onMouseLeave, onMouseEnter }: { content: 
 
         {/* Action Buttons */}
         <div className="flex items-center gap-2 mt-1.5">
-           <button className="w-9 h-9 flex-shrink-0 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors shadow-inner border border-white/5">
-              <Plus className="w-4 h-4 text-white" />
+           <button 
+             onClick={(e) => {
+               e.stopPropagation();
+               isInWatchlist(content.id) ? removeFromWatchlist(content.id) : addToWatchlist(content.id);
+             }}
+             className="w-9 h-9 flex-shrink-0 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors shadow-inner border border-white/5"
+             aria-label={isInWatchlist(content.id) ? "Remove from Watchlist" : "Add to Watchlist"}
+           >
+              {isInWatchlist(content.id) ? (
+                <Heart className="w-4 h-4 text-[#E50914] fill-current" />
+              ) : (
+                <Plus className="w-4 h-4 text-white" />
+              )}
            </button>
            <button 
              onClick={() => router.push(navUrl)}
