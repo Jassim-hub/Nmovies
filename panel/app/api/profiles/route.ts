@@ -61,7 +61,8 @@ export async function PUT(request: NextRequest) {
   }
 }
 
-// DELETE /api/profiles - Delete a profile (bypasses RLS)
+// DELETE /api/profiles - Delete a user and all their details (bypasses RLS)
+// NOTE: Payment history is intentionally preserved.
 export async function DELETE(request: NextRequest) {
   // SECURITY: Verify the caller is an authenticated admin
   const auth = await verifyAdminRequest(request);
@@ -75,14 +76,50 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
     }
 
-    const { error } = await supabaseAdmin
+    // Step 1: Delete watchlist entries for this user
+    const { error: watchlistError } = await supabaseAdmin
+      .from('watchlists')
+      .delete()
+      .eq('user_id', id)
+
+    if (watchlistError) {
+      console.error('Error deleting user watchlist:', watchlistError)
+      // Non-fatal — continue with deletion
+    }
+
+    // Step 2: Delete subscriptions for this user (not payment history)
+    const { error: subscriptionsError } = await supabaseAdmin
+      .from('subscriptions')
+      .delete()
+      .eq('user_id', id)
+
+    if (subscriptionsError) {
+      console.error('Error deleting user subscriptions:', subscriptionsError)
+      // Non-fatal — continue with deletion
+    }
+
+    // Step 3: Delete the profile row
+    const { error: profileError } = await supabaseAdmin
       .from('profiles')
       .delete()
       .eq('id', id)
 
-    if (error) {
-      console.error('Error deleting profile:', error)
-      return NextResponse.json({ error: 'Failed to delete profile' }, { status: 500 })
+    if (profileError) {
+      console.error('Error deleting profile:', profileError)
+      return NextResponse.json({ error: 'Failed to delete user profile' }, { status: 500 })
+    }
+
+    // Step 4: Delete the auth user (this fully removes login access)
+    const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(id)
+
+    if (authError) {
+      console.error('Error deleting auth user:', authError)
+      // Profile is already deleted; warn but still return success so the UI
+      // reflects the removal — the orphaned auth record won't be able to log in.
+      return NextResponse.json({
+        success: true,
+        warning: 'Profile data deleted but auth account removal failed. User cannot log in but auth record may persist.',
+      })
     }
 
     return NextResponse.json({ success: true })

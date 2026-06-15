@@ -14,7 +14,7 @@ import "swiper/css/effect-fade";
 import { NetflixCard } from "@/components/NetflixCard";
 import { StreamitHoverCard } from "@/components/StreamitHoverCard";
 import { Top10Card } from "@/components/Top10Card";
-import { PopularPersonalities } from "@/components/PopularPersonalities";
+
 import { InlineSpinner, FullPageSpinner } from "@/components/LoadingSpinner";
 import { ShareButton } from "@/components/ShareButton";
 
@@ -526,10 +526,7 @@ export default function HomePage() {
                   </div>
                 </section>
 
-                {/* Inject Popular Personalities immediately after the Action row */}
-                {genre.name.toLowerCase() === 'action' && (
-                  <PopularPersonalities />
-                )}
+
               </React.Fragment>
             ))
           ) : !genresLoaded ? (
