@@ -57,6 +57,11 @@ export default function UsersPage() {
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  // Deactivate confirmation modal state
+  const [isDeactivateModalOpen, setIsDeactivateModalOpen] = useState(false);
+  const [userToDeactivate, setUserToDeactivate] = useState<User | null>(null);
+  const [deactivating, setDeactivating] = useState(false);
+
   // Toast-like state for better feedback
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
@@ -64,6 +69,13 @@ export default function UsersPage() {
     fetchUsers();
     fetchPlans();
   }, []);
+
+  const checkIsPremium = (user: User) => {
+    return user.subscription &&
+      user.subscription !== 'free' &&
+      user.subscription_expiry_date &&
+      new Date(user.subscription_expiry_date) > new Date();
+  };
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -338,6 +350,66 @@ export default function UsersPage() {
     setUserToDelete(null);
   };
 
+  const handleDeactivateClick = (user: User) => {
+    setUserToDeactivate(user);
+    setIsDeactivateModalOpen(true);
+  };
+
+  const confirmDeactivate = async () => {
+    if (!userToDeactivate) return;
+
+    setDeactivating(true);
+    try {
+      const updateData = {
+        subscription: 'free',
+        subscription_start_date: null,
+        subscription_expiry_date: null
+      };
+
+      const res = await authFetch('/api/profiles', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: userToDeactivate.id, ...updateData }),
+      });
+
+      if (!res.ok) {
+        const json = await res.json();
+        throw new Error(json.error || 'Failed to deactivate subscription');
+      }
+
+      // Update local state
+      setUsers(prevUsers =>
+        prevUsers.map(user =>
+          user.id === userToDeactivate.id
+            ? {
+              ...user,
+              subscription: 'free',
+              subscription_start_date: '',
+              subscription_expiry_date: ''
+            }
+            : user
+        )
+      );
+
+      setMessage({ type: 'success', text: `Subscription for ${userToDeactivate.name || userToDeactivate.email} has been deactivated.` });
+      setIsDeactivateModalOpen(false);
+      setUserToDeactivate(null);
+    } catch (error: unknown) {
+      console.error('Error deactivating subscription:', error);
+      setMessage({
+        type: 'error',
+        text: `Failed to deactivate subscription: ${error instanceof Error ? error.message : 'Unknown error'}`
+      });
+    } finally {
+      setDeactivating(false);
+    }
+  };
+
+  const cancelDeactivate = () => {
+    setIsDeactivateModalOpen(false);
+    setUserToDeactivate(null);
+  };
+
   // Auto-hide message after 5 seconds
   useEffect(() => {
     if (message) {
@@ -394,6 +466,7 @@ export default function UsersPage() {
               <th className="px-6 py-4 text-[#E50914] font-bold uppercase tracking-wider text-xs">#</th>
               <th className="px-6 py-4 text-[#E50914] font-bold uppercase tracking-wider text-xs">Name</th>
               <th className="px-6 py-4 text-[#E50914] font-bold uppercase tracking-wider text-xs">Email</th>
+              <th className="px-6 py-4 text-[#E50914] font-bold uppercase tracking-wider text-xs">Status</th>
               <th className="px-6 py-4 text-[#E50914] font-bold uppercase tracking-wider text-xs">Actions</th>
             </tr>
           </thead>
@@ -412,15 +485,30 @@ export default function UsersPage() {
                   <td className="px-6 py-4 text-gray-400 font-medium">{startIndex + idx + 1}</td>
                   <td className="px-6 py-4 text-gray-200 font-medium">{user.name || 'N/A'}</td>
                   <td className="px-6 py-4 text-gray-400">{user.email || 'N/A'}</td>
-                  <td className="px-6 py-4 flex gap-3">
+                  <td className="px-6 py-4">
+                    {checkIsPremium(user) ? (
+                      <span className="bg-green-900/40 text-green-500 px-2 py-1 rounded text-xs font-bold border border-green-900 uppercase tracking-wider">Premium</span>
+                    ) : (
+                      <span className="bg-gray-800 text-gray-400 px-2 py-1 rounded text-xs font-bold border border-gray-700 uppercase tracking-wider">Free</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 flex flex-wrap gap-2">
                     <Button
-                      className="bg-[#E50914] hover:bg-[#b80710] text-white px-4 py-2 text-xs font-bold uppercase tracking-wider border-none shadow-[0_0_10px_rgba(229,9,20,0.2)]"
+                      className="bg-[#E50914] hover:bg-[#b80710] text-white px-3 py-1.5 text-xs font-bold uppercase tracking-wider border-none shadow-[0_0_10px_rgba(229,9,20,0.2)]"
                       onClick={() => handleSubscribe(user)}
                     >
                       Subscribe
                     </Button>
+                    {checkIsPremium(user) && (
+                      <Button
+                        className="bg-transparent border border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-white px-3 py-1.5 text-xs font-bold uppercase tracking-wider"
+                        onClick={() => handleDeactivateClick(user)}
+                      >
+                        Deactivate
+                      </Button>
+                    )}
                     <Button
-                      className="bg-transparent border border-red-900 text-red-500 hover:bg-red-900 hover:text-white px-4 py-2 text-xs font-bold uppercase tracking-wider"
+                      className="bg-transparent border border-red-900 text-red-500 hover:bg-red-900 hover:text-white px-3 py-1.5 text-xs font-bold uppercase tracking-wider"
                       onClick={() => handleDeleteClick(user)}
                     >
                       Delete
@@ -448,20 +536,35 @@ export default function UsersPage() {
             <div key={user.id} className="bg-[#1a1c21] rounded-2xl p-5 border border-gray-800 shadow-xl">
               <div className="flex justify-between items-start mb-4">
                 <div className="flex-1">
-                  <div className="text-xs text-[#E50914] font-bold mb-1 uppercase">#{startIndex + idx + 1}</div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="text-xs text-[#E50914] font-bold uppercase">#{startIndex + idx + 1}</div>
+                    {checkIsPremium(user) ? (
+                      <span className="bg-green-900/40 text-green-500 px-2 py-0.5 rounded text-[10px] font-bold border border-green-900 uppercase tracking-wider">Premium</span>
+                    ) : (
+                      <span className="bg-gray-800 text-gray-400 px-2 py-0.5 rounded text-[10px] font-bold border border-gray-700 uppercase tracking-wider">Free</span>
+                    )}
+                  </div>
                   <div className="font-bold text-white mb-1 text-lg">{user.name || 'N/A'}</div>
                   <div className="text-sm text-gray-400 break-all">{user.email || 'N/A'}</div>
                 </div>
               </div>
-              <div className="flex gap-3 pt-4 border-t border-gray-800">
+              <div className="flex flex-wrap gap-2 pt-4 border-t border-gray-800">
                 <Button
-                  className="bg-[#E50914] hover:bg-[#b80710] text-white px-4 py-2 text-xs font-bold uppercase tracking-wider flex-1 shadow-[0_0_10px_rgba(229,9,20,0.2)]"
+                  className="bg-[#E50914] hover:bg-[#b80710] text-white px-3 py-1.5 text-xs font-bold uppercase tracking-wider flex-1 shadow-[0_0_10px_rgba(229,9,20,0.2)] min-w-[100px]"
                   onClick={() => handleSubscribe(user)}
                 >
                   Subscribe
                 </Button>
+                {checkIsPremium(user) && (
+                  <Button
+                    className="bg-transparent border border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-white px-3 py-1.5 text-xs font-bold uppercase tracking-wider flex-1 min-w-[100px]"
+                    onClick={() => handleDeactivateClick(user)}
+                  >
+                    Deactivate
+                  </Button>
+                )}
                 <Button
-                  className="bg-transparent border border-red-900 text-red-500 hover:bg-red-900 hover:text-white px-4 py-2 text-xs font-bold uppercase tracking-wider flex-1"
+                  className="bg-transparent border border-red-900 text-red-500 hover:bg-red-900 hover:text-white px-3 py-1.5 text-xs font-bold uppercase tracking-wider flex-1 min-w-[100px]"
                   onClick={() => handleDeleteClick(user)}
                 >
                   Delete
@@ -751,6 +854,63 @@ export default function UsersPage() {
                 </>
               ) : (
                 'Yes, Delete User'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      {/* Deactivate Confirmation Modal */}
+      <Dialog open={isDeactivateModalOpen} onOpenChange={setIsDeactivateModalOpen}>
+        <DialogContent className="mx-4 sm:mx-0 max-w-md sm:max-w-lg bg-[#1a1c21] border-gray-800 text-white shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-orange-500 font-bold uppercase tracking-wider text-xl">Deactivate Subscription</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="flex items-start space-x-4">
+              <div className="flex-shrink-0 mt-1">
+                <div className="w-12 h-12 bg-orange-500/20 rounded-full flex items-center justify-center border border-orange-500">
+                  <svg className="w-6 h-6 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                </div>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-white mb-2">
+                  Deactivate Subscription?
+                </h3>
+                <div className="text-sm text-gray-400 space-y-2">
+                  <p>
+                    You are about to deactivate the premium subscription for <span className="font-bold text-white bg-gray-800 px-2 py-0.5 rounded">{userToDeactivate?.name || userToDeactivate?.email || 'Unknown User'}</span>.
+                  </p>
+                  <p className="text-orange-500 font-bold">
+                    They will immediately lose access to premium features.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="flex-col sm:flex-row gap-3">
+            <Button
+              variant="outline"
+              onClick={cancelDeactivate}
+              disabled={deactivating}
+              className="w-full sm:w-auto bg-transparent border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white uppercase tracking-wider font-bold"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmDeactivate}
+              disabled={deactivating}
+              className="bg-orange-500 text-white hover:bg-orange-600 w-full sm:w-auto uppercase tracking-wider font-bold border-none"
+            >
+              {deactivating ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Deactivating...
+                </>
+              ) : (
+                'Yes, Deactivate'
               )}
             </Button>
           </DialogFooter>
