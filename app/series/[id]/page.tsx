@@ -90,7 +90,10 @@ export default function SeriesDetailsPage() {
         // If seriesData.seasons exists (from Reelplexi), fetch episodes for each
         if ((seriesData as any).seasons && (seriesData as any).seasons.length > 0) {
           seasonsList = (seriesData as any).seasons;
-          setActiveSeasonId(seasonsList[0].id || '1');
+          // Derive the first season's ID from its actual season_number, not a hardcoded '1'.
+          const firstSeasonRaw = seasonsList[0] as any;
+          const firstSeasonNum = firstSeasonRaw.season_number || firstSeasonRaw.order || 1;
+          setActiveSeasonId(firstSeasonRaw.id || String(firstSeasonNum));
           
           const seasonsWithEpisodes = await Promise.all(
             seasonsList.map(async (season: any) => {

@@ -296,7 +296,8 @@ export async function searchAllContent(query: string, limit = 50, page = 1, vjNa
 export async function getVJs() {
   try {
     const vjs = await Reelplexi.getReelplexiVJs(1, 100);
-    return vjs.map((vj: any) => ({ id: vj.name, name: vj.name }));
+    // VJ ids must be case-insensitive to match correctly on the frontend filters
+    return vjs.map((vj: any) => ({ id: (vj.name || '').toLowerCase(), name: vj.name }));
   } catch (error) {
     console.error('Error fetching vjs:', error);
     return [];
