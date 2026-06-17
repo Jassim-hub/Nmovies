@@ -300,7 +300,11 @@ export async function getReelplexiRelatedSeriesByGenre(id: string, page = 1, per
 export async function getReelplexiMovieTrailers(id: string) {
   try {
     const res = await fetchReelplexi(`/v1/movies/${id}/trailers`);
-    return res.trailers || [];
+    let trailers = res.trailers;
+    if (trailers && !Array.isArray(trailers) && Array.isArray(trailers.trailers)) {
+      trailers = trailers.trailers;
+    }
+    return Array.isArray(trailers) ? trailers : [];
   } catch {
     return [];
   }
@@ -309,7 +313,11 @@ export async function getReelplexiMovieTrailers(id: string) {
 export async function getReelplexiSeriesTrailers(id: string) {
   try {
     const res = await fetchReelplexi(`/v1/series/${id}/trailers`);
-    return res.trailers || [];
+    let trailers = res.trailers;
+    if (trailers && !Array.isArray(trailers) && Array.isArray(trailers.trailers)) {
+      trailers = trailers.trailers;
+    }
+    return Array.isArray(trailers) ? trailers : [];
   } catch {
     return [];
   }

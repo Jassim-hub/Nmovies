@@ -57,7 +57,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     return (
       <div className="w-full h-full relative">
         <iframe
-          src={`https://www.youtube.com/embed/${youtubeId}?autoplay=0&rel=0`}
+          src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=1&rel=0`}
           title={title || "YouTube video player"}
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
           allowFullScreen
