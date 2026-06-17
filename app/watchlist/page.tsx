@@ -3,27 +3,21 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
-import { supabase, MovieWithVJ, SeriesWithVJ } from "@/lib/supabase";
 import { FullPageSpinner } from "@/components/LoadingSpinner";
 import { NetflixCard } from "@/components/NetflixCard";
 import { StreamitHoverCard } from "@/components/StreamitHoverCard";
 import { Button } from "@/components/ui/button";
 import { Trash2, Film, Tv } from "lucide-react";
-
-interface WatchlistItem {
-  id: string;
-  movie_id: string | null;
-  series_id: string | null;
-  created_at: string;
-  movies?: MovieWithVJ | null;
-  series?: SeriesWithVJ | null;
-}
+import { useUserPreferences } from "@/lib/hooks/useUserPreferences";
 
 export default function WatchlistPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  
+  const { watchlist, removeFromWatchlist, loading: prefLoading } = useUserPreferences();
+  
+  const [watchlistItems, setWatchlistItems] = useState<any[]>([]);
+  const [loadingItems, setLoadingItems] = useState(true);
   const [filter, setFilter] = useState<'all' | 'movies' | 'series'>('all');
 
   useEffect(() => {
@@ -31,69 +25,60 @@ export default function WatchlistPage() {
       router.push('/signin');
       return;
     }
-
-    if (user) {
-      fetchWatchlist();
-    }
   }, [user, authLoading, router]);
 
-  const fetchWatchlist = async () => {
-    if (!user) return;
-
-    try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('watchlists')
-        .select(`
-          id,
-          movie_id,
-          series_id,
-          created_at,
-          movies:movie_id (*, vjs:vj_id(name)),
-          series:series_id (*, vjs:vj_id(name))
-        `)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
+  useEffect(() => {
+    async function fetchWatchlistDetails() {
+      if (prefLoading) return;
       
-      // Type assertion to handle Supabase's return type
-      setWatchlist((data as any) || []);
-    } catch (error) {
-      console.error('Error fetching watchlist:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const removeFromWatchlist = async (itemId: string) => {
-    try {
-      const { error } = await supabase
-        .from('watchlists')
-        .delete()
-        .eq('id', itemId);
-
-      if (error) throw error;
+      if (!watchlist || watchlist.length === 0) {
+        setWatchlistItems([]);
+        setLoadingItems(false);
+        return;
+      }
       
-      // Update local state
-      setWatchlist(prev => prev.filter(item => item.id !== itemId));
-    } catch (error) {
-      console.error('Error removing from watchlist:', error);
+      try {
+        setLoadingItems(true);
+        // Fetch all items from Reelplexi instead of Supabase
+        const itemPromises = watchlist.map(async (id) => {
+          let item = await (await import('@/lib/api')).getMovieById(id);
+          if (item) return { ...item, type: 'movie' as const };
+          
+          item = await (await import('@/lib/api')).getSeriesById(id) as any;
+          if (item) return { ...item, type: 'series' as const };
+          
+          return null;
+        });
+        
+        const results = await Promise.all(itemPromises);
+        const validItems = results.filter(Boolean);
+        
+        // Reverse so the newest additions are at the top
+        setWatchlistItems(validItems.reverse());
+      } catch (error) {
+        console.error('Error fetching watchlist:', error);
+      } finally {
+        setLoadingItems(false);
+      }
     }
-  };
 
-  if (authLoading || loading) {
+    if (user) {
+      fetchWatchlistDetails();
+    }
+  }, [watchlist, prefLoading, user]);
+
+  if (authLoading || prefLoading || (loadingItems && watchlistItems.length === 0 && watchlist.length > 0)) {
     return <FullPageSpinner text="Loading your watchlist..." />;
   }
 
-  const filteredWatchlist = watchlist.filter(item => {
-    if (filter === 'movies') return item.movie_id !== null;
-    if (filter === 'series') return item.series_id !== null;
+  const filteredWatchlist = watchlistItems.filter(item => {
+    if (filter === 'movies') return item.type === 'movie';
+    if (filter === 'series') return item.type === 'series';
     return true;
   });
 
-  const movieCount = watchlist.filter(item => item.movie_id !== null).length;
-  const seriesCount = watchlist.filter(item => item.series_id !== null).length;
+  const movieCount = watchlistItems.filter(item => item.type === 'movie').length;
+  const seriesCount = watchlistItems.filter(item => item.type === 'series').length;
 
   return (
     <div className="min-h-screen bg-[#141414] text-white">
@@ -102,14 +87,14 @@ export default function WatchlistPage() {
         <div className="max-w-7xl mx-auto">
           <h1 className="text-4xl md:text-5xl font-black mb-4 text-white">My Watchlist</h1>
           <p className="text-gray-400 text-lg mb-8">
-            {watchlist.length === 0 
+            {watchlistItems.length === 0 
               ? "Your watchlist is empty. Start adding movies and series you want to watch!"
-              : `You have ${watchlist.length} item${watchlist.length !== 1 ? 's' : ''} in your watchlist`
+              : `You have ${watchlistItems.length} item${watchlistItems.length !== 1 ? 's' : ''} in your watchlist`
             }
           </p>
 
           {/* Filter Tabs */}
-          {watchlist.length > 0 && (
+          {watchlistItems.length > 0 && (
             <div className="flex gap-4 mb-8 border-b border-gray-800 pb-4">
               <button
                 onClick={() => setFilter('all')}
@@ -119,7 +104,7 @@ export default function WatchlistPage() {
                     : 'bg-transparent text-gray-400 hover:text-white'
                 }`}
               >
-                All ({watchlist.length})
+                All ({watchlistItems.length})
               </button>
               <button
                 onClick={() => setFilter('movies')}
@@ -182,15 +167,12 @@ export default function WatchlistPage() {
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 md:gap-6">
               {filteredWatchlist.map((item) => {
-                const content = item.movies || item.series;
-                const type = item.movie_id ? 'movie' : 'series';
-                
-                if (!content) return null;
+                if (!item) return null;
 
                 return (
                   <div key={item.id} className="relative group">
-                    <StreamitHoverCard content={{ ...content, type }}>
-                      <NetflixCard content={content} type={type} />
+                    <StreamitHoverCard content={item}>
+                      <NetflixCard content={item} type={item.type} />
                     </StreamitHoverCard>
                     
                     {/* Remove Button */}
