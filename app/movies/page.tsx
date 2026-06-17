@@ -34,16 +34,8 @@ export default function MoviesPage() {
   // Fetch functions with useCallback to prevent recreation
   const fetchAvailableVJs = useCallback(async () => {
     try {
-      // In streamit we fetch VJs directly from Supabase historically,
-      // but since we want to move to Reelplexi entirely, we can extract
-      // unique VJs from a large fetch, or use the existing vjs table just for the dropdown names.
-      // For now, let's keep the existing VJ list from supabase as it only contains names/ids.
-      const { data: vjData, error } = await supabase
-        .from('vjs')
-        .select('id, name')
-        .order('name');
-
-      if (error) throw error;
+      const api = await import('@/lib/api');
+      const vjData = await api.getVJs();
       setAvailableVJs(vjData || []);
     } catch (error) {
       console.error('Error fetching VJs:', error);

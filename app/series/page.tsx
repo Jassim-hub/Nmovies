@@ -35,12 +35,8 @@ export default function SeriesPage() {
   // Fetch functions with useCallback to prevent recreation
   const fetchAvailableVJs = useCallback(async () => {
     try {
-      const { data: vjData, error } = await supabase
-        .from('vjs')
-        .select('id, name')
-        .order('name');
-
-      if (error) throw error;
+      const api = await import('@/lib/api');
+      const vjData = await api.getVJs();
       setAvailableVJs(vjData || []);
     } catch (error) {
       console.error('Error fetching VJs:', error);

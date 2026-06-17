@@ -358,3 +358,13 @@ export async function getReelplexiEpisodeDownloadUrl(seriesId: string, season: n
     return null;
   }
 }
+
+export async function getReelplexiAppNotifications() {
+  try {
+    const res = await fetchReelplexi('/v1/account/app-notifications');
+    return res.notifications || [];
+  } catch (e) {
+    console.error('Error fetching app notifications:', e);
+    return [];
+  }
+}

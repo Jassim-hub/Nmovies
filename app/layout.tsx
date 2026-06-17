@@ -6,6 +6,7 @@ import "swiper/css/navigation";
 import "swiper/css/pagination";
 import { AuthProvider } from "@/components/AuthProvider";
 import ConditionalLayout from "../components/ConditionalLayout";
+import WhatsAppFloat from "../components/WhatsAppFloat";
 import Script from "next/script";
 
 const roboto = Roboto({
@@ -175,6 +176,7 @@ export default function RootLayout({
         />
         <AuthProvider>
           <ConditionalLayout>{children}</ConditionalLayout>
+          <WhatsAppFloat />
         </AuthProvider>
       </body>
     </html>

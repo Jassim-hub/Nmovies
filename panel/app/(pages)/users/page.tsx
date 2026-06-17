@@ -235,7 +235,43 @@ export default function UsersPage() {
   const updateSubscription = async () => {
     if (!editingUser) return;
 
-    // Validate required fields
+    // Handle cancellation to free plan
+    if (modalPlan === 'free') {
+      setUpdating(true);
+      try {
+        const res = await authFetch('/api/profiles', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: editingUser.id,
+            subscription: 'free',
+            subscription_start_date: null,
+            subscription_expiry_date: null,
+          }),
+        });
+        if (!res.ok) {
+          const json = await res.json();
+          throw new Error(json.error || 'Failed to cancel subscription');
+        }
+        setUsers(prev =>
+          prev.map(u =>
+            u.id === editingUser.id
+              ? { ...u, subscription: 'free', subscription_start_date: '', subscription_expiry_date: '' }
+              : u
+          )
+        );
+        setMessage({ type: 'success', text: 'Subscription cancelled (set to Free).' });
+        closeModal();
+        setTimeout(() => fetchUsers(), 1000);
+      } catch (error: unknown) {
+        setMessage({ type: 'error', text: `Failed: ${error instanceof Error ? error.message : 'Unknown error'}` });
+      } finally {
+        setUpdating(false);
+      }
+      return;
+    }
+
+    // Validate required fields for paid plans
     if (!modalPlan || !modalStartDate || !modalEndDate) {
       setMessage({ type: 'error', text: 'Please fill in all required fields.' });
       return;
@@ -785,7 +821,7 @@ export default function UsersPage() {
             </Button>
             <Button
               onClick={updateSubscription}
-              disabled={updating || !modalPlan || !modalEndDate}
+              disabled={updating || !modalPlan || (modalPlan !== 'free' && !modalEndDate)}
               className="bg-[#E50914] text-white hover:bg-[#b80710] w-full sm:w-auto uppercase tracking-wider font-bold border-none"
             >
               {updating ? (

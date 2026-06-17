@@ -89,6 +89,7 @@ export default function HomePage() {
   const [latestSeries, setLatestSeries] = useState<any[]>([]);
   const [genreRows, setGenreRows] = useState<{ name: string; movies: any[] }[]>([]);
   const [vjContent, setVJContent] = useState<VJContent[]>([]);
+  const [animationContent, setAnimationContent] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [authModal, setAuthModal] = useState<{
     isOpen: boolean;
@@ -145,15 +146,26 @@ export default function HomePage() {
         setVJContent(vjData as any);
         setLoading(false); 
 
-        const [latestMoviesData, latestSeriesData, genreRowsData] = await Promise.all([
-          (await import('@/lib/api')).getMovies(12),
-          (await import('@/lib/api')).getSeries(12),
-          (await import('@/lib/api')).getGenreRowsForHome(12)
+        const api = await import('@/lib/api');
+        const Reelplexi = await import('@/lib/reelplexi');
+
+        const [latestMoviesData, latestSeriesData, genreRowsData, animMovies, animSeries] = await Promise.all([
+          api.getMovies(12),
+          api.getSeries(12),
+          api.getGenreRowsForHome(12),
+          Reelplexi.getReelplexiMoviesByGenre('animation', 1, 12),
+          Reelplexi.getReelplexiSeriesByGenre('animation', 1, 12),
         ]);
 
         setLatestMovies(latestMoviesData);
         setLatestSeries(latestSeriesData);
         setGenreRows(genreRowsData);
+        // Interleave animation movies and series, mark type
+        const combined = [
+          ...(animMovies || []).map((m: any) => ({ ...m, type: 'movie' })),
+          ...(animSeries || []).map((s: any) => ({ ...s, type: 'series' })),
+        ];
+        setAnimationContent(combined);
         setGenresLoaded(true);
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -244,10 +256,17 @@ export default function HomePage() {
                             <Calendar className="w-4 h-4 text-[#E50914]" />
                             {content.release_date ? new Date(content.release_date).getFullYear() : "2024"}
                           </div>
-                          <div className="flex items-center gap-2">
-                            <Globe className="w-4 h-4 text-[#E50914]" />
-                            English
-                          </div>
+                          {content.vjs ? (
+                            <div className="flex items-center gap-2">
+                              <Globe className="w-4 h-4 text-[#E50914]" />
+                              VJ: {content.vjs.name}
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <Globe className="w-4 h-4 text-[#E50914]" />
+                              English
+                            </div>
+                          )}
                           {'duration' in content && (content as any).duration && (
                             <div className="flex items-center gap-2">
                               <Clock className="w-4 h-4 text-[#E50914]" />
@@ -534,6 +553,31 @@ export default function HomePage() {
               <InlineSpinner text="Loading genre collections..." />
             </div>
           ) : null}
+
+          {/* Animation Row */}
+          {animationContent.length > 0 && (
+            <section className="mb-12">
+              <div className="container mx-auto px-4 md:px-12">
+                <div className="flex items-center justify-between mb-6 border-b border-gray-800 pb-2">
+                  <h2 className="text-xl md:text-2xl font-bold text-white uppercase tracking-wide">
+                    🎬 Animation
+                  </h2>
+                  <Link href="/movies?genre=animation" className="text-[#E50914] hover:text-[#b80710] text-sm font-semibold transition-colors uppercase tracking-wider">
+                    View All
+                  </Link>
+                </div>
+                <Swiper {...rowSwiperSettings}>
+                  {animationContent.map((item) => (
+                    <SwiperSlide key={`anim-${item.id}`}>
+                      <StreamitHoverCard content={item}>
+                        <NetflixCard content={item} type={item.type} />
+                      </StreamitHoverCard>
+                    </SwiperSlide>
+                  ))}
+                </Swiper>
+              </div>
+            </section>
+          )}
         </div>
       </div>
 

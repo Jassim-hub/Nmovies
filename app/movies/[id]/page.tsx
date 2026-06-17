@@ -287,7 +287,7 @@ export default function MovieDetailsPage() {
                   <div className="text-center">
                      <p className="text-xl font-bold mb-4">Video currently unavailable</p>
                      {!hasRights && (
-                        <Button onClick={() => setShowAuthModal(true)} className="bg-[#E50914]">Subscribe to Watch</Button>
+                        <Button onClick={() => router.push('/payment')} className="bg-[#E50914]">Subscribe to Watch</Button>
                      )}
                   </div>
                </div>

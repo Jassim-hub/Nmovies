@@ -6,7 +6,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { signOut } from "@/lib/auth";
 import { setRedirectCookie } from "@/lib/utils";
-import { Search } from "lucide-react";
+import { Search, Bell } from "lucide-react";
 
 
 const leftNavItems: { href: string; label: React.ReactNode }[] = [
@@ -268,6 +268,15 @@ export default function Header() {
               <Search className="w-5 h-5" />
             </Link>
 
+            {/* Notifications Icon */}
+            <Link
+              href="/notifications"
+              className="p-2 hover:text-[#E50914] text-gray-300 transition-colors focus:outline-none"
+              aria-label="Notifications"
+            >
+              <Bell className="w-5 h-5" />
+            </Link>
+
             {/* Download Icon Button */}
             <Link
               href="/download"
@@ -278,6 +287,7 @@ export default function Header() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
               </svg>
             </Link>
+
 
             {/* Language Selector (Placeholder) */}
             <button className="flex items-center space-x-2 bg-gray-800 px-3 py-2 rounded text-xs font-bold text-gray-300 hover:bg-gray-700 transition-colors">
