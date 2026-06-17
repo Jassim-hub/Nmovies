@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Film, Tv, User } from "lucide-react";
+import { Home, Film, Tv, User, Plus } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import Image from "next/image";
 
@@ -22,6 +22,7 @@ export default function MobileNav() {
     { href: "/", label: "Home", icon: Home },
     { href: "/movies", label: "Movies", icon: Film },
     { href: "/series", label: "TV Shows", icon: Tv },
+    { href: "/watchlist", label: "Watchlist", icon: Plus },
     { href: "/profile", label: "Profile", icon: User },
   ];
 
