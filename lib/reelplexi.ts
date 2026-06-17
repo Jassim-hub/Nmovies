@@ -179,21 +179,46 @@ export async function getReelplexiMovies(page = 1, perPage = 50, genre?: string)
 
 export async function searchReelplexiMovies(query: string, page = 1, perPage = 50, vj?: string, genre?: string, year?: string) {
   const params: Record<string, string | number> = { page, per_page: perPage };
-  if (query) params.q = query;
-  if (vj) params.vj = vj;
+  // Normalize VJ name to lowercase so ilike on the API side matches all casing variants
+  const vjNorm = vj ? vj.toLowerCase() : undefined;
   if (genre) params.genre = genre;
   if (year) params.year = year;
+
+  // /v1/movies/search requires q with min_length=1.
+  // When there is no search text, use the list endpoint which accepts vj as an optional filter.
+  if (!query.trim()) {
+    if (vjNorm) params.vj = vjNorm;
+    const res = await fetchReelplexi('/v1/movies', params);
+    return (res.data || []).map(normalizeReelplexiMovie);
+  }
+
+  params.q = query.trim();
+  if (vjNorm) params.vj = vjNorm;
   const res = await fetchReelplexi('/v1/movies/search', params);
   return (res.data || []).map(normalizeReelplexiMovie);
 }
 
 export async function searchReelplexiAll(query: string, page = 1, perPage = 50, vj?: string, genre?: string) {
-  const params: Record<string, string | number> = { page, per_page: perPage };
-  if (query) params.q = query;
-  if (vj) params.vj = vj;
+  const vjNorm = vj ? vj.toLowerCase() : undefined;
+
+  // /v1/search requires q with min_length=1.
+  // When there is no search text, fetch movies and series list endpoints separately.
+  if (!query.trim()) {
+    const [moviesRes, seriesRes] = await Promise.all([
+      searchReelplexiMovies('', page, Math.ceil(perPage / 2), vjNorm, genre),
+      searchReelplexiSeries('', page, Math.ceil(perPage / 2), vjNorm, genre),
+    ]);
+    return [
+      ...moviesRes.map((m: any) => ({ ...m, type: 'movie' })),
+      ...seriesRes.map((s: any) => ({ ...s, type: 'series' })),
+    ];
+  }
+
+  const params: Record<string, string | number> = { page, per_page: perPage, q: query.trim() };
+  if (vjNorm) params.vj = vjNorm;
   if (genre) params.genre = genre;
   const res = await fetchReelplexi('/v1/search', params);
-  
+
   // The search endpoint returns mixed content (movies and series)
   return (res.data || []).map((item: any) => {
     if (item.type === 'movie' || item.type === undefined) { // fallback
@@ -231,10 +256,20 @@ export async function getReelplexiSeries(page = 1, perPage = 50, genre?: string)
 
 export async function searchReelplexiSeries(query: string, page = 1, perPage = 50, vj?: string, genre?: string, year?: string) {
   const params: Record<string, string | number> = { page, per_page: perPage };
-  if (query) params.q = query;
-  if (vj) params.vj = vj;
+  const vjNorm = vj ? vj.toLowerCase() : undefined;
   if (genre) params.genre = genre;
   if (year) params.year = year;
+
+  // /v1/series/search requires q with min_length=1.
+  // When there is no search text, use the list endpoint which accepts vj as an optional filter.
+  if (!query.trim()) {
+    if (vjNorm) params.vj = vjNorm;
+    const res = await fetchReelplexi('/v1/series', params);
+    return (res.data || []).map(normalizeReelplexiSeries);
+  }
+
+  params.q = query.trim();
+  if (vjNorm) params.vj = vjNorm;
   const res = await fetchReelplexi('/v1/series/search', params);
   return (res.data || []).map(normalizeReelplexiSeries);
 }
