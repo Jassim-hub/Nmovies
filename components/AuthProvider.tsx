@@ -10,6 +10,7 @@ interface AuthContextType {
   user: User | null
   loading: boolean
   isPremium: boolean
+  refreshPremiumStatus: () => Promise<void>
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>
   signUp: (email: string, password: string) => Promise<{ error: Error | null }>
   signInWithGoogle: () => Promise<{ error: Error | null }>
@@ -198,10 +199,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error }
   }
 
+  // Expose a function to force-refresh premium status (e.g. after payment)
+  const refreshPremiumStatus = async () => {
+    if (user) {
+      await checkPremiumStatus(user)
+    }
+  }
+
   const value = {
     user,
     loading,
     isPremium,
+    refreshPremiumStatus,
     signIn,
     signUp,
     signInWithGoogle,

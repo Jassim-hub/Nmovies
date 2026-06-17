@@ -13,14 +13,14 @@ import Link from 'next/link';
 import { YoPaymentsService } from '@/lib/yopayments';
 
 function PaymentPageContent() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, refreshPremiumStatus } = useAuth();
   const router = useRouter();
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [detectedMNO, setDetectedMNO] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [paymentStatus, setPaymentStatus] = useState<'idle' | 'processing' | 'success' | 'failed'>('idle');
+  const [paymentStatus, setPaymentStatus] = useState<'idle' | 'processing' | 'success' | 'failed' | 'timeout'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
   const [transactionRef, setTransactionRef] = useState<string>('');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -235,6 +235,8 @@ function PaymentPageContent() {
             }
 
             setPaymentStatus('success');
+            // Refresh premium status in AuthProvider so isPremium updates immediately
+            await refreshPremiumStatus();
             setTimeout(() => { window.location.href = '/'; }, 3000);
             return; // exit polling loop
           }
@@ -250,9 +252,9 @@ function PaymentPageContent() {
         }
       }
 
-      // Polling exhausted without completion
-      setPaymentStatus('failed');
-      setErrorMessage('Payment is still processing. If you approved on your phone, your subscription will activate shortly via webhook.');
+      // Polling exhausted without completion — show warning, not failure
+      setPaymentStatus('timeout');
+      setErrorMessage('Payment is still processing. If you approved on your phone, your subscription will activate shortly.');
     } catch (error) {
       setPaymentStatus('failed');
       setErrorMessage(error instanceof Error ? error.message : 'An unexpected error occurred');
@@ -316,7 +318,30 @@ function PaymentPageContent() {
           </div>
         )}
 
-        {paymentStatus === 'idle' && (
+        {paymentStatus === 'timeout' && (
+          <div className="mb-6 p-4 bg-yellow-900/60 border border-yellow-600 rounded-xl">
+            <div className="flex items-start space-x-3">
+              <svg className="w-5 h-5 text-yellow-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+              <div>
+                <p className="text-yellow-400 font-medium">Payment Still Processing</p>
+                <p className="text-yellow-300 text-sm mt-1">{errorMessage}</p>
+                <p className="text-yellow-300/70 text-xs mt-2">You can safely close this page. Your subscription will activate automatically once payment is confirmed.</p>
+                <div className="flex space-x-3 mt-3">
+                  <Link href="/" className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-black rounded-lg text-sm font-medium">
+                    Go to Home
+                  </Link>
+                  <button onClick={() => setPaymentStatus('idle')} className="px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 text-sm">
+                    Try Another Payment
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {(paymentStatus === 'idle' || paymentStatus === 'timeout') && (
           <>
             <h2 className="text-2xl font-bold mb-6 text-center">Choose Your Plan</h2>
             <div className={`grid gap-6 mb-6 ${

@@ -36,7 +36,7 @@ export default function MakyPayButton({
   onSuccess,
   onError,
 }: MakyPayButtonProps) {
-  const { user } = useAuth();
+  const { user, refreshPremiumStatus } = useAuth();
   const [isProcessing, setIsProcessing] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'mobile_money' | 'card'>('mobile_money');
@@ -145,6 +145,8 @@ export default function MakyPayButton({
         }
 
         setShowModal(false);
+        // Refresh premium status in AuthProvider so isPremium updates immediately
+        await refreshPremiumStatus();
         onSuccess?.();
       } else {
         throw new Error(statusData.transaction.displayStatus || 'Payment failed');

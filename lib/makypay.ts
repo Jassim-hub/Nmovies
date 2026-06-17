@@ -450,6 +450,13 @@ export class MakyPayService {
     try {
       const { userId, transactionId, subscriptionPlan, subscriptionDuration } = params;
 
+      // Require service-role client — anon client cannot bypass profiles RLS
+      if (!supabaseAdmin) {
+        throw new MakyPayException(
+          'Server configuration error: SUPABASE_SERVICE_ROLE_KEY is not set. Cannot activate subscription.'
+        );
+      }
+
       // Check if payment was successful
       const result = await this.checkTransactionStatus(transactionId);
 
@@ -458,27 +465,9 @@ export class MakyPayService {
         const now = new Date();
         const expiryDate = new Date(now.getTime() + subscriptionDuration * 24 * 60 * 60 * 1000);
 
-        // Insert subscription record
-        // Use service-role client to bypass RLS
-        const dbClient = supabaseAdmin || supabase;
-        const { error: subscriptionError } = await dbClient
-          .from('subscriptions')
-          .insert({
-            user_id: userId,
-            plan: subscriptionPlan,
-            payment_method: 'makypay_mobile_money',
-            subscribed_at: now,
-          });
-
-        if (subscriptionError) {
-          console.error('Error updating subscription:', subscriptionError);
-          throw new MakyPayException('Failed to update subscription');
-        }
-
-        // Update user profile with subscription details
-        // MUST use service-role client: profiles UPDATE RLS requires auth.uid() = id,
-        // which is NULL on the server side (no user session attached to this client)
-        const { error: profileError } = await dbClient
+        // Update user profile with subscription details FIRST
+        // This is the critical write — all access checks read from profiles
+        const { error: profileError } = await supabaseAdmin
           .from('profiles')
           .update({
             subscription: subscriptionPlan,
@@ -488,8 +477,25 @@ export class MakyPayService {
           .eq('id', userId);
 
         if (profileError) {
-          console.error('Error updating profile:', profileError);
-          // Don't throw here as subscription was updated
+          console.error('CRITICAL: Failed to update profile subscription:', profileError);
+          throw new MakyPayException(
+            'Failed to activate subscription. Please contact support with your transaction reference.'
+          );
+        }
+
+        // Insert subscription record (payment ledger — non-critical)
+        const { error: subscriptionError } = await supabaseAdmin
+          .from('subscriptions')
+          .insert({
+            user_id: userId,
+            plan: subscriptionPlan,
+            payment_method: 'makypay_mobile_money',
+            subscribed_at: now,
+          });
+
+        if (subscriptionError) {
+          // Log but don't fail — profile is already updated, user has access
+          console.error('Non-critical: Failed to insert subscription record:', subscriptionError);
         }
 
         // Mark transaction as completed in our database
@@ -500,6 +506,7 @@ export class MakyPayService {
         throw new MakyPayException(`Payment not completed. Status: ${result.status}`);
       }
     } catch (e) {
+      if (e instanceof MakyPayException) throw e;
       throw new MakyPayException(`Failed to complete subscription: ${e}`);
     }
   }
@@ -512,6 +519,9 @@ export class MakyPayService {
     result: MakyPayCollectionResult
   ): Promise<void> {
     try {
+      if (!supabaseAdmin) {
+        console.warn('storeTransaction: supabaseAdmin not available, transaction record may not be stored due to RLS');
+      }
       const dbClient = supabaseAdmin || supabase;
       const { error } = await dbClient
         .from('makypay_transactions')
@@ -546,6 +556,9 @@ export class MakyPayService {
     result: MakyPayCardCollectionResult
   ): Promise<void> {
     try {
+      if (!supabaseAdmin) {
+        console.warn('storeCardTransaction: supabaseAdmin not available, transaction record may not be stored due to RLS');
+      }
       const dbClient = supabaseAdmin || supabase;
       const { error } = await dbClient
         .from('makypay_transactions')
@@ -589,6 +602,9 @@ export class MakyPayService {
         updateData.error_message = errorMessage;
       }
 
+      if (!supabaseAdmin) {
+        console.warn('updateTransactionStatus: supabaseAdmin not available, status update may fail due to RLS');
+      }
       const dbClient = supabaseAdmin || supabase;
       const { error } = await dbClient
         .from('makypay_transactions')

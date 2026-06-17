@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
 /**
@@ -54,15 +53,18 @@ export async function POST(request: NextRequest) {
 
     // Update by UUID or reference
     // Use service-role client for server-side webhook writes
-    const db = supabaseAdmin || supabase;
-    const { error } = await db
-      .from('makypay_transactions')
-      .update(updateData)
-      .or(`uuid.eq.${transaction.uuid},reference.eq.${transaction.reference}`);
+    if (!supabaseAdmin) {
+      console.error('Webhook: SUPABASE_SERVICE_ROLE_KEY not set — cannot update transaction status');
+    } else {
+      const { error } = await supabaseAdmin
+        .from('makypay_transactions')
+        .update(updateData)
+        .or(`uuid.eq.${transaction.uuid},reference.eq.${transaction.reference}`);
 
-    if (error) {
-      console.error('Failed to update transaction from webhook:', error);
-      // Don't return error to MakyPay - we received the webhook
+      if (error) {
+        console.error('Failed to update transaction from webhook:', error);
+        // Don't return error to MakyPay - we received the webhook
+      }
     }
 
     // Handle specific event types
@@ -119,12 +121,16 @@ async function activateSubscriptionFromTransaction(
   transactionUuid: string,
   transactionReference: string
 ): Promise<void> {
-  // Use service-role client: webhook runs without user session, so
+  // Require service-role client: webhook runs without user session, so
   // auth.uid() is NULL and RLS on profiles (auth.uid() = id) would block writes
-  const db = supabaseAdmin || supabase;
+  if (!supabaseAdmin) {
+    console.error('Webhook: SUPABASE_SERVICE_ROLE_KEY is not set — cannot activate subscription from webhook');
+    return;
+  }
+
   try {
     // Look up the transaction to find the user and plan details
-    const { data: txRecord, error: txError } = await db
+    const { data: txRecord, error: txError } = await supabaseAdmin
       .from('makypay_transactions')
       .select('user_id, description, amount')
       .or(`uuid.eq.${transactionUuid},reference.eq.${transactionReference}`)
@@ -136,7 +142,7 @@ async function activateSubscriptionFromTransaction(
     }
 
     // Check if user already has an active subscription (avoid duplicate activation)
-    const { data: profile } = await db
+    const { data: profile } = await supabaseAdmin
       .from('profiles')
       .select('subscription, subscription_expiry_date')
       .eq('id', txRecord.user_id)
@@ -151,44 +157,52 @@ async function activateSubscriptionFromTransaction(
     }
 
     // Parse plan name from the description (format: "Subscription: Plan Name")
-    const planName = txRecord.description?.replace(/^Subscription:\s*/i, '').toLowerCase() || 'basic';
+    const planName = txRecord.description?.replace(/^Subscription:\s*/i, '').toLowerCase().trim() || 'basic';
 
-    // Look up the plan to get the duration
-    const { data: plan } = await db
+    // Look up the plan to get the duration — use exact case-insensitive match
+    // (fuzzy %like% can match multiple plans and cause PGRST116 errors)
+    const { data: plan } = await supabaseAdmin
       .from('plans')
       .select('name, duration_in_days')
-      .ilike('name', `%${planName}%`)
-      .single();
+      .ilike('name', planName)
+      .maybeSingle();
 
     const durationDays = plan?.duration_in_days || 30;
+    // Use the canonical plan name from DB if found, otherwise use parsed name
+    const canonicalPlanName = plan?.name?.toLowerCase() || planName;
     const now = new Date();
     const expiryDate = new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000);
 
-    // Insert subscription record
-    await db
-      .from('subscriptions')
-      .insert({
-        user_id: txRecord.user_id,
-        plan: planName,
-        payment_method: 'makypay_mobile_money',
-        subscribed_at: now.toISOString(),
-      });
-
-    // Update user profile — MUST use service-role to bypass profiles RLS
-    const { error: profileError } = await db
+    // Update user profile FIRST — this is the critical write for access control
+    const { error: profileError } = await supabaseAdmin
       .from('profiles')
       .update({
-        subscription: planName,
+        subscription: canonicalPlanName,
         subscription_start_date: now.toISOString(),
         subscription_expiry_date: expiryDate.toISOString(),
       })
       .eq('id', txRecord.user_id);
 
     if (profileError) {
-      console.error('Webhook: Failed to update profile subscription:', profileError);
-    } else {
-      console.log(`✅ Webhook: Subscription activated for user ${txRecord.user_id} (${planName}, ${durationDays} days)`);
+      console.error('Webhook: CRITICAL — Failed to update profile subscription:', profileError);
+      return; // Don't insert subscription record if profile update failed
     }
+
+    // Insert subscription record (payment ledger — non-critical)
+    const { error: subError } = await supabaseAdmin
+      .from('subscriptions')
+      .insert({
+        user_id: txRecord.user_id,
+        plan: canonicalPlanName,
+        payment_method: 'makypay_mobile_money',
+        subscribed_at: now.toISOString(),
+      });
+
+    if (subError) {
+      console.error('Webhook: Non-critical — Failed to insert subscription record:', subError);
+    }
+
+    console.log(`✅ Webhook: Subscription activated for user ${txRecord.user_id} (${canonicalPlanName}, ${durationDays} days)`);
   } catch (e) {
     console.error('Webhook: Error activating subscription:', e);
   }

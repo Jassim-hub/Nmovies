@@ -26,8 +26,10 @@ if (!supabaseUrl) {
  */
 function createServiceClient() {
   if (!serviceRoleKey) {
-    console.warn(
-      'SUPABASE_SERVICE_ROLE_KEY not set — server-side writes may fail due to RLS restrictions.'
+    console.error(
+      '⚠️ CRITICAL: SUPABASE_SERVICE_ROLE_KEY is not set. ' +
+      'Payment activations, webhook processing, and profile updates WILL FAIL silently due to RLS restrictions. ' +
+      'Set this environment variable in production immediately.'
     );
     return null;
   }

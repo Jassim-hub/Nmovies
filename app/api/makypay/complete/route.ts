@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { MakyPayService } from '@/lib/makypay';
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { supabase } from '@/lib/supabase';
 import { createClient } from '@supabase/supabase-js';
 
 export async function POST(request: NextRequest) {
@@ -18,7 +17,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Use service-role client for all server-side operations (bypasses RLS)
-    const db = supabaseAdmin || supabase;
+    if (!supabaseAdmin) {
+      console.error('SUPABASE_SERVICE_ROLE_KEY is not set — cannot complete subscription');
+      return NextResponse.json(
+        { error: 'Server configuration error. Please contact support.' },
+        { status: 500 }
+      );
+    }
+    const db = supabaseAdmin;
 
     // Try resolving user from provided session access token
     let resolvedUserId: string | null = userId ?? null;
@@ -119,7 +125,7 @@ export async function POST(request: NextRequest) {
         .from('plans')
         .select('name, duration_in_days, amount, active')
         .ilike('name', planNameNormalized)
-        .single();
+        .maybeSingle();
 
       if (planError) {
         console.warn('Could not look up plan from DB:', planError.message);
