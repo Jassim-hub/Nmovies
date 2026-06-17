@@ -270,12 +270,12 @@ export async function getReelplexiTrendingSeries(page = 1, perPage = 20) {
 }
 
 export async function getReelplexiMoviesByGenre(genre: string, page = 1, perPage = 20) {
-  const res = await fetchReelplexi(`/v1/genres/${genre}/movies`, { page, per_page: perPage });
+  const res = await fetchReelplexi(`/v1/genres/${genre.toLowerCase()}/movies`, { page, per_page: perPage });
   return (res.data || []).map(normalizeReelplexiMovie);
 }
 
 export async function getReelplexiSeriesByGenre(genre: string, page = 1, perPage = 20) {
-  const res = await fetchReelplexi(`/v1/genres/${genre}/series`, { page, per_page: perPage });
+  const res = await fetchReelplexi(`/v1/genres/${genre.toLowerCase()}/series`, { page, per_page: perPage });
   return (res.data || []).map(normalizeReelplexiSeries);
 }
 
