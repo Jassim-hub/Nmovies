@@ -22,6 +22,15 @@ export async function getMovieById(id: string) {
   }
 }
 
+export async function getMovieTrailers(id: string) {
+  try {
+    return await Reelplexi.getReelplexiMovieTrailers(id);
+  } catch (error) {
+    console.error(`Error fetching movie trailers ${id}:`, error);
+    return [];
+  }
+}
+
 export async function getMovieStream(id: string) {
   try {
     return await Reelplexi.getReelplexiMovieStream(id);
@@ -72,6 +81,15 @@ export async function getSeriesById(id: string) {
   } catch (error) {
     console.error(`Error fetching series ${id}:`, error);
     return null;
+  }
+}
+
+export async function getSeriesTrailers(id: string) {
+  try {
+    return await Reelplexi.getReelplexiSeriesTrailers(id);
+  } catch (error) {
+    console.error(`Error fetching series trailers ${id}:`, error);
+    return [];
   }
 }
 

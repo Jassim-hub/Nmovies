@@ -297,6 +297,24 @@ export async function getReelplexiRelatedSeriesByGenre(id: string, page = 1, per
   }
 }
 
+export async function getReelplexiMovieTrailers(id: string) {
+  try {
+    const res = await fetchReelplexi(`/v1/movies/${id}/trailers`);
+    return res.trailers || [];
+  } catch {
+    return [];
+  }
+}
+
+export async function getReelplexiSeriesTrailers(id: string) {
+  try {
+    const res = await fetchReelplexi(`/v1/series/${id}/trailers`);
+    return res.trailers || [];
+  } catch {
+    return [];
+  }
+}
+
 export async function getReelplexiMovieStream(id: string) {
   try {
     return await fetchReelplexi(`/v1/movies/${id}/stream`);

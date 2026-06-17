@@ -94,26 +94,37 @@ export default function MovieDetailsPage() {
         }),
       }).catch(() => {}); // silently ignore errors
 
+      // Fetch trailers from Reelplexi
+      let trailerUrlStr = "";
+      try {
+        const trailers = await api.getMovieTrailers(params.id as string);
+        if (trailers && trailers.length > 0 && trailers[0].key) {
+           trailerUrlStr = `https://www.youtube.com/watch?v=${trailers[0].key}`;
+        }
+      } catch (e) {
+        console.error('Failed to fetch trailers');
+      }
+
       // 2. Determine Video Player State based on Auth
       const authResult = checkAuth(data.premium);
       setHasRights(authResult.allowed);
 
       if (!authResult.allowed) {
          // No rights: Play Trailer Only
-         if (data.trailer_url) {
-            setStreamUrl(normalizeVideoUrl(data.trailer_url));
+         if (trailerUrlStr) {
+            setStreamUrl(trailerUrlStr);
             setIsPlayingTrailer(true);
          }
       } else {
          // Has rights: Play Trailer first (if available), then fetch secure video URL
-         if (data.trailer_url) {
-            setStreamUrl(normalizeVideoUrl(data.trailer_url));
+         if (trailerUrlStr) {
+            setStreamUrl(trailerUrlStr);
             setIsPlayingTrailer(true);
          }
          // Fetch the actual video URL from Reelplexi
          try {
            const streamData = await api.getMovieStream(params.id as string);
-           if (streamData && streamData.video_url && !data.trailer_url) {
+           if (streamData && streamData.video_url && !trailerUrlStr) {
              setStreamUrl(streamData.video_url);
              setIsPlayingTrailer(false);
            }

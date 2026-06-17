@@ -159,9 +159,20 @@ export default function SeriesDetailsPage() {
           }),
         }).catch(() => {});
 
+        // Fetch trailers from Reelplexi
+        let trailerUrlStr = "";
+        try {
+          const trailers = await api.getSeriesTrailers(params.id as string);
+          if (trailers && trailers.length > 0 && trailers[0].key) {
+             trailerUrlStr = `https://www.youtube.com/watch?v=${trailers[0].key}`;
+          }
+        } catch (e) {
+          console.error('Failed to fetch series trailers');
+        }
+
         // Auto-play trailer if available
-        if (seriesData.trailer_url) {
-           setStreamUrl(normalizeVideoUrl(seriesData.trailer_url));
+        if (trailerUrlStr) {
+           setStreamUrl(trailerUrlStr);
            setIsPlayingTrailer(true);
         }
 
