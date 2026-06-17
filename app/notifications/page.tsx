@@ -1,7 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import Header from '@/app/components/Header';
+import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { getReelplexiAppNotifications } from '@/lib/reelplexi';
 
@@ -15,7 +15,7 @@ export default async function NotificationsPage() {
       <Header />
       <main className="container mx-auto px-4 py-24">
         <h1 className="text-3xl font-bold mb-8">Notifications</h1>
-        
+
         {notifications.length === 0 ? (
           <div className="text-center text-gray-400 py-12">
             No notifications yet.
@@ -23,13 +23,13 @@ export default async function NotificationsPage() {
         ) : (
           <div className="space-y-4 max-w-4xl mx-auto">
             {notifications.map((notif: any) => {
-              const linkUrl = notif.content_type && notif.content_id 
+              const linkUrl = notif.content_type && notif.content_id
                 ? `/${notif.content_type === 'movie' ? 'movies' : 'series'}/${notif.content_id}`
                 : '#';
-                
+
               return (
-                <Link 
-                  href={linkUrl} 
+                <Link
+                  href={linkUrl}
                   key={notif.id}
                   className="bg-[#1f1f1f] border border-gray-800 rounded-lg p-4 flex gap-4 hover:bg-[#2a2a2a] transition-colors"
                 >
