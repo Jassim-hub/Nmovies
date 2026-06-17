@@ -858,6 +858,8 @@ export default function UsersPage() {
             </Button>
           </DialogFooter>
         </DialogContent>
+      </Dialog>
+
       {/* Deactivate Confirmation Modal */}
       <Dialog open={isDeactivateModalOpen} onOpenChange={setIsDeactivateModalOpen}>
         <DialogContent className="mx-4 sm:mx-0 max-w-md sm:max-w-lg bg-[#1a1c21] border-gray-800 text-white shadow-2xl">
