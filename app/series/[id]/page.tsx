@@ -94,17 +94,26 @@ export default function SeriesDetailsPage() {
           
           const seasonsWithEpisodes = await Promise.all(
             seasonsList.map(async (season: any) => {
-              const episodes = await api.getEpisodes(params.id as string, season.season_number || season.order || 1);
-              
-              const seasonEps = episodes || [];
+              const seasonNum = season.season_number || season.order || 1;
+              const seasonId = season.id || String(seasonNum);
+
+              // Use already-embedded episodes if available (from normalizeReelplexiSeries),
+              // otherwise fall back to the dedicated API call.
+              let seasonEps: any[] = [];
+              if (Array.isArray(season.episodes) && season.episodes.length > 0) {
+                seasonEps = season.episodes;
+              } else {
+                seasonEps = await api.getEpisodes(params.id as string, seasonNum) || [];
+              }
+
               const mappedEps = seasonEps.map((e: any) => ({
-                  ...e,
-                  seasonName: season.name || `Season ${season.season_number || season.order || 1}`,
-                  seasonOrder: season.season_number || season.order || 1,
-                  season_id: season.id || String(season.season_number || season.order || 1)
+                ...e,
+                seasonName: season.name || `Season ${seasonNum}`,
+                seasonOrder: seasonNum,
+                season_id: seasonId,
               })) as unknown as EpisodeWithSeason[];
               loadedEpisodes = [...loadedEpisodes, ...mappedEps];
-              return { ...season, episodes: seasonEps, id: season.id || String(season.season_number || season.order || 1) };
+              return { ...season, episodes: seasonEps, id: seasonId };
             })
           );
           (seriesData as any).seasons = seasonsWithEpisodes;

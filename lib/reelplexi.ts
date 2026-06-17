@@ -106,9 +106,24 @@ export function normalizeReelplexiSeries(raw: any): any {
   const vjName = extractVjName(raw);
   const posterUrl = asString(raw.poster_url) || asString(raw.thumbnail_url) || '';
   const backdropUrl = asString(raw.backdrop_url) || posterUrl;
-  
+  const seriesId = asString(raw.id) || '';
+
+  // Preserve embedded seasons and their episodes — the dedicated episodes
+  // endpoint is unreliable; this embedded data is the source of truth.
+  const rawSeasons = Array.isArray(raw.seasons) ? raw.seasons : [];
+  const seasons = rawSeasons.map((s: any) => ({
+    season_number: s.season_number || 1,
+    name: s.name || `Season ${s.season_number || 1}`,
+    overview: s.overview || '',
+    episode_count: s.episode_count || (Array.isArray(s.episodes) ? s.episodes.length : 0),
+    poster_path: s.poster_path || s.poster_url || '',
+    episodes: Array.isArray(s.episodes)
+      ? s.episodes.map((ep: any) => normalizeReelplexiEpisode(seriesId, s.season_number || 1, ep))
+      : [],
+  }));
+
   return {
-    id: asString(raw.id) || '',
+    id: seriesId,
     title: asString(raw.title) || asString(raw.name) || 'Untitled',
     description: asString(raw.description) || asString(raw.overview) || '',
     release_date: asString(raw.first_air_date) || yearToDate(raw.year) || asString(raw.release_date) || new Date().toISOString(),
@@ -117,19 +132,22 @@ export function normalizeReelplexiSeries(raw: any): any {
     trailer_url: asString(raw.trailer_url),
     genre_ids: genres.map(g => g.toLowerCase()),
     published: true,
-    premium: raw.premium !== false, // All content is paid for by default
+    premium: raw.premium !== false,
     created_at: raw.created_at || new Date().toISOString(),
     vj_id: vjName ? vjName.toLowerCase() : undefined,
     tmdb_id: raw.tmdb_id || undefined,
     vjs: vjName ? { id: vjName.toLowerCase(), name: vjName } : null,
-    type: 'series'
+    type: 'series',
+    season_count: raw.no_of_seasons || seasons.length || 0,
+    seasons,
   };
 }
 
 export function normalizeReelplexiEpisode(seriesId: string, seasonNumber: number, raw: any): any {
   if (!raw) return null;
   const episodeNumber = parseInt(raw.episode_number || 0, 10);
-  const posterUrl = asString(raw.poster_url) || asString(raw.thumbnail_url) || '';
+  // Support both dedicated endpoint format (poster_url/thumbnail_url) and embedded format (still_path)
+  const posterUrl = asString(raw.poster_url) || asString(raw.thumbnail_url) || asString(raw.still_path) || '';
   const backdropUrl = asString(raw.backdrop_url) || posterUrl;
   const syntheticId = `${seriesId}:season:${seasonNumber}:episode:${episodeNumber}`;
 
@@ -139,10 +157,11 @@ export function normalizeReelplexiEpisode(seriesId: string, seasonNumber: number
     title: asString(raw.title) || asString(raw.name) || `Episode ${episodeNumber}`,
     episode_number: episodeNumber,
     description: asString(raw.description) || asString(raw.overview) || '',
-    video_url: asString(raw.stream_url) || asString(raw.proxy_url),
+    // Support both dedicated endpoint (stream_url/proxy_url) and embedded format (video_url)
+    video_url: asString(raw.stream_url) || asString(raw.proxy_url) || asString(raw.video_url),
     embed_url: asString(raw.embed_url) || `https://embed.reelplexi.com/tv/${seriesId}/${seasonNumber}/${episodeNumber}?key=${REELPLEXI_API_KEY}`,
     published: true,
-    premium: raw.premium !== false, // All content is paid for by default
+    premium: raw.premium !== false,
     duration: raw.duration_mins || raw.runtime || 45,
     thumbnail_url: posterUrl,
     cover_image_url: backdropUrl,
@@ -231,13 +250,31 @@ export async function getReelplexiSeriesById(id: string) {
 }
 
 export async function getReelplexiEpisodes(seriesId: string, season: number) {
+  // Try the dedicated endpoint first
   try {
     const res = await fetchReelplexi(`/v1/series/${seriesId}/seasons/${season}/episodes`);
-    return (res.data || []).map((ep: any) => normalizeReelplexiEpisode(seriesId, season, ep));
+    const episodes = (res.data || []).map((ep: any) => normalizeReelplexiEpisode(seriesId, season, ep));
+    if (episodes.length > 0) return episodes;
+    // Empty result — fall through to embedded extraction below
   } catch (e) {
-    if (e instanceof ReelplexiError && e.status === 404) return [];
-    throw e;
+    if (!(e instanceof ReelplexiError && e.status === 404)) throw e;
+    // 404 — fall through to embedded extraction below
   }
+
+  // Fallback: the series endpoint already embeds seasons[].episodes[].
+  // Extract from there instead of returning empty.
+  try {
+    const seriesRes = await fetchReelplexi(`/v1/series/${seriesId}`);
+    const seriesRaw = seriesRes.data || seriesRes;
+    const rawSeasons = Array.isArray(seriesRaw.seasons) ? seriesRaw.seasons : [];
+    const target = rawSeasons.find((s: any) => (s.season_number || 1) === season);
+    if (target && Array.isArray(target.episodes) && target.episodes.length > 0) {
+      return target.episodes.map((ep: any) => normalizeReelplexiEpisode(seriesId, season, ep));
+    }
+  } catch {
+    // Ignore — return empty below
+  }
+  return [];
 }
 
 export async function getReelplexiGenres() {
