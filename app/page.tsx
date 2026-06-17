@@ -53,13 +53,13 @@ const VJCard = ({ content }: { content: VJContent }) => (
           />
 
           <div className="absolute top-2 left-2 bg-yellow-500 px-2 py-0.5 rounded text-[10px] font-bold text-black flex items-center gap-1 shadow-md z-10">
-             <Star className="w-3 h-3 fill-black" />
-             {('rating' in content && typeof content.rating === 'number') ? content.rating.toFixed(1) : (Math.random() * 2 + 7).toFixed(1)}
+            <Star className="w-3 h-3 fill-black" />
+            {('rating' in content && typeof content.rating === 'number') ? content.rating.toFixed(1) : (Math.random() * 2 + 7).toFixed(1)}
           </div>
 
           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center z-10">
             <div className="bg-[#E50914] rounded-full w-10 h-10 flex items-center justify-center transform scale-0 group-hover:scale-100 transition-transform duration-300 delay-100">
-               <Play fill="white" className="w-4 h-4 ml-0.5 text-white" />
+              <Play fill="white" className="w-4 h-4 ml-0.5 text-white" />
             </div>
           </div>
         </div>
@@ -118,16 +118,16 @@ export default function HomePage() {
         const itemPromises = watchlist.map(async (id) => {
           let item = await (await import('@/lib/api')).getMovieById(id);
           if (item) return { ...item, type: 'movie' as const };
-          
+
           item = await (await import('@/lib/api')).getSeriesById(id) as any;
           if (item) return { ...item, type: 'series' as const };
-          
+
           return null;
         });
-        
+
         const results = await Promise.all(itemPromises);
         const validItems = results.filter(Boolean);
-        
+
         // Items are already in the order of the promises (which matches the watchlist array order).
         // Since we want the most recently added last (or first, depending on design), we'll just reverse the validItems
         setWatchlistItems(validItems.reverse());
@@ -144,7 +144,7 @@ export default function HomePage() {
         const vjData = await getVJContent(8);
         setFeaturedContent(vjData.slice(0, 5) as any);
         setVJContent(vjData as any);
-        setLoading(false); 
+        setLoading(false);
 
         const api = await import('@/lib/api');
         const Reelplexi = await import('@/lib/reelplexi');
@@ -184,8 +184,8 @@ export default function HomePage() {
   const top10Content = [];
   const maxLength = Math.max(latestMovies.slice(0, 5).length, latestSeries.slice(0, 5).length);
   for (let i = 0; i < maxLength; i++) {
-     if (latestMovies[i]) top10Content.push(latestMovies[i]);
-     if (latestSeries[i]) top10Content.push(latestSeries[i]);
+    if (latestMovies[i]) top10Content.push(latestMovies[i]);
+    if (latestSeries[i]) top10Content.push(latestSeries[i]);
   }
   const finalTop10 = top10Content.slice(0, 10);
 
@@ -275,12 +275,12 @@ export default function HomePage() {
                           )}
                         </div>
 
-                        <div 
+                        <div
                           className="flex items-center gap-4 relative z-50 swiper-no-swiping"
                           onClick={(e) => e.stopPropagation()}
                           onPointerDown={(e) => e.stopPropagation()}
                         >
-                          <button 
+                          <button
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
@@ -295,7 +295,7 @@ export default function HomePage() {
                               <Plus className="w-5 h-5 md:w-6 md:h-6 text-white" />
                             )}
                           </button>
-                          
+
                           <Button
                             size="lg"
                             className="font-bold px-8 md:px-10 py-6 md:py-7 rounded bg-[#E50914] text-white hover:bg-[#b80710] transition-all duration-300 flex items-center shadow-[0_8px_25px_rgba(229,9,20,0.4)] hover:scale-105 active:scale-95 cursor-pointer"
@@ -319,10 +319,10 @@ export default function HomePage() {
                           </Button>
 
                           <div onClick={(e) => e.stopPropagation()} className="cursor-pointer">
-                            <ShareButton 
-                              title={content.title} 
+                            <ShareButton
+                              title={content.title}
                               url={`${typeof window !== 'undefined' ? window.location.origin : ''}/${content.type === 'movie' ? 'movies' : 'series'}/${content.id}`}
-                              variant="icon" 
+                              variant="icon"
                               className="!w-10 !h-10 md:!w-12 md:!h-12 backdrop-blur-md"
                             />
                           </div>
@@ -338,7 +338,7 @@ export default function HomePage() {
 
         {/* Dynamic Content Layers */}
         <div className="relative z-20 mt-4 md:mt-8 pb-8 space-y-4 md:space-y-6">
-          
+
           {/* Top 10 Row */}
           {finalTop10.length > 0 && (
             <section className="mb-4">
@@ -346,9 +346,9 @@ export default function HomePage() {
                 <div className="flex items-center justify-between mb-2 md:mb-4 border-b border-gray-800 pb-2">
                   <h2 className="text-xl md:text-2xl font-bold text-white uppercase tracking-wide">Top 10</h2>
                 </div>
-                
-                <Swiper 
-                  {...rowSwiperSettings} 
+
+                <Swiper
+                  {...rowSwiperSettings}
                   spaceBetween={5}
                   breakpoints={{
                     480: { slidesPerView: 2.5 },
@@ -375,9 +375,9 @@ export default function HomePage() {
                 <div className="flex items-center justify-between mb-4 border-b border-gray-800 pb-2">
                   <h2 className="text-xl md:text-2xl font-bold text-white uppercase tracking-wide">Continue Watching</h2>
                 </div>
-                
-                <Swiper 
-                  {...rowSwiperSettings} 
+
+                <Swiper
+                  {...rowSwiperSettings}
                   className="streamit-row-swiper"
                 >
                   {continueWatching.map((item) => {
@@ -434,9 +434,9 @@ export default function HomePage() {
                   <h2 className="text-xl md:text-2xl font-bold text-white uppercase tracking-wide">My Watchlist</h2>
                   <Link href="/profile" className="text-[#E50914] hover:text-[#b80710] text-sm font-semibold transition-colors uppercase tracking-wider">Manage</Link>
                 </div>
-                
-                <Swiper 
-                  {...rowSwiperSettings} 
+
+                <Swiper
+                  {...rowSwiperSettings}
                   className="streamit-row-swiper"
                 >
                   {watchlistItems.map((item) => (
@@ -481,7 +481,7 @@ export default function HomePage() {
                 <h2 className="text-xl md:text-2xl font-bold text-white uppercase tracking-wide">Latest Movies</h2>
                 <Link href="/movies" className="text-[#E50914] hover:text-[#b80710] text-sm font-semibold transition-colors uppercase tracking-wider">View All</Link>
               </div>
-              
+
               {latestMovies.length > 0 ? (
                 <Swiper {...rowSwiperSettings}>
                   {latestMovies.map((movie) => (
@@ -505,7 +505,7 @@ export default function HomePage() {
                 <h2 className="text-xl md:text-2xl font-bold text-white uppercase tracking-wide">Latest Series</h2>
                 <Link href="/series" className="text-[#E50914] hover:text-[#b80710] text-sm font-semibold transition-colors uppercase tracking-wider">View All</Link>
               </div>
-              
+
               {latestSeries.length > 0 ? (
                 <Swiper {...rowSwiperSettings}>
                   {latestSeries.map((show) => (
@@ -532,7 +532,7 @@ export default function HomePage() {
                       <h2 className="text-xl md:text-2xl font-bold text-white uppercase tracking-wide">{genre.name} Movies</h2>
                       <Link href="/movies" className="text-[#E50914] hover:text-[#b80710] text-sm font-semibold transition-colors uppercase tracking-wider">View All</Link>
                     </div>
-                    
+
                     <Swiper {...rowSwiperSettings}>
                       {genre.movies.map((item) => (
                         <SwiperSlide key={item.id}>
@@ -560,7 +560,7 @@ export default function HomePage() {
               <div className="container mx-auto px-4 md:px-12">
                 <div className="flex items-center justify-between mb-6 border-b border-gray-800 pb-2">
                   <h2 className="text-xl md:text-2xl font-bold text-white uppercase tracking-wide">
-                    🎬 Animation
+                    Animation
                   </h2>
                   <Link href="/movies?genre=animation" className="text-[#E50914] hover:text-[#b80710] text-sm font-semibold transition-colors uppercase tracking-wider">
                     View All
