@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from "react"
-import { supabase } from "@/lib/supabase"
 import { NetflixCard } from "@/components/NetflixCard"
 import { Search, X, ChevronDown } from "lucide-react"
 
@@ -70,8 +69,9 @@ export default function SearchPage() {
     const loadInitialData = async () => {
       try {
         const api = await import("@/lib/api")
+        // VJs come from the Reelplexi API (not Supabase). getVJs() maps id=name.
         const [vjRes, genreRes] = await Promise.all([
-          supabase.from('vjs').select('id, name').order('name').then(res => res.data || []),
+          api.getVJs(),
           api.getGenres()
         ])
         setVjs(vjRes || [])
@@ -84,6 +84,7 @@ export default function SearchPage() {
   }, [])
 
   // Fetch content whenever query, VJ, or genre changes using the backend Search API
+  // selectedVJ is already the VJ name string (getVJs maps id=name), use it directly.
   const fetchResults = useCallback(async (pageNum: number) => {
     const isLoadMore = pageNum > 1
     if (isLoadMore) setLoadingMore(true)
@@ -93,15 +94,15 @@ export default function SearchPage() {
       const api = await import("@/lib/api")
       const limit = 50
 
-      const selectedVJName = vjs.find((v) => v.id === selectedVJ)?.name
+      // selectedVJ is the VJ name (id === name from getVJs), pass directly
+      const vjNameParam = selectedVJ || undefined
       const selectedGenreName = genres.find((g) => g.id === selectedGenre)?.name
 
       let newMovies: any[] = []
       let newSeries: any[] = []
 
-      // We can use the new searchAllContent if there is a query, or fetch movies/series if no query
-      if (searchQuery.trim() || selectedVJName || selectedGenreName) {
-        const items = await api.searchAllContent(searchQuery.trim(), limit, pageNum, selectedVJName, selectedGenreName)
+      if (searchQuery.trim() || vjNameParam || selectedGenreName) {
+        const items = await api.searchAllContent(searchQuery.trim(), limit, pageNum, vjNameParam, selectedGenreName)
         newMovies = items.filter((item: any) => item.type === 'movie')
         newSeries = items.filter((item: any) => item.type === 'series')
       } else {
@@ -129,18 +130,14 @@ export default function SearchPage() {
         setSeries(newSeries)
       }
 
-      if (newMovies.length === 0 && newSeries.length === 0) {
-        setHasMore(false)
-      } else {
-        setHasMore(true)
-      }
+      setHasMore(newMovies.length > 0 || newSeries.length > 0)
     } catch (error) {
       console.error("Error fetching search results:", error)
     } finally {
       if (isLoadMore) setLoadingMore(false)
       else setLoading(false)
     }
-  }, [searchQuery, selectedVJ, selectedGenre, vjs, genres])
+  }, [searchQuery, selectedVJ, selectedGenre, genres])
 
   useEffect(() => {
     setPage(1)

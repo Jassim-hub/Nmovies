@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { InlineSpinner } from "@/components/LoadingSpinner";
 import { useEffect, useState, useCallback } from "react";
 import { Series } from "@/lib/supabase";
-import { supabase } from "@/lib/supabase";
 import { StreamitHoverCard } from "@/components/StreamitHoverCard";
 import { NetflixCard } from "@/components/NetflixCard";
 
@@ -30,9 +29,8 @@ export default function SeriesPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalSeries, setTotalSeries] = useState(0);
 
-  const seriesPerPage = 48; // More items per page for compact design
+  const seriesPerPage = 48;
 
-  // Fetch functions with useCallback to prevent recreation
   const fetchAvailableVJs = useCallback(async () => {
     try {
       const api = await import('@/lib/api');
@@ -43,28 +41,26 @@ export default function SeriesPage() {
     }
   }, []);
 
-  const fetchSeries = useCallback(async (page: number, query = "", vjId = "") => {
+  // selectedVJ is already the VJ name (getVJs maps id=name), pass it directly
+  const fetchSeries = useCallback(async (page: number, query = "", vjName = "") => {
     setLoading(true);
     try {
       const api = await import('@/lib/api');
-      const vjName = availableVJs.find(v => v.id === vjId)?.name;
-      const seriesData = await api.searchSeries(query, seriesPerPage, page, vjName);
+      const seriesData = await api.searchSeries(query, seriesPerPage, page, vjName || undefined);
       setSeries(seriesData as any[]);
-      
       setTotalSeries(seriesData.length === seriesPerPage ? page * seriesPerPage + 1 : (page - 1) * seriesPerPage + seriesData.length);
     } catch (error) {
       console.error('Error fetching series:', error);
     } finally {
       setLoading(false);
     }
-  }, [seriesPerPage, availableVJs]);
+  }, [seriesPerPage]);
 
   // Initial load
   useEffect(() => {
     fetchSeries(1);
     fetchAvailableVJs();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [fetchSeries, fetchAvailableVJs]);
 
   // Handle pagination changes
   useEffect(() => {
@@ -74,15 +70,13 @@ export default function SeriesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage]);
 
-  // Handle search with debounce
+  // Handle search/VJ filter with debounce
   useEffect(() => {
     const handler = setTimeout(() => {
-      if (searchQuery !== undefined) {
-        if (currentPage !== 1) {
-          setCurrentPage(1);
-        } else {
-          fetchSeries(1, searchQuery, selectedVJ);
-        }
+      if (currentPage !== 1) {
+        setCurrentPage(1);
+      } else {
+        fetchSeries(1, searchQuery, selectedVJ);
       }
     }, 400);
     return () => clearTimeout(handler);
@@ -94,8 +88,10 @@ export default function SeriesPage() {
     setSearchQuery("");
     setCurrentPage(1);
   };
+
   const totalPages = Math.ceil(totalSeries / seriesPerPage);
-  const isFiltering = searchQuery.trim().length > 0 || selectedVJ;
+  const isFiltering = searchQuery.trim().length > 0 || !!selectedVJ;
+  const selectedVJLabel = availableVJs.find(vj => vj.id === selectedVJ)?.name;
 
   return (
     <div className="min-h-screen bg-black text-white py-8 flex flex-col items-center">
@@ -125,7 +121,7 @@ export default function SeriesPage() {
                 onClick={() => setShowVJDropdown(!showVJDropdown)}
               >
                 <Filter className="w-4 h-4 mr-2" />
-                {selectedVJ ? availableVJs.find(vj => vj.id === selectedVJ)?.name : 'VJ Filter'}
+                {selectedVJLabel || 'VJ Filter'}
                 <ChevronDown className="w-4 h-4 ml-2" />
               </Button>
 
@@ -148,7 +144,7 @@ export default function SeriesPage() {
                           setSelectedVJ(vj.id);
                           setShowVJDropdown(false);
                         }}
-                        className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 rounded"
+                        className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-700 rounded ${selectedVJ === vj.id ? 'text-[#E50914] font-semibold' : 'text-gray-300'}`}
                       >
                         {vj.name}
                       </button>
@@ -176,7 +172,7 @@ export default function SeriesPage() {
             <p className="text-gray-400 mb-4">
               {loading ? 'Searching...' : `${series.length} results`}
               {searchQuery && ` for "${searchQuery}"`}
-              {selectedVJ && ` by ${availableVJs.find(vj => vj.id === selectedVJ)?.name}`}
+              {selectedVJ && ` by ${selectedVJLabel}`}
             </p>
           )}
         </div>
@@ -184,7 +180,7 @@ export default function SeriesPage() {
         {/* Loading State */}
         {loading && <InlineSpinner text="Loading series..." />}
 
-        {/* Series Grid - Compact Mobile Design */}
+        {/* Series Grid */}
         {!loading && (
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-x-2 gap-y-4">
             {series.map((show) => (
@@ -263,7 +259,7 @@ export default function SeriesPage() {
           <div className="text-center mt-8 text-gray-400">
             Found {series.length} series
             {searchQuery && ` matching "${searchQuery}"`}
-            {selectedVJ && ` by ${availableVJs.find(vj => vj.id === selectedVJ)?.name}`}
+            {selectedVJ && ` by ${selectedVJLabel}`}
           </div>
         )}
       </div>

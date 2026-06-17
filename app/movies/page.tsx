@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useEffect, useState, useCallback } from "react";
 import { Movie } from "@/lib/supabase";
-import { supabase } from "@/lib/supabase";
 import { StreamitHoverCard } from "@/components/StreamitHoverCard";
 import { NetflixCard } from "@/components/NetflixCard";
 
@@ -29,9 +28,8 @@ export default function MoviesPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalMovies, setTotalMovies] = useState(0);
 
-  const moviesPerPage = 48; // More items per page for compact design
+  const moviesPerPage = 48;
 
-  // Fetch functions with useCallback to prevent recreation
   const fetchAvailableVJs = useCallback(async () => {
     try {
       const api = await import('@/lib/api');
@@ -42,33 +40,26 @@ export default function MoviesPage() {
     }
   }, []);
 
-  const fetchMovies = useCallback(async (page: number, query = "", vjId = "") => {
+  // selectedVJ is already the VJ name (getVJs maps id=name), pass it directly
+  const fetchMovies = useCallback(async (page: number, query = "", vjName = "") => {
     setLoading(true);
     try {
       const api = await import('@/lib/api');
-      // Fix: since availableVJs changes, just fetch the VJ name directly from supabase if we don't have it, or ignore.
-      // Better: let's just pass vjId, because we already changed the API to use selectedVJName.
-      // Wait, in app/movies/page.tsx the API requires vjName. 
-      // Let's just use availableVJs inside without adding it to deps, or use a ref.
-      // Actually, since we already fetch the vj list, we can just find it:
-      const vjName = availableVJs.find(v => v.id === vjId)?.name;
-      const moviesData = await api.searchMovies(query, moviesPerPage, page, vjName);
+      const moviesData = await api.searchMovies(query, moviesPerPage, page, vjName || undefined);
       setMovies(moviesData as any);
-      
       setTotalMovies(moviesData.length === moviesPerPage ? page * moviesPerPage + 1 : (page - 1) * moviesPerPage + moviesData.length);
     } catch (error) {
       console.error('Error fetching movies:', error);
     } finally {
       setLoading(false);
     }
-  }, [moviesPerPage, availableVJs]); // We keep it in deps but remove fetchMovies from initial load
+  }, [moviesPerPage]);
 
   // Initial load
   useEffect(() => {
     fetchMovies(1);
     fetchAvailableVJs();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [fetchMovies, fetchAvailableVJs]);
 
   // Handle pagination changes
   useEffect(() => {
@@ -78,30 +69,28 @@ export default function MoviesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage]);
 
-  // Handle search with debounce
+  // Handle search/VJ filter with debounce
   useEffect(() => {
     const handler = setTimeout(() => {
-      if (searchQuery !== undefined) {
-        if (currentPage !== 1) {
-          setCurrentPage(1);
-        } else {
-          fetchMovies(1, searchQuery, selectedVJ);
-        }
+      if (currentPage !== 1) {
+        setCurrentPage(1);
+      } else {
+        fetchMovies(1, searchQuery, selectedVJ);
       }
     }, 400);
     return () => clearTimeout(handler);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery, selectedVJ]); // Removed fetchMovies to prevent loop
+  }, [searchQuery, selectedVJ]);
 
   const clearFilters = () => {
     setSelectedVJ("");
     setSearchQuery("");
     setCurrentPage(1);
-    fetchMovies(1);
   };
 
   const totalPages = Math.ceil(totalMovies / moviesPerPage);
-  const isFiltering = searchQuery.trim().length > 0 || selectedVJ;
+  const isFiltering = searchQuery.trim().length > 0 || !!selectedVJ;
+  const selectedVJLabel = availableVJs.find(vj => vj.id === selectedVJ)?.name;
 
   return (
     <div className="min-h-screen bg-black text-white py-8">
@@ -132,7 +121,7 @@ export default function MoviesPage() {
                 onClick={() => setShowVJDropdown(!showVJDropdown)}
               >
                 <Filter className="w-4 h-4 mr-2" />
-                {selectedVJ ? availableVJs.find(vj => vj.id === selectedVJ)?.name : 'VJ Filter'}
+                {selectedVJLabel || 'VJ Filter'}
                 <ChevronDown className="w-4 h-4 ml-2" />
               </Button>
 
@@ -155,7 +144,7 @@ export default function MoviesPage() {
                           setSelectedVJ(vj.id);
                           setShowVJDropdown(false);
                         }}
-                        className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 rounded"
+                        className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-700 rounded ${selectedVJ === vj.id ? 'text-[#E50914] font-semibold' : 'text-gray-300'}`}
                       >
                         {vj.name}
                       </button>
@@ -183,7 +172,7 @@ export default function MoviesPage() {
             <p className="text-gray-400 mb-4">
               {loading ? 'Searching...' : `${movies.length} results`}
               {searchQuery && ` for "${searchQuery}"`}
-              {selectedVJ && ` by ${availableVJs.find(vj => vj.id === selectedVJ)?.name}`}
+              {selectedVJ && ` by ${selectedVJLabel}`}
             </p>
           )}
         </div>
@@ -195,7 +184,7 @@ export default function MoviesPage() {
           </div>
         )}
 
-        {/* Movies Grid - Compact Mobile Design */}
+        {/* Movies Grid */}
         {!loading && (
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-x-2 gap-y-4">
             {movies.map((movie) => (
@@ -274,7 +263,7 @@ export default function MoviesPage() {
           <div className="text-center mt-8 text-gray-400">
             Found {movies.length} movie{movies.length !== 1 ? 's' : ''}
             {searchQuery && ` matching "${searchQuery}"`}
-            {selectedVJ && ` by ${availableVJs.find(vj => vj.id === selectedVJ)?.name}`}
+            {selectedVJ && ` by ${selectedVJLabel}`}
           </div>
         )}
       </div>
