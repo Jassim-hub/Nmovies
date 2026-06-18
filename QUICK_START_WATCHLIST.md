@@ -2,11 +2,23 @@
 
 ## 🚀 Deploy in 3 Steps
 
-### Step 1: Apply Database Policies (Required)
+### Step 1: Fix Database Schema (Required)
 Run this SQL in your Supabase SQL Editor:
 
 ```sql
--- Enable RLS
+-- First, fix the column types (movie_id and series_id should be TEXT not UUID)
+ALTER TABLE watchlists DROP CONSTRAINT IF EXISTS watchlists_series_id_fkey;
+ALTER TABLE watchlists DROP CONSTRAINT IF EXISTS watchlists_movie_id_fkey;
+ALTER TABLE watchlists DROP CONSTRAINT IF EXISTS watchlists_user_id_series_id_key;
+ALTER TABLE watchlists DROP CONSTRAINT IF EXISTS watchlists_user_id_movie_id_key;
+
+ALTER TABLE watchlists ALTER COLUMN movie_id TYPE TEXT;
+ALTER TABLE watchlists ALTER COLUMN series_id TYPE TEXT;
+
+ALTER TABLE watchlists ADD CONSTRAINT watchlists_user_id_movie_id_key UNIQUE (user_id, movie_id);
+ALTER TABLE watchlists ADD CONSTRAINT watchlists_user_id_series_id_key UNIQUE (user_id, series_id);
+
+-- Now enable RLS
 ALTER TABLE watchlists ENABLE ROW LEVEL SECURITY;
 
 -- Allow users to view their own watchlist

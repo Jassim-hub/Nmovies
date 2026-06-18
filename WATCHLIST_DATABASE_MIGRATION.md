@@ -5,13 +5,24 @@ The watchlist feature now uses the proper `watchlists` database table instead of
 
 ## Database Schema
 
+### Important: ID Type Compatibility
+
+⚠️ **Critical:** Your `movies` and `series` tables use **TEXT/VARCHAR IDs** (like "4008", "1133"), not UUIDs. The `watchlists` table must use the same type for `movie_id` and `series_id` columns.
+
+If you originally created the watchlists table with UUID types, you MUST run the migration script first:
+```sql
+-- See: supabase/migrations/fix_watchlists_id_types.sql
+ALTER TABLE watchlists ALTER COLUMN movie_id TYPE TEXT;
+ALTER TABLE watchlists ALTER COLUMN series_id TYPE TEXT;
+```
+
 ### Watchlists Table Structure
 ```sql
 CREATE TABLE public.watchlists (
   id UUID NOT NULL DEFAULT extensions.uuid_generate_v4(),
   user_id UUID NOT NULL,
-  movie_id UUID NULL,
-  series_id UUID NULL,
+  movie_id TEXT NULL,        -- Changed from UUID to TEXT to match movies.id
+  series_id TEXT NULL,       -- Changed from UUID to TEXT to match series.id
   created_at TIMESTAMP WITH TIME ZONE NULL DEFAULT timezone('utc'::text, now()),
   
   -- Primary Key
@@ -21,9 +32,9 @@ CREATE TABLE public.watchlists (
   CONSTRAINT watchlists_user_id_series_id_key UNIQUE (user_id, series_id),
   CONSTRAINT watchlists_user_id_movie_id_key UNIQUE (user_id, movie_id),
   
-  -- Foreign Keys (with cascade delete)
-  CONSTRAINT watchlists_series_id_fkey FOREIGN KEY (series_id) REFERENCES series (id) ON DELETE CASCADE,
-  CONSTRAINT watchlists_movie_id_fkey FOREIGN KEY (movie_id) REFERENCES movies (id) ON DELETE CASCADE,
+  -- Foreign Keys (commented out if movies/series use TEXT IDs)
+  -- CONSTRAINT watchlists_series_id_fkey FOREIGN KEY (series_id) REFERENCES series (id) ON DELETE CASCADE,
+  -- CONSTRAINT watchlists_movie_id_fkey FOREIGN KEY (movie_id) REFERENCES movies (id) ON DELETE CASCADE,
   CONSTRAINT watchlists_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users (id) ON DELETE CASCADE,
   
   -- Check Constraint (either movie_id OR series_id, not both)
