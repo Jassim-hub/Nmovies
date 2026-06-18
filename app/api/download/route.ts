@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
-  getReelplexiMovieDownloadUrl,
-  getReelplexiEpisodeDownloadUrl,
+  getReelplexiMovieStream,
+  getReelplexiEpisodeStream,
 } from '@/lib/reelplexi';
 
 /**
@@ -41,25 +41,30 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    let resolvedUrl: string | null = null;
+    let streamData: any = null;
 
     if (type === 'movie') {
-      resolvedUrl = await getReelplexiMovieDownloadUrl(id);
+      streamData = await getReelplexiMovieStream(id);
     } else if (type === 'episode' && season && episode) {
-      resolvedUrl = await getReelplexiEpisodeDownloadUrl(
+      streamData = await getReelplexiEpisodeStream(
         id,
         parseInt(season, 10),
         parseInt(episode, 10)
       );
     }
 
+    if (!streamData || (!streamData.stream_url && !streamData.proxy_url)) {
+      return NextResponse.json({ error: 'Download URL not available' }, { status: 404 });
+    }
+
+    const resolvedUrl = streamData.proxy_url || streamData.stream_url;
     if (!resolvedUrl) {
       return NextResponse.json({ error: 'Download URL not available' }, { status: 404 });
     }
 
     return proxyDownload(resolvedUrl, filename);
-  } catch (error: any) {
-    console.error('[Download] Reelplexi lookup error:', error.message);
+  } catch (error) {
+    console.error('[Download Proxy] Reelplexi lookup error:', error);
     return NextResponse.json({ error: 'Failed to resolve download URL' }, { status: 500 });
   }
 }
