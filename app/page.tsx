@@ -114,15 +114,15 @@ export default function HomePage() {
         return;
       }
       try {
-        // Fetch all items from Reelplexi instead of Supabase
-        const itemPromises = watchlist.map(async (id) => {
-          let item = await (await import('@/lib/api')).getMovieById(id);
-          if (item) return { ...item, type: 'movie' as const };
-
-          item = await (await import('@/lib/api')).getSeriesById(id) as any;
-          if (item) return { ...item, type: 'series' as const };
-
-          return null;
+        // Fetch items based on their stored type
+        const itemPromises = watchlist.map(async (item) => {
+          if (item.type === 'movie') {
+            const movie = await (await import('@/lib/api')).getMovieById(item.id);
+            return movie ? { ...movie, type: 'movie' as const } : null;
+          } else {
+            const series = await (await import('@/lib/api')).getSeriesById(item.id);
+            return series ? { ...series, type: 'series' as const } : null;
+          }
         });
 
         const results = await Promise.all(itemPromises);
@@ -284,7 +284,7 @@ export default function HomePage() {
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              isInWatchlist(content.id) ? removeFromWatchlist(content.id) : addToWatchlist(content.id);
+                              isInWatchlist(content.id) ? removeFromWatchlist(content.id) : addToWatchlist(content.id, content.type || 'movie');
                             }}
                             className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all duration-300 backdrop-blur-md cursor-pointer"
                             aria-label={isInWatchlist(content.id) ? "Remove from Watchlist" : "Add to Watchlist"}
