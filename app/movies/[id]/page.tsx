@@ -322,7 +322,7 @@ export default function MovieDetailsPage() {
                   Watch now
                </Button>
                <button 
-                  onClick={() => isWatchlisted ? removeFromWatchlist(movie.id) : addToWatchlist(movie.id)}
+                  onClick={() => isWatchlisted ? removeFromWatchlist(movie.id) : addToWatchlist(movie.id, 'movie')}
                   className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all duration-300 hover:scale-110 flex-shrink-0"
                   aria-label={isWatchlisted ? "Remove from Watchlist" : "Add to Watchlist"}
                >

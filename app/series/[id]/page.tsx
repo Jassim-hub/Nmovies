@@ -400,7 +400,7 @@ export default function SeriesDetailsPage() {
                   Watch Episode 1
                </Button>
                <button 
-                  onClick={() => isWatchlisted ? removeFromWatchlist(series.id) : addToWatchlist(series.id)}
+                  onClick={() => isWatchlisted ? removeFromWatchlist(series.id) : addToWatchlist(series.id, 'series')}
                   className="w-14 h-14 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all duration-300 hover:scale-110"
                   aria-label={isWatchlisted ? "Remove from Watchlist" : "Add to Watchlist"}
                >
