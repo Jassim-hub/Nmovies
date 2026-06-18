@@ -130,8 +130,7 @@ function ExpandedCard({ content, rect, onMouseLeave, onMouseEnter }: { content: 
            <button 
              onClick={(e) => {
                e.stopPropagation();
-               const contentType = content.type === 'series' ? 'series' : 'movie';
-               isInWatchlist(content.id) ? removeFromWatchlist(content.id) : addToWatchlist(content.id, contentType);
+               isInWatchlist(content.id) ? removeFromWatchlist(content.id) : addToWatchlist(content.id);
              }}
              className="w-9 h-9 flex-shrink-0 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors shadow-inner border border-white/5"
              aria-label={isInWatchlist(content.id) ? "Remove from Watchlist" : "Add to Watchlist"}

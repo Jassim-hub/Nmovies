@@ -39,16 +39,13 @@ export default function WatchlistPage() {
       
       try {
         setLoadingItems(true);
-        // Fetch all items from Reelplexi using the stored type information
-        const itemPromises = watchlist.map(async (item) => {
-          // Use the type to fetch the correct content type
-          if (item.type === 'series') {
-            const seriesData = await (await import('@/lib/api')).getSeriesById(item.id) as any;
-            if (seriesData) return { ...seriesData, type: 'series' as const };
-          } else {
-            const movieData = await (await import('@/lib/api')).getMovieById(item.id);
-            if (movieData) return { ...movieData, type: 'movie' as const };
-          }
+        // Fetch all items from Reelplexi instead of Supabase
+        const itemPromises = watchlist.map(async (id) => {
+          let item = await (await import('@/lib/api')).getMovieById(id);
+          if (item) return { ...item, type: 'movie' as const };
+          
+          item = await (await import('@/lib/api')).getSeriesById(id) as any;
+          if (item) return { ...item, type: 'series' as const };
           
           return null;
         });

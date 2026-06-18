@@ -14,14 +14,9 @@ export interface WatchProgress {
   episode?: number;
 }
 
-export interface WatchlistItem {
-  id: string;
-  type: 'movie' | 'series';
-}
-
 export function useUserPreferences() {
   const { user } = useAuth();
-  const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
+  const [watchlist, setWatchlist] = useState<string[]>([]);
   const [watchHistory, setWatchHistory] = useState<Record<string, WatchProgress>>({});
   const [loading, setLoading] = useState(true);
 
@@ -33,21 +28,7 @@ export function useUserPreferences() {
         const localWatchlist = localStorage.getItem('streamit_watchlist');
         const localHistory = localStorage.getItem('streamit_history');
         
-        if (localWatchlist) {
-          const parsed = JSON.parse(localWatchlist);
-          // Handle migration from old string[] format to new WatchlistItem[] format
-          if (Array.isArray(parsed)) {
-            if (parsed.length > 0 && typeof parsed[0] === 'string') {
-              // Old format: string[] - convert to new format (assume movies for backward compatibility)
-              const migrated = parsed.map(id => ({ id, type: 'movie' as const }));
-              setWatchlist(migrated);
-              localStorage.setItem('streamit_watchlist', JSON.stringify(migrated));
-            } else {
-              // New format: WatchlistItem[]
-              setWatchlist(parsed);
-            }
-          }
-        }
+        if (localWatchlist) setWatchlist(JSON.parse(localWatchlist));
         if (localHistory) setWatchHistory(JSON.parse(localHistory));
       } catch (e) {
         console.error("Failed to parse local storage preferences", e);
@@ -65,16 +46,8 @@ export function useUserPreferences() {
           if (!error && data) {
             // Merge DB state with local state, giving priority to DB
             if (data.watchlist && Array.isArray(data.watchlist)) {
-              const parsed = data.watchlist;
-              // Handle migration from old string[] format to new WatchlistItem[] format
-              if (parsed.length > 0 && typeof parsed[0] === 'string') {
-                const migrated = parsed.map((id: string) => ({ id, type: 'movie' as const }));
-                setWatchlist(migrated);
-                localStorage.setItem('streamit_watchlist', JSON.stringify(migrated));
-              } else {
-                setWatchlist(parsed);
-                localStorage.setItem('streamit_watchlist', JSON.stringify(parsed));
-              }
+              setWatchlist(data.watchlist);
+              localStorage.setItem('streamit_watchlist', JSON.stringify(data.watchlist));
             }
             if (data.watch_history) {
               setWatchHistory(data.watch_history);
@@ -91,7 +64,7 @@ export function useUserPreferences() {
     loadPreferences();
   }, [user]);
 
-  const syncToDb = async (newWatchlist: WatchlistItem[], newHistory: Record<string, WatchProgress>) => {
+  const syncToDb = async (newWatchlist: string[], newHistory: Record<string, WatchProgress>) => {
     if (!user?.id) return;
     try {
       await supabase
@@ -106,10 +79,10 @@ export function useUserPreferences() {
     }
   };
 
-  const addToWatchlist = useCallback(async (id: string, type: 'movie' | 'series' = 'movie') => {
+  const addToWatchlist = useCallback(async (id: string) => {
     setWatchlist(prev => {
-      if (prev.some(item => item.id === id)) return prev;
-      const newList = [...prev, { id, type }];
+      if (prev.includes(id)) return prev;
+      const newList = [...prev, id];
       localStorage.setItem('streamit_watchlist', JSON.stringify(newList));
       syncToDb(newList, watchHistory);
       return newList;
@@ -118,7 +91,7 @@ export function useUserPreferences() {
 
   const removeFromWatchlist = useCallback(async (id: string) => {
     setWatchlist(prev => {
-      const newList = prev.filter(item => item.id !== id);
+      const newList = prev.filter(itemId => itemId !== id);
       localStorage.setItem('streamit_watchlist', JSON.stringify(newList));
       syncToDb(newList, watchHistory);
       return newList;
@@ -126,7 +99,7 @@ export function useUserPreferences() {
   }, [user, watchHistory]);
 
   const isInWatchlist = useCallback((id: string) => {
-    return watchlist.some(item => item.id === id);
+    return watchlist.includes(id);
   }, [watchlist]);
 
   const updateWatchProgress = useCallback(async (progress: WatchProgress) => {
