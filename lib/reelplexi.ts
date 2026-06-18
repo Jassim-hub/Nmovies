@@ -397,7 +397,12 @@ export async function getReelplexiSeriesTrailers(id: string) {
 
 export async function getReelplexiMovieStream(id: string) {
   try {
-    return await fetchReelplexi(`/v1/movies/${id}/stream`);
+    const res = await fetchReelplexi(`/v1/movies/${id}/stream`);
+    const streamData = res.data || res;
+    return {
+      stream_url: streamData.stream_url || streamData.video_url || streamData.proxy_url || streamData.url,
+      proxy_url: streamData.proxy_url || streamData.video_url || streamData.stream_url || streamData.url,
+    };
   } catch {
     return null;
   }
@@ -405,7 +410,12 @@ export async function getReelplexiMovieStream(id: string) {
 
 export async function getReelplexiEpisodeStream(seriesId: string, season: number, episode: number) {
   try {
-    return await fetchReelplexi(`/v1/series/${seriesId}/seasons/${season}/episodes/${episode}/stream`);
+    const res = await fetchReelplexi(`/v1/series/${seriesId}/seasons/${season}/episodes/${episode}/stream`);
+    const streamData = res.data || res;
+    return {
+      stream_url: streamData.stream_url || streamData.video_url || streamData.proxy_url || streamData.url,
+      proxy_url: streamData.proxy_url || streamData.video_url || streamData.stream_url || streamData.url,
+    };
   } catch {
     return null;
   }
