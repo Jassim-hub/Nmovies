@@ -380,6 +380,15 @@ export default function Header() {
               <Search className="w-5 h-5 text-gray-300 hover:text-[#E50914]" />
             </Link>
 
+            {/* Mobile Notifications Button */}
+            <Link
+              href="/notifications"
+              className="p-2 rounded-lg hover:bg-black transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#E50914] min-w-[44px] min-h-[44px] flex items-center justify-center"
+              aria-label="Notifications"
+            >
+              <Bell className="w-5 h-5 text-gray-300 hover:text-[#E50914]" />
+            </Link>
+
             {/* Mobile Menu Button */}
             <button
               type="button"

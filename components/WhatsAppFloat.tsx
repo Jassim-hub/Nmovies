@@ -17,7 +17,7 @@ export default function WhatsAppFloat() {
       onClick={handleClick}
       aria-label="Chat with support on WhatsApp"
       title="Chat with support on WhatsApp"
-      className="fixed bottom-6 right-6 z-[9999] w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-transform duration-300 hover:scale-110 active:scale-95 focus:outline-none"
+      className="fixed bottom-24 lg:bottom-6 right-6 z-[9999] w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-transform duration-300 hover:scale-110 active:scale-95 focus:outline-none"
       style={{ background: "#25D366" }}
     >
       {/* WhatsApp SVG icon */}
