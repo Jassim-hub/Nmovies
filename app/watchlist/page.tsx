@@ -39,15 +39,28 @@ export default function WatchlistPage() {
       
       try {
         setLoadingItems(true);
-        // Fetch items based on their stored type
+        // Fetch items based on their stored type, with fallback
         const itemPromises = watchlist.map(async (item) => {
-          if (item.type === 'movie') {
-            const movie = await (await import('@/lib/api')).getMovieById(item.id);
-            return movie ? { ...movie, type: 'movie' as const } : null;
-          } else {
-            const series = await (await import('@/lib/api')).getSeriesById(item.id);
-            return series ? { ...series, type: 'series' as const } : null;
+          try {
+            if (item.type === 'movie') {
+              const movie = await (await import('@/lib/api')).getMovieById(item.id);
+              if (movie) return { ...movie, type: 'movie' as const };
+              
+              // Fallback: maybe it was misidentified, try as series
+              const series = await (await import('@/lib/api')).getSeriesById(item.id);
+              if (series) return { ...series, type: 'series' as const };
+            } else {
+              const series = await (await import('@/lib/api')).getSeriesById(item.id);
+              if (series) return { ...series, type: 'series' as const };
+              
+              // Fallback: maybe it was misidentified, try as movie
+              const movie = await (await import('@/lib/api')).getMovieById(item.id);
+              if (movie) return { ...movie, type: 'movie' as const };
+            }
+          } catch (err) {
+            console.error(`Error fetching watchlist item ${item.id}:`, err);
           }
+          return null;
         });
         
         const results = await Promise.all(itemPromises);

@@ -38,19 +38,12 @@ export function useUserPreferences() {
           // Migrate old format (array of strings) to new format (array of objects)
           if (parsed.length > 0 && typeof parsed[0] === 'string') {
             // Old format - convert to new format
-            // We'll detect type later when fetching, for now mark as unknown
-            const migrated = await Promise.all(
-              parsed.map(async (id: string) => {
-                // Try to detect type from watch history first
-                const history = JSON.parse(localStorage.getItem('streamit_history') || '{}');
-                if (history[id]?.type) {
-                  return { id, type: history[id].type };
-                }
-                // Otherwise, we'll need to try fetching to determine type
-                // For immediate migration, default to movie but allow correction
-                return { id, type: 'movie' as const };
-              })
-            );
+            // Use watch history to determine type if available, otherwise default to movie
+            const history = localHistory ? JSON.parse(localHistory) : {};
+            const migrated = parsed.map((id: string) => ({
+              id,
+              type: (history[id]?.type || 'movie') as 'movie' | 'series'
+            }));
             setWatchlist(migrated);
             // Update localStorage with migrated format
             localStorage.setItem('streamit_watchlist', JSON.stringify(migrated));
@@ -78,18 +71,14 @@ export function useUserPreferences() {
             // Merge DB state with local state, giving priority to DB
             if (data.watchlist && Array.isArray(data.watchlist)) {
               // Migrate old format to new format
-              const migratedWatchlist = await Promise.all(
-                data.watchlist.map(async (item: any) => {
-                  if (typeof item === 'string') {
-                    // Try to detect type from watch history
-                    if (data.watch_history?.[item]?.type) {
-                      return { id: item, type: data.watch_history[item].type };
-                    }
-                    return { id: item, type: 'movie' as const };
-                  }
-                  return item;
-                })
-              );
+              const migratedWatchlist = data.watchlist.map((item: any) => {
+                if (typeof item === 'string') {
+                  // Try to detect type from watch history
+                  const type = (data.watch_history?.[item]?.type || 'movie') as 'movie' | 'series';
+                  return { id: item, type };
+                }
+                return item;
+              });
               setWatchlist(migratedWatchlist);
               localStorage.setItem('streamit_watchlist', JSON.stringify(migratedWatchlist));
             }
