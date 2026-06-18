@@ -84,30 +84,13 @@ export async function GET(req: NextRequest) {
   }
   // ── End subscription gate ─────────────────────────────────────────────────
 
+  // Redirect directly to the signed Wasabi URL
+  // This avoids Next.js serverless payload limits and timeouts for large video files.
+  // The signed URL already contains the ResponseContentDisposition to force a download.
   try {
-    const upstream = await fetch(url);
-
-    if (!upstream.ok) {
-      return NextResponse.json(
-        { error: `Upstream returned ${upstream.status}` },
-        { status: upstream.status }
-      );
-    }
-
-    const contentLength = upstream.headers.get('content-length');
-
-    const headers = new Headers({
-      'Content-Disposition': `attachment; filename="${filename}"`,
-      'Content-Type': 'application/octet-stream',
-    });
-
-    if (contentLength) {
-      headers.set('Content-Length', contentLength);
-    }
-
-    return new NextResponse(upstream.body, { status: 200, headers });
+    return NextResponse.redirect(url);
   } catch (error: any) {
-    console.error('[Download Proxy] Error:', error.message);
+    console.error('[Download Redirect] Error:', error.message);
     return NextResponse.json({ error: 'Download failed' }, { status: 500 });
   }
 }
