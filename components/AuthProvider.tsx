@@ -6,6 +6,11 @@ import { User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 import { getUserSubscription } from '@/lib/subscriptions'
 
+// Import debug utilities for development
+if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+  import('@/lib/utils/clearOldWatchlist');
+}
+
 interface AuthContextType {
   user: User | null
   loading: boolean
