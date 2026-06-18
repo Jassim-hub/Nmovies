@@ -4,7 +4,7 @@ import { useSearchParams } from 'next/navigation';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import VideoPlayer from '@/components/VideoPlayer';
-import { ArrowLeft, AlertCircle, ChevronLeft, ChevronRight, Play } from 'lucide-react';
+import { ArrowLeft, AlertCircle, ChevronLeft, ChevronRight, Play, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/AuthProvider';
@@ -525,7 +525,7 @@ export default function PlayerContent() {
                     return (
                       <div
                         key={episode.id}
-                        className={`p-2 rounded cursor-pointer transition-colors ${isCurrentEpisode
+                        className={`group p-2 rounded cursor-pointer transition-colors ${isCurrentEpisode
                           ? 'bg-[#E50914]/20 border border-[#E50914]/30'
                           : canAccess
                             ? 'hover:bg-gray-800'
@@ -565,27 +565,46 @@ export default function PlayerContent() {
                           </div>
 
                           {/* Episode Info */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="text-white text-sm font-medium truncate">
-                                {episode.title}
-                              </span>
-                              {isPremiumEpisode && (
-                                <span className="text-xs bg-[#E50914] text-white px-1 py-0.5 rounded flex-shrink-0">
-                                  Premium
+                          <div className="flex-1 min-w-0 flex items-center justify-between">
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="text-white text-sm font-medium truncate">
+                                  {episode.title}
                                 </span>
-                              )}
-                              {isCurrentEpisode && (
-                                <Play className="w-3 h-3 text-[#E50914] flex-shrink-0" />
-                              )}
-                            </div>
-                            <div className="text-xs text-gray-400">
-                              {episode.seasonName}
-                            </div>
-                            {!canAccess && (
-                              <div className="text-xs text-red-400">
-                                {isPremiumEpisode ? 'Premium Required' : 'Login Required'}
+                                {isPremiumEpisode && (
+                                  <span className="text-xs bg-[#E50914] text-white px-1 py-0.5 rounded flex-shrink-0">
+                                    Premium
+                                  </span>
+                                )}
+                                {isCurrentEpisode && (
+                                  <Play className="w-3 h-3 text-[#E50914] flex-shrink-0" />
+                                )}
                               </div>
+                              <div className="text-xs text-gray-400">
+                                {episode.seasonName}
+                              </div>
+                              {!canAccess && (
+                                <div className="text-xs text-red-400">
+                                  {isPremiumEpisode ? 'Premium Required' : 'Login Required'}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Download Button (shows on hover) */}
+                            {canAccess && (
+                              <button
+                                className="opacity-0 group-hover:opacity-100 p-2 text-gray-400 hover:text-white transition-opacity shrink-0"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const cleanTitle = episode.title ? episode.title.replace(/[^a-zA-Z0-9\s\-_.]/g, '').trim() : 'episode';
+                                  const filename = `${cleanTitle}.mp4`;
+                                  const proxyUrl = `/api/download?id=${seriesId || contentId}&type=episode&season=${episode.seasonOrder}&episode=${episode.episode_number}&filename=${encodeURIComponent(filename)}`;
+                                  window.open(proxyUrl, '_blank');
+                                }}
+                                title="Download"
+                              >
+                                <Download className="w-5 h-5" />
+                              </button>
                             )}
                           </div>
                         </div>

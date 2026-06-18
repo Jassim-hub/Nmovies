@@ -449,25 +449,12 @@ export default function MovieDetailsPage() {
             <h2 className="text-2xl font-bold mb-3 text-white">Download Movie</h2>
             <Button
               className="w-full bg-[#E50914] hover:bg-[#b80710] text-white mb-3"
-              onClick={async () => {
-                try {
-                  const api = await import('@/lib/api');
-                  const downloadUrl = await api.getMovieDownload(movie.id);
-                  
-                  if (!downloadUrl) {
-                    alert('Download link currently unavailable.');
-                    return;
-                  }
-                  
-                  const cleanTitle = movie.title.replace(/[^a-zA-Z0-9\s\-_.]/g, '').trim();
-                  const filename = `${cleanTitle}.mp4`;
-                  
-                  // Use our same-origin proxy to force download instead of inline playback
-                  const proxyUrl = `/api/download?url=${encodeURIComponent(downloadUrl)}&filename=${encodeURIComponent(filename)}`;
-                  window.open(proxyUrl, '_blank');
-                } catch (e) {
-                  console.error('Download failed');
-                }
+              onClick={() => {
+                const cleanTitle = movie.title.replace(/[^a-zA-Z0-9\s\-_.]/g, '').trim();
+                const filename = `${cleanTitle}.mp4`;
+                // Use Mode 2: server resolves the Reelplexi download URL — no client-side API call needed
+                const proxyUrl = `/api/download?id=${movie.id}&type=movie&filename=${encodeURIComponent(filename)}`;
+                window.open(proxyUrl, '_blank');
                 setShowDownloadModal(false);
               }}
             >
@@ -477,6 +464,7 @@ export default function MovieDetailsPage() {
           </div>
         </div>
       )}
+
 
       <AuthRequiredModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} action={authAction} requirePremium={false} />
     </div>

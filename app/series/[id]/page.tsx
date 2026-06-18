@@ -296,27 +296,18 @@ export default function SeriesDetailsPage() {
 
   const handleDownloadNow = async () => {
     if (!selectedEpisode) return;
-    try {
-      const api = await import('@/lib/api');
-      const downloadUrl = await api.getEpisodeDownload(params.id as string, selectedEpisode.seasonOrder || 1, selectedEpisode.episode_number);
-      
-      if (!downloadUrl) {
-        alert('Download link currently unavailable.');
-        return;
-      }
-      
-      const cleanSeriesTitle = series?.title.replace(/[^a-zA-Z0-9\s\-_.]/g, '').trim() || 'Series';
-      const cleanEpisodeTitle = selectedEpisode.title.replace(/[^a-zA-Z0-9\s\-_.]/g, '').trim();
-      const filename = `${cleanSeriesTitle} - S${selectedEpisode.seasonOrder}E${selectedEpisode.episode_number} - ${cleanEpisodeTitle}.mp4`;
-      
-      // Use our same-origin proxy to force download instead of inline playback
-      const proxyUrl = `/api/download?url=${encodeURIComponent(downloadUrl)}&filename=${encodeURIComponent(filename)}`;
-      window.open(proxyUrl, '_blank');
-    } catch (e) {
-      console.error('Download failed');
-    }
+
+    const cleanSeriesTitle = series?.title.replace(/[^a-zA-Z0-9\s\-_.]/g, '').trim() || 'Series';
+    const cleanEpisodeTitle = selectedEpisode.title.replace(/[^a-zA-Z0-9\s\-_.]/g, '').trim();
+    const filename = `${cleanSeriesTitle} - S${selectedEpisode.seasonOrder}E${selectedEpisode.episode_number} - ${cleanEpisodeTitle}.mp4`;
+
+    // Use Mode 2: server resolves the Reelplexi download URL — no client-side API call needed
+    const proxyUrl = `/api/download?id=${params.id}&type=episode&season=${selectedEpisode.seasonOrder || 1}&episode=${selectedEpisode.episode_number}&filename=${encodeURIComponent(filename)}`;
+    window.open(proxyUrl, '_blank');
+
     setShowDownloadModal(false);
   };
+
 
   if (loading || authLoading) return <FullPageSpinner text="Loading series details..." />;
 
