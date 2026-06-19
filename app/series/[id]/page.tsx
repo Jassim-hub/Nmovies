@@ -301,9 +301,22 @@ export default function SeriesDetailsPage() {
     const cleanEpisodeTitle = selectedEpisode.title.replace(/[^a-zA-Z0-9\s\-_.]/g, '').trim();
     const filename = `${cleanSeriesTitle} - S${selectedEpisode.seasonOrder}E${selectedEpisode.episode_number} - ${cleanEpisodeTitle}.mp4`;
 
-    // Use Mode 2: server resolves the Reelplexi download URL — no client-side API call needed
-    const proxyUrl = `/api/download?id=${params.id}&type=episode&season=${selectedEpisode.seasonOrder || 1}&episode=${selectedEpisode.episode_number}&filename=${encodeURIComponent(filename)}`;
-    window.open(proxyUrl, '_blank');
+    try {
+      // Fetch the presigned URL from our API route
+      const res = await fetch(`/api/download?id=${params.id}&type=episode&season=${selectedEpisode.seasonOrder || 1}&episode=${selectedEpisode.episode_number}`);
+      const data = await res.json();
+      if (!data.download_url) throw new Error(data.error || 'No download URL');
+      // Use an <a download> to force a file download instead of opening the media player
+      const a = document.createElement('a');
+      a.href = data.download_url;
+      a.download = filename;
+      a.rel = 'noopener noreferrer';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch (err: any) {
+      alert(`Download failed: ${err.message}`);
+    }
 
     setShowDownloadModal(false);
   };

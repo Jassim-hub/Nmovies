@@ -449,12 +449,25 @@ export default function MovieDetailsPage() {
             <h2 className="text-2xl font-bold mb-3 text-white">Download Movie</h2>
             <Button
               className="w-full bg-[#E50914] hover:bg-[#b80710] text-white mb-3"
-              onClick={() => {
+              onClick={async () => {
                 const cleanTitle = movie.title.replace(/[^a-zA-Z0-9\s\-_.]/g, '').trim();
                 const filename = `${cleanTitle}.mp4`;
-                // Use Mode 2: server resolves the Reelplexi download URL — no client-side API call needed
-                const proxyUrl = `/api/download?id=${movie.id}&type=movie&filename=${encodeURIComponent(filename)}`;
-                window.open(proxyUrl, '_blank');
+                try {
+                  // Fetch the presigned URL from our API route
+                  const res = await fetch(`/api/download?id=${movie.id}&type=movie`);
+                  const data = await res.json();
+                  if (!data.download_url) throw new Error(data.error || 'No download URL');
+                  // Use an <a download> to force a file download instead of opening the media player
+                  const a = document.createElement('a');
+                  a.href = data.download_url;
+                  a.download = filename;
+                  a.rel = 'noopener noreferrer';
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                } catch (err: any) {
+                  alert(`Download failed: ${err.message}`);
+                }
                 setShowDownloadModal(false);
               }}
             >

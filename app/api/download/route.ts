@@ -5,25 +5,24 @@ import {
 } from '@/lib/reelplexi';
 
 /**
- * Download route that fetches a presigned download URL from the backend
- * and redirects the user to it.
+ * Download route that fetches a presigned download URL from the backend.
  *
- * Two modes:
+ * Returns JSON { download_url } so the client can trigger a true file download
+ * using an <a href download> element. A plain 302 redirect to a video URL
+ * causes Chrome to open its built-in media player instead of saving the file,
+ * so we must let the browser initiate the download itself via an anchor tag.
  *
- * 1. Direct redirect (url already known):
- *    ?url=<signed-url>
- *    Redirects to the provided URL.
- *
- * 2. Reelplexi lookup:
- *    ?id=<id>&type=movie|episode&season=<n>&episode=<n>
- *    Resolves the dedicated download URL from Reelplexi server-side, then redirects.
+ * Modes:
+ * 1. ?url=<signed-url>        — wraps an already-known URL in the JSON envelope
+ * 2. ?id=<id>&type=movie|episode&season=<n>&episode=<n>
+ *    — resolves the download URL from Reelplexi server-side
  */
 export async function GET(req: NextRequest) {
   const url = req.nextUrl.searchParams.get('url');
 
-  // Mode 1: Direct redirect — url is already known
+  // Mode 1: URL already known — return it in the JSON envelope
   if (url) {
-    return NextResponse.redirect(url);
+    return NextResponse.json({ download_url: url });
   }
 
   // Mode 2: Resolve URL from Reelplexi server-side
@@ -38,7 +37,6 @@ export async function GET(req: NextRequest) {
 
   try {
     let resolvedUrl: string | null = null;
-    let fallbackUsed = false;
 
     if (type === 'movie') {
       try {
@@ -54,7 +52,7 @@ export async function GET(req: NextRequest) {
           parseInt(episode, 10)
         );
       } catch (e: any) {
-         return NextResponse.json({ error: 'Failed to get episode download url', details: e.message }, { status: 500 });
+        return NextResponse.json({ error: 'Failed to get episode download url', details: e.message }, { status: 500 });
       }
     }
 
@@ -62,8 +60,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Download URL not available, resolvedUrl was null' }, { status: 404 });
     }
 
-    // Redirect the browser directly to the Wasabi presigned URL.
-    return NextResponse.redirect(resolvedUrl);
+    // Return the URL as JSON — the client will create an <a href download> to
+    // trigger a true file download instead of opening the media player.
+    return NextResponse.json({ download_url: resolvedUrl });
   } catch (error: any) {
     console.error('[Download API] Reelplexi lookup error:', error);
     return NextResponse.json({ error: 'Failed to resolve download URL', details: error.message }, { status: 500 });
