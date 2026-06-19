@@ -29,18 +29,26 @@ async function fetchReelplexi(endpoint: string, params: Record<string, string | 
 
   const res = await fetch(url.toString(), {
     headers,
-    // We can use Next.js fetch caching here if desired, e.g. next: { revalidate: 3600 }
+    cache: 'no-store', // CRITICAL: Prevent Next.js from caching API responses (especially error payloads)
   });
 
   if (!res.ok) {
     let message = 'Unknown API error';
+    const text = await res.text();
     try {
-      const body = await res.json();
+      const body = JSON.parse(text);
+      if (body.detail) {
+        const detailMsg = typeof body.detail === 'string' 
+          ? body.detail 
+          : (body.detail.error?.message || JSON.stringify(body.detail));
+        throw new ReelplexiError(res.status, `Reelplexi API error (HTTP ${res.status}): ${detailMsg}`);
+      }
       if (body.error) {
         message = typeof body.error === 'string' ? body.error : (body.error.message || JSON.stringify(body.error));
       }
-    } catch {
-      // Ignored
+    } catch (e) {
+      if (e instanceof ReelplexiError) throw e;
+      throw new ReelplexiError(res.status, `HTTP error ${res.status}: ${text.substring(0, 150)}`);
     }
     throw new ReelplexiError(res.status, `Reelplexi API error: ${message}`);
   }
