@@ -1,33 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
-  getReelplexiMovieStream,
-  getReelplexiEpisodeStream,
+  getReelplexiMovieDownloadUrl,
+  getReelplexiEpisodeDownloadUrl,
 } from '@/lib/reelplexi';
 
 /**
- * Proxy download route that streams the file through our server.
- * Enforces server-side subscription check before streaming.
+ * Download route that fetches a presigned download URL from the backend
+ * and redirects the user to it.
  *
  * Two modes:
  *
- * 1. Direct proxy (url already known):
- *    ?url=<signed-url>&filename=<name.mp4>
- *    Streams the upstream file through with Content-Disposition: attachment.
+ * 1. Direct redirect (url already known):
+ *    ?url=<signed-url>
+ *    Redirects to the provided URL.
  *
- * 2. Reelplexi lookup (server resolves the URL):
- *    ?id=<id>&type=movie|episode&season=<n>&episode=<n>&filename=<name.mp4>
- *    Resolves the download URL from Reelplexi server-side, then proxies it.
+ * 2. Reelplexi lookup:
+ *    ?id=<id>&type=movie|episode&season=<n>&episode=<n>
+ *    Resolves the dedicated download URL from Reelplexi server-side, then redirects.
  */
 export async function GET(req: NextRequest) {
   const url = req.nextUrl.searchParams.get('url');
-  const filename = req.nextUrl.searchParams.get('filename') || 'download.mp4';
 
-  // Access control is handled by the frontend UI (hiding the download buttons
-  // from non-premium users) matching the blog_site implementation.
-
-  // Mode 1: Direct proxy — url is already known
+  // Mode 1: Direct redirect — url is already known
   if (url) {
-    return proxyDownload(url, filename);
+    return NextResponse.redirect(url);
   }
 
   // Mode 2: Resolve URL from Reelplexi server-side
@@ -41,66 +37,28 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    let streamData: any = null;
+    let resolvedUrl: string | null = null;
 
     if (type === 'movie') {
-      streamData = await getReelplexiMovieStream(id);
+      resolvedUrl = await getReelplexiMovieDownloadUrl(id);
     } else if (type === 'episode' && season && episode) {
-      streamData = await getReelplexiEpisodeStream(
+      resolvedUrl = await getReelplexiEpisodeDownloadUrl(
         id,
         parseInt(season, 10),
         parseInt(episode, 10)
       );
     }
 
-    if (!streamData || (!streamData.stream_url && !streamData.proxy_url)) {
-      return NextResponse.json({ error: 'Download URL not available' }, { status: 404 });
-    }
-
-    const resolvedUrl = streamData.proxy_url || streamData.stream_url;
     if (!resolvedUrl) {
       return NextResponse.json({ error: 'Download URL not available' }, { status: 404 });
     }
 
-    return proxyDownload(resolvedUrl, filename);
+    // Redirect the browser directly to the Wasabi presigned URL.
+    // The backend's download URL generator already adds response-content-disposition=attachment
+    // to force the browser to download the file instead of playing it.
+    return NextResponse.redirect(resolvedUrl);
   } catch (error) {
-    console.error('[Download Proxy] Reelplexi lookup error:', error);
+    console.error('[Download API] Reelplexi lookup error:', error);
     return NextResponse.json({ error: 'Failed to resolve download URL' }, { status: 500 });
   }
 }
-
-/**
- * Proxy the upstream URL through our server as a forced download.
- * Content-Type is set to application/octet-stream so the browser
- * treats it as a binary file rather than trying to play it inline.
- */
-async function proxyDownload(url: string, filename: string) {
-  try {
-    const upstream = await fetch(url);
-
-    if (!upstream.ok) {
-      return NextResponse.json(
-        { error: `Upstream returned ${upstream.status}` },
-        { status: upstream.status }
-      );
-    }
-
-    const contentLength = upstream.headers.get('content-length');
-
-    const headers = new Headers({
-      'Content-Disposition': `attachment; filename="${filename}"`,
-      'Content-Type': 'application/octet-stream',
-    });
-
-    if (contentLength) {
-      headers.set('Content-Length', contentLength);
-    }
-
-    // Stream the body through — avoids loading the entire file into memory
-    return new NextResponse(upstream.body, { status: 200, headers });
-  } catch (error: any) {
-    console.error('[Download Proxy] Error:', error.message);
-    return NextResponse.json({ error: 'Download failed' }, { status: 500 });
-  }
-}
-
