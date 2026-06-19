@@ -38,27 +38,34 @@ export async function GET(req: NextRequest) {
 
   try {
     let resolvedUrl: string | null = null;
+    let fallbackUsed = false;
 
     if (type === 'movie') {
-      resolvedUrl = await getReelplexiMovieDownloadUrl(id);
+      try {
+        resolvedUrl = await getReelplexiMovieDownloadUrl(id);
+      } catch (e: any) {
+        return NextResponse.json({ error: 'Failed to get movie download url', details: e.message }, { status: 500 });
+      }
     } else if (type === 'episode' && season && episode) {
-      resolvedUrl = await getReelplexiEpisodeDownloadUrl(
-        id,
-        parseInt(season, 10),
-        parseInt(episode, 10)
-      );
+      try {
+        resolvedUrl = await getReelplexiEpisodeDownloadUrl(
+          id,
+          parseInt(season, 10),
+          parseInt(episode, 10)
+        );
+      } catch (e: any) {
+         return NextResponse.json({ error: 'Failed to get episode download url', details: e.message }, { status: 500 });
+      }
     }
 
     if (!resolvedUrl) {
-      return NextResponse.json({ error: 'Download URL not available' }, { status: 404 });
+      return NextResponse.json({ error: 'Download URL not available, resolvedUrl was null' }, { status: 404 });
     }
 
     // Redirect the browser directly to the Wasabi presigned URL.
-    // The backend's download URL generator already adds response-content-disposition=attachment
-    // to force the browser to download the file instead of playing it.
     return NextResponse.redirect(resolvedUrl);
-  } catch (error) {
+  } catch (error: any) {
     console.error('[Download API] Reelplexi lookup error:', error);
-    return NextResponse.json({ error: 'Failed to resolve download URL' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to resolve download URL', details: error.message }, { status: 500 });
   }
 }

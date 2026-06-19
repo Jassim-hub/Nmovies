@@ -429,9 +429,9 @@ export async function getReelplexiMovieDownloadUrl(id: string) {
   try {
     const res = await fetchReelplexi(`/v1/download/movie/${id}`);
     return res.download_url as string;
-  } catch (e) {
+  } catch (e: any) {
     console.error('Error fetching movie download URL:', e);
-    return null;
+    throw e;
   }
 }
 
@@ -439,9 +439,9 @@ export async function getReelplexiEpisodeDownloadUrl(seriesId: string, season: n
   try {
     const res = await fetchReelplexi(`/v1/download/tv/${seriesId}/${season}/${episode}`);
     return res.download_url as string;
-  } catch (e) {
+  } catch (e: any) {
     console.error('Error fetching episode download URL:', e);
-    return null;
+    throw e;
   }
 }
 
