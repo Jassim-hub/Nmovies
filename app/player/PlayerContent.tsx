@@ -594,24 +594,13 @@ export default function PlayerContent() {
                             {canAccess && (
                               <button
                                 className="opacity-0 group-hover:opacity-100 p-2 text-gray-400 hover:text-white transition-opacity shrink-0"
-                                onClick={async (e) => {
+                                onClick={(e) => {
                                   e.stopPropagation();
                                   const cleanTitle = episode.title ? episode.title.replace(/[^a-zA-Z0-9\s\-_.]/g, '').trim() : 'episode';
                                   const filename = `${cleanTitle}.mp4`;
-                                  try {
-                                    const res = await fetch(`/api/download?id=${seriesId || contentId}&type=episode&season=${episode.seasonOrder}&episode=${episode.episode_number}`);
-                                    const data = await res.json();
-                                    if (!data.download_url) throw new Error(data.error || 'No download URL');
-                                    const a = document.createElement('a');
-                                    a.href = data.download_url;
-                                    a.download = filename;
-                                    a.rel = 'noopener noreferrer';
-                                    document.body.appendChild(a);
-                                    a.click();
-                                    document.body.removeChild(a);
-                                  } catch (err: any) {
-                                    alert(`Download failed: ${err.message}`);
-                                  }
+                                  // The API route redirects to the signed S3 URL which enforces the download
+                                  const proxyUrl = `/api/download?id=${seriesId || contentId}&type=episode&season=${episode.seasonOrder}&episode=${episode.episode_number}&filename=${encodeURIComponent(filename)}`;
+                                  window.open(proxyUrl, '_blank');
                                 }}
                                 title="Download"
                               >
