@@ -40,9 +40,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      // Add timeout to prevent hanging
+      // Increase timeout to 15s to prevent hanging on slow networks, but give enough time
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Subscription check timeout')), 5000)
+        setTimeout(() => reject(new Error('Subscription check timeout')), 15000)
       )
       
       // Get user profile with subscription details including expiry date
@@ -54,8 +54,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       const { data: profile, error } = await Promise.race([profilePromise, timeoutPromise]) as any
       
-      if (error || !profile) {
-        console.log('No profile found or error:', error)
+      if (error) {
+        console.error('Error fetching profile for premium check:', error)
+        // Keep previous state on network/timeout errors to avoid dropping premium
+        return
+      }
+
+      if (!profile) {
+        console.log('No profile found')
         setIsPremium(false)
         return
       }
@@ -78,8 +84,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsPremium(isPremiumUser)
     } catch (error) {
       console.error('Error checking premium status:', error)
-      // Don't let subscription errors block the auth flow
-      setIsPremium(false)
+      // Do NOT let subscription errors or timeouts block the auth flow or drop state
     }
   }
 
@@ -92,21 +97,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false)
     }, 10000) // 10 second timeout
 
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      console.log('AuthProvider: Got session', session?.user?.email || 'no user')
-      setUser(session?.user ?? null)
-      
-      // Check premium status but don't block loading state
-      if (session?.user) {
-        console.log('AuthProvider: Checking premium status for user')
-        checkPremiumStatus(session.user).catch(console.error)
+    supabase.auth.getSession().then(async ({ data: { session }, error }) => {
+      if (error) {
+        console.error('AuthProvider: Error getting session (network/timeout):', error)
+        // Do NOT clear the user state on a transient network error!
+      } else {
+        console.log('AuthProvider: Got session', session?.user?.email || 'no user')
+        setUser(session?.user ?? null)
+        
+        // Check premium status but don't block loading state
+        if (session?.user) {
+          console.log('AuthProvider: Checking premium status for user')
+          checkPremiumStatus(session.user).catch(console.error)
+        } else {
+          setIsPremium(false)
+        }
       }
       
       console.log('AuthProvider: Setting loading to false')
       setLoading(false)
       clearTimeout(loadingTimeout)
     }).catch((error) => {
-      console.error('AuthProvider: Error getting session:', error)
+      console.error('AuthProvider: Uncaught error getting session:', error)
+      // Do NOT wipe state on unhandled errors either
       setLoading(false)
       clearTimeout(loadingTimeout)
     })
@@ -124,14 +137,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return
         }
 
-        setUser(session?.user ?? null)
-
-        // Only check premium status if we have a user and it's not a sign out event
-        if (session?.user && event !== 'SIGNED_OUT') {
+        if (event === 'INITIAL_SESSION') {
+          setUser(session?.user ?? null)
+          if (session?.user) {
+            checkPremiumStatus(session.user).catch(console.error)
+          } else {
+            setIsPremium(false)
+          }
+        } else if (event === 'SIGNED_OUT') {
+          // Explicitly clear state on verifiable logouts
+          setUser(null)
+          setIsPremium(false)
+        } else if (session?.user) {
+          // For events like SIGNED_IN or TOKEN_REFRESHED where we have a user
+          setUser(session.user)
           // Don't await this to prevent blocking the auth state change
           checkPremiumStatus(session.user).catch(console.error)
-        } else {
-          setIsPremium(false)
         }
 
         setLoading(false)
