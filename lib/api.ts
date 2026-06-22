@@ -136,10 +136,15 @@ export async function getTranslatedSeries(limit = 6) {
 export async function getTranslatedContent(limit = 12) {
   const movies = await getTranslatedMovies(limit);
   const series = await getTranslatedSeries(limit);
-  const combined = [...movies, ...series];
-  return combined.sort((a, b) =>
-    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-  ).slice(0, limit);
+  
+  const combined = [];
+  const maxLength = Math.max(movies.length, series.length);
+  for (let i = 0; i < maxLength; i++) {
+    if (movies[i]) combined.push(movies[i]);
+    if (series[i]) combined.push(series[i]);
+  }
+  
+  return combined.slice(0, limit);
 }
 
 export async function getVJMovies(limit = 6) {
@@ -165,10 +170,15 @@ export async function getVJSeries(limit = 6) {
 export async function getVJContent(limit = 12) {
   const movies = await getVJMovies(limit);
   const series = await getVJSeries(limit);
-  const combined = [...movies, ...series];
-  return combined.sort((a, b) =>
-    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-  ).slice(0, limit);
+  
+  const combined = [];
+  const maxLength = Math.max(movies.length, series.length);
+  for (let i = 0; i < maxLength; i++) {
+    if (movies[i]) combined.push(movies[i]);
+    if (series[i]) combined.push(series[i]);
+  }
+  
+  return combined.slice(0, limit);
 }
 
 // Genres API
