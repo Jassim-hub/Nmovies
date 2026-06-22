@@ -87,7 +87,7 @@ export function normalizeReelplexiMovie(raw: any): any {
   return {
     id: asString(raw.id) || '',
     title: asString(raw.title) || asString(raw.name) || 'Untitled',
-    description: asString(raw.description) || asString(raw.overview) || '',
+    description: asString(raw.description) || asString(raw.overview) || asString(raw.plot) || asString(raw.synopsis) || asString(raw.storyline) || '',
     release_date: asString(raw.release_date) || asString(raw.released_at) || yearToDate(raw.year) || new Date().toISOString(),
     thumbnail_url: posterUrl,
     cover_image_url: backdropUrl,
@@ -133,7 +133,7 @@ export function normalizeReelplexiSeries(raw: any): any {
   return {
     id: seriesId,
     title: asString(raw.title) || asString(raw.name) || 'Untitled',
-    description: asString(raw.description) || asString(raw.overview) || '',
+    description: asString(raw.description) || asString(raw.overview) || asString(raw.plot) || asString(raw.synopsis) || asString(raw.storyline) || '',
     release_date: asString(raw.first_air_date) || yearToDate(raw.year) || asString(raw.release_date) || new Date().toISOString(),
     thumbnail_url: posterUrl,
     cover_image_url: backdropUrl,

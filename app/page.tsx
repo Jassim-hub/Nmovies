@@ -142,11 +142,33 @@ export default function HomePage() {
     async function fetchCriticalData() {
       try {
         const vjData = await getVJContent(8);
-        setFeaturedContent(vjData.slice(0, 5) as any);
+        const top5 = vjData.slice(0, 5) as any[];
+        
+        // Fetch full details for the featured items if they lack a description from the list API
+        const api = await import('@/lib/api');
+        const featuredWithDetails = await Promise.all(
+          top5.map(async (item) => {
+            if (!item.description || item.description.trim() === '') {
+              try {
+                if (item.type === 'movie') {
+                  const details = await api.getMovieById(item.id);
+                  if (details && details.description) return { ...item, description: details.description };
+                } else {
+                  const details = await api.getSeriesById(item.id);
+                  if (details && details.description) return { ...item, description: details.description };
+                }
+              } catch (e) {
+                console.error("Failed to fetch details for featured item", item.id, e);
+              }
+            }
+            return item;
+          })
+        );
+        
+        setFeaturedContent(featuredWithDetails as any);
         setVJContent(vjData as any);
         setLoading(false);
 
-        const api = await import('@/lib/api');
         const Reelplexi = await import('@/lib/reelplexi');
 
         const [latestMoviesData, latestSeriesData, genreRowsData, animMovies, animSeries] = await Promise.all([
