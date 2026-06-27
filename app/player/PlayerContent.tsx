@@ -52,7 +52,7 @@ export default function PlayerContent() {
     if (user) {
       getProfile(user.id).then(setProfile);
     }
-  }, [user]);
+  }, [user, isPremium]);
 
   const contentId = searchParams.get('id');
   const contentType = searchParams.get('type');

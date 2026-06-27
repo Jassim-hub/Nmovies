@@ -41,7 +41,6 @@ export default function SeriesDetailsPage() {
   const [selectedEpisode, setSelectedEpisode] = useState<EpisodeWithSeason | null>(null);
   
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [canDownload, setCanDownload] = useState<boolean>(false);
 
   // Video Player States
   const [streamUrl, setStreamUrl] = useState<string>('');
@@ -65,15 +64,8 @@ export default function SeriesDetailsPage() {
 
   useEffect(() => {
     if (user) getProfile(user.id).then(setProfile);
-  }, [user]);
+  }, [user, isPremium]);
 
-  useEffect(() => {
-    (async () => {
-      if (!user) { setCanDownload(false); return; }
-      const allowed = await canUserDownload(user.id);
-      setCanDownload(allowed);
-    })();
-  }, [user]);
 
   useEffect(() => {
     async function fetchSeriesData() {
@@ -299,7 +291,11 @@ export default function SeriesDetailsPage() {
     setSelectedEpisode(episode);
     if (!user?.id) { setAuthAction('download'); setShowAuthModal(true); return; }
     if (episode.premium && !isPremium) { router.push('/payment'); return; }
-    if (!canDownload) { router.push('/payment'); return; }
+    
+    // Check download permission dynamically
+    const allowed = await canUserDownload(user.id);
+    if (!allowed) { router.push('/payment'); return; }
+    
     setShowDownloadModal(true);
   };
 

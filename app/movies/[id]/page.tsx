@@ -26,7 +26,6 @@ export default function MovieDetailsPage() {
   const { checkAuth } = useAuthCheck();
 
   const [movie, setMovie] = useState<MovieWithVJ | null>(null);
-  const [canDownload, setCanDownload] = useState<boolean>(false);
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -58,13 +57,6 @@ export default function MovieDetailsPage() {
 
   const hasRights = movie ? checkAuth(movie.premium).allowed : false;
 
-  useEffect(() => {
-    (async () => {
-      if (!user) { setCanDownload(false); return; }
-      const allowed = await canUserDownload(user.id);
-      setCanDownload(allowed);
-    })();
-  }, [user]);
 
   useEffect(() => {
     async function fetchCriticalData() {
@@ -208,7 +200,11 @@ export default function MovieDetailsPage() {
   const handleDownload = async () => {
     if (!user?.id) { setAuthAction('download'); setShowAuthModal(true); return; }
     if (movie?.premium && !isPremium) { router.push('/payment'); return; }
-    if (!canDownload) { router.push('/payment'); return; }
+    
+    // Check download permission dynamically
+    const allowed = await canUserDownload(user.id);
+    if (!allowed) { router.push('/payment'); return; }
+    
     setShowDownloadModal(true);
   };
 
