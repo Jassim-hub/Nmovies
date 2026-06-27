@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -59,6 +59,10 @@ export default function SeriesDetailsPage() {
   const [activeTab, setActiveTab] = useState<'episodes' | 'cast' | 'reviews' | 'related'>('episodes');
   const [activeSeasonId, setActiveSeasonId] = useState<string | null>(null);
 
+  // Tracks the content key for which we have already successfully fetched data,
+  // preventing redundant re-fetches caused by multiple Supabase auth state events.
+  const dataFetchedRef = React.useRef<string | null>(null);
+
   useEffect(() => {
     if (user) getProfile(user.id).then(setProfile);
   }, [user]);
@@ -74,6 +78,10 @@ export default function SeriesDetailsPage() {
   useEffect(() => {
     async function fetchSeriesData() {
       if (!params.id) return;
+
+      if (dataFetchedRef.current === params.id) {
+        return;
+      }
 
       try {
         const api = await import('@/lib/api');
@@ -211,6 +219,7 @@ export default function SeriesDetailsPage() {
         }
         
         setRelatedLoaded(true);
+        dataFetchedRef.current = params.id as string;
 
       } catch (error) {
         console.error('Error fetching series:', error);
@@ -218,7 +227,7 @@ export default function SeriesDetailsPage() {
       }
     }
     fetchSeriesData();
-  }, [params.id, user]);
+  }, [params.id, user?.id]);
 
   const [showDownloadModal, setShowDownloadModal] = useState(false);
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { useAuth } from "@/components/AuthProvider";
@@ -45,13 +45,18 @@ export default function MovieDetailsPage() {
   // Video Player states
   const [streamUrl, setStreamUrl] = useState<string>('');
   const [isPlayingTrailer, setIsPlayingTrailer] = useState<boolean>(false);
-  const [hasRights, setHasRights] = useState<boolean>(false);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState<boolean>(false);
 
   const { watchHistory, addToWatchlist, removeFromWatchlist, isInWatchlist, updateWatchProgress } = useUserPreferences();
   const progress = movie ? watchHistory[movie.id] : null;
   const initialTime = progress ? progress.progress : 0;
   const isWatchlisted = movie ? isInWatchlist(movie.id) : false;
+
+  // Tracks the content key for which we have already successfully fetched data,
+  // preventing redundant re-fetches caused by multiple Supabase auth state events.
+  const dataFetchedRef = React.useRef<string | null>(null);
+
+  const hasRights = movie ? checkAuth(movie.premium).allowed : false;
 
   useEffect(() => {
     (async () => {
@@ -63,13 +68,18 @@ export default function MovieDetailsPage() {
 
   useEffect(() => {
     async function fetchCriticalData() {
-      setLoading(true);
-      setError(null);
       if (!params?.id) {
         setError("No movie ID provided");
         setLoading(false);
         return;
       }
+
+      if (dataFetchedRef.current === params.id) {
+        return;
+      }
+
+      setLoading(true);
+      setError(null);
 
       // 1. Fetch movie display data from Reelplexi
       const api = await import('@/lib/api');
@@ -107,7 +117,6 @@ export default function MovieDetailsPage() {
 
       // 2. Determine Video Player State based on Auth
       const authResult = checkAuth(data.premium);
-      setHasRights(authResult.allowed);
 
       if (!authResult.allowed) {
          // No rights: Play Trailer Only
@@ -156,9 +165,11 @@ export default function MovieDetailsPage() {
       }
       await Promise.all(promises);
       setRelatedLoaded(true);
+      
+      dataFetchedRef.current = params.id as string;
     }
     fetchCriticalData();
-  }, [params.id, user, isPremium]);
+  }, [params.id, user?.id, isPremium]);
 
   const handleSkipTrailer = useCallback(async () => {
      // Gate access the same way Watch Now does
