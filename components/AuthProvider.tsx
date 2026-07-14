@@ -97,36 +97,67 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false)
     }, 10000) // 10 second timeout
 
-    supabase.auth.getSession().then(async ({ data: { session }, error }) => {
-      if (error) {
-        console.error('AuthProvider: Error getting session (network/timeout):', error)
-        // Do NOT clear the user state on a transient network error!
-      } else {
-        console.log('AuthProvider: Got session', session?.user?.email || 'no user')
-        setUser(session?.user ?? null)
+    const initAuth = async () => {
+      try {
+        let { data: { session }, error } = await supabase.auth.getSession();
         
-        // Check premium status but don't block loading state
-        if (session?.user) {
-          console.log('AuthProvider: Checking premium status for user')
-          checkPremiumStatus(session.user).catch(console.error)
-        } else {
-          setIsPremium(false)
+        // PWA/Webview fix: If no session in cookies but exists in localStorage, restore it
+        if (!session && !error) {
+          const stored = localStorage.getItem('katiwatch-auth-session');
+          if (stored) {
+            try {
+              const parsedSession = JSON.parse(stored);
+              if (parsedSession?.access_token && parsedSession?.refresh_token) {
+                console.log('AuthProvider: Restoring volatile session from localStorage');
+                const { data, error: restoreError } = await supabase.auth.setSession({
+                  access_token: parsedSession.access_token,
+                  refresh_token: parsedSession.refresh_token,
+                });
+                
+                if (!restoreError && data.session) {
+                  session = data.session;
+                }
+              }
+            } catch (e) {
+              console.error('AuthProvider: Failed to restore session from localStorage', e);
+            }
+          }
         }
+
+        if (error) {
+          console.error('AuthProvider: Error getting session (network/timeout):', error)
+          // Do NOT clear the user state on a transient network error!
+        } else {
+          console.log('AuthProvider: Got session', session?.user?.email || 'no user')
+          setUser(session?.user ?? null)
+          
+          // Check premium status but don't block loading state
+          if (session?.user) {
+            console.log('AuthProvider: Checking premium status for user')
+            checkPremiumStatus(session.user).catch(console.error)
+          } else {
+            setIsPremium(false)
+          }
+        }
+      } catch (err) {
+        console.error('AuthProvider: Uncaught error getting session:', err)
+      } finally {
+        console.log('AuthProvider: Setting loading to false')
+        setLoading(false)
+        clearTimeout(loadingTimeout)
       }
-      
-      console.log('AuthProvider: Setting loading to false')
-      setLoading(false)
-      clearTimeout(loadingTimeout)
-    }).catch((error) => {
-      console.error('AuthProvider: Uncaught error getting session:', error)
-      // Do NOT wipe state on unhandled errors either
-      setLoading(false)
-      clearTimeout(loadingTimeout)
-    })
+    };
+
+    initAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('AuthProvider: Auth state changed', event, session?.user?.email || 'no user')
+
+        // Sync session to localStorage for PWA/WebView persistence
+        if (session) {
+          localStorage.setItem('katiwatch-auth-session', JSON.stringify(session));
+        }
 
         // Intercept password recovery — do NOT sign the user in.
         // Redirect them to the reset-password page to set a new password.
@@ -138,14 +169,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         if (event === 'INITIAL_SESSION') {
-          setUser(session?.user ?? null)
+          // Handled primarily by initAuth, but we can set state here if it's available
           if (session?.user) {
+            setUser(session.user)
             checkPremiumStatus(session.user).catch(console.error)
-          } else {
-            setIsPremium(false)
           }
         } else if (event === 'SIGNED_OUT') {
           // Explicitly clear state on verifiable logouts
+          localStorage.removeItem('katiwatch-auth-session');
           setUser(null)
           setIsPremium(false)
         } else if (session?.user) {
