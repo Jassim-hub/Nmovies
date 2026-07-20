@@ -228,7 +228,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           redirectTo: redirectUrl,
           queryParams: {
             access_type: 'offline',
-            prompt: 'consent'
+            prompt: 'select_account'
           }
         }
       })

@@ -7,7 +7,11 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables')
 }
 
-export const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey)
+export const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey, {
+  cookieOptions: {
+    maxAge: 315360000, // 10 years in seconds (persistent login like Netflix)
+  }
+})
 
 // Database Types
 export interface Genre {
