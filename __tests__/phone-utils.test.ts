@@ -78,6 +78,8 @@ describe('getProviderFromPhone', () => {
     ['0781234567', '78'],
     ['0761234567', '76'],
     ['0391234567', '39'],
+    ['0311234567', '31'],
+    ['0791234567', '79'],
   ])('detects MTN for prefix %s (0%s)', (phone) => {
     expect(getProviderFromPhone(phone)).toBe('mtn');
   });
@@ -87,6 +89,8 @@ describe('getProviderFromPhone', () => {
     ['256781234567'],
     ['256761234567'],
     ['256391234567'],
+    ['256311234567'],
+    ['256791234567'],
   ])('detects MTN for already-formatted %s', (phone) => {
     expect(getProviderFromPhone(phone)).toBe('mtn');
   });
@@ -110,8 +114,6 @@ describe('getProviderFromPhone', () => {
 
   // --- Unsupported prefixes (valid Ugandan but not MakyPay-supported) ---
   it.each([
-    ['0311234567', '31'],
-    ['0791234567', '79'],
     ['0731234567', '73'],
   ])('throws for unsupported prefix %s (0%s)', (phone) => {
     expect(() => getProviderFromPhone(phone)).toThrow('Unsupported number');

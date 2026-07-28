@@ -5,7 +5,7 @@
  * provider detection. Does NOT import any server-side dependencies.
  * 
  * Supported Providers (per MakyPay API docs):
- * - MTN Mobile Money: 077, 078, 076, 039
+ * - MTN Mobile Money: 077, 078, 076, 039, 031, 079
  * - Airtel Money: 070, 074, 075
  */
 
@@ -40,17 +40,14 @@ export function formatPhoneNumber(phoneNumber: string): string {
  * Determine mobile money provider based on phone number prefix.
  * 
  * MakyPay API officially supports:
- * - MTN: 77, 78, 76, 39
+ * - MTN: 77, 78, 76, 39, 31, 79
  * - Airtel: 70, 74, 75
- * 
- * Prefixes 31, 79, 73 are valid Ugandan numbers but NOT supported
- * by MakyPay for mobile money collections.
  */
 export function getProviderFromPhone(phoneNumber: string): string {
   const formatted = formatPhoneNumber(phoneNumber);
 
-  // MTN: 256 + (077, 078, 076, 039) — per MakyPay API docs
-  if (/^256(77|78|76|39)/.test(formatted)) {
+  // MTN: 256 + (077, 078, 076, 039, 031, 079)
+  if (/^256(77|78|76|39|31|79)/.test(formatted)) {
     return 'mtn';
   }
 
@@ -62,7 +59,7 @@ export function getProviderFromPhone(phoneNumber: string): string {
   // Reject unsupported prefixes with clear message
   const prefix = formatted.substring(3, 5);
   throw new Error(
-    `Unsupported number (0${prefix}). Use MTN (077/078/076/039) or Airtel (070/074/075).`
+    `Unsupported number (0${prefix}). Use MTN (077/078/076/039/031/079) or Airtel (070/074/075).`
   );
 }
 
