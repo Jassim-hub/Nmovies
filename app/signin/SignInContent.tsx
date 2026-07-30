@@ -23,15 +23,33 @@ export default function SignInContent() {
   const [forgotEmail, setForgotEmail] = useState('')
   const [forgotLoading, setForgotLoading] = useState(false)
 
+  const parseErrorMessage = (err: any, fallback: string = 'An error occurred'): string => {
+    if (!err) return ''
+    if (typeof err === 'string') {
+      if (err.trim() === '{}' || err.trim() === '[object Object]') {
+        return 'Authentication service error. Please try again.'
+      }
+      return err
+    }
+    if (err.message && typeof err.message === 'string' && err.message.trim() !== '{}' && err.message.trim() !== '[object Object]') {
+      return err.message
+    }
+    return fallback
+  }
+
   useEffect(() => {
     const errorParam = searchParams.get('error')
     const messageParam = searchParams.get('message')
     const redirectParam = searchParams.get('redirect')
 
-    if (errorParam === 'auth_failed') {
-      setError('Authentication failed. Please try again.')
-    } else if (errorParam === 'unexpected') {
-      setError('An unexpected error occurred. Please try again.')
+    if (errorParam) {
+      if (errorParam === 'auth_failed') {
+        setError('Authentication failed. Please try again.')
+      } else if (errorParam === 'unexpected') {
+        setError('An unexpected error occurred. Please try again.')
+      } else {
+        setError(parseErrorMessage(errorParam, 'Authentication failed. Please try again.'))
+      }
     }
 
     if (messageParam === 'check_email') {
@@ -82,7 +100,7 @@ export default function SignInContent() {
     const { error } = await signInWithGoogle()
 
     if (error) {
-      setError(error.message || 'Failed to sign in with Google')
+      setError(parseErrorMessage(error, 'Failed to sign in with Google'))
       setLoading(false)
     }
     // If successful, the redirect will be handled by the OAuth flow
@@ -96,7 +114,7 @@ export default function SignInContent() {
     const { error } = await signIn(email, password)
 
     if (error) {
-      setError(error.message || 'Failed to sign in')
+      setError(parseErrorMessage(error, 'Invalid email or password. Please try again.'))
       setLoading(false)
     } else {
       // Sign-in successful, reset loading so redirect effect can trigger

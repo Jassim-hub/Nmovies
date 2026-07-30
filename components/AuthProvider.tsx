@@ -113,13 +113,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                   access_token: parsedSession.access_token,
                   refresh_token: parsedSession.refresh_token,
                 });
-                
+
                 if (!restoreError && data.session) {
                   session = data.session;
+                } else {
+                  console.warn('AuthProvider: Stale session in localStorage, clearing');
+                  localStorage.removeItem('katiwatch-auth-session');
                 }
+              } else {
+                localStorage.removeItem('katiwatch-auth-session');
               }
             } catch (e) {
               console.error('AuthProvider: Failed to restore session from localStorage', e);
+              localStorage.removeItem('katiwatch-auth-session');
             }
           }
         }
