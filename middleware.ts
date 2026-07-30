@@ -6,9 +6,26 @@ export async function middleware(request: NextRequest) {
     request,
   })
 
+  // Fast-path: If no Supabase auth cookies are present, skip remote auth session refresh
+  const allCookies = request.cookies.getAll()
+  const hasAuthCookie = allCookies.some((cookie) =>
+    cookie.name.startsWith('sb-') || cookie.name.includes('auth-token')
+  )
+
+  if (!hasAuthCookie) {
+    return supabaseResponse
+  }
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return supabaseResponse
+  }
+
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseAnonKey,
     {
       cookieOptions: {
         maxAge: 315360000, // 10 years in seconds
@@ -20,11 +37,11 @@ export async function middleware(request: NextRequest) {
         setAll(cookiesToSet) {
           // Update request cookies so that the response reflects the refreshed token
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-          
+
           supabaseResponse = NextResponse.next({
             request,
           })
-          
+
           // Update response cookies so the browser saves the refreshed token
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
@@ -34,13 +51,21 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // IMPORTANT: Avoid writing any logic between createServerClient and
-  // supabase.auth.getUser(). A simple mistake could make it very hard to debug
-  // issues with users being randomly logged out.
-  
-  // This will refresh the session if the access token has expired and
-  // there is a valid refresh token.
-  await supabase.auth.getUser()
+  // Industry Standard Safety: Wrap network auth check in a timeout (2500ms) and try/catch.
+  // This prevents Supabase 503/latency spikes from triggering Vercel 504 MIDDLEWARE_INVOCATION_TIMEOUT.
+  try {
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Supabase Auth timeout in middleware')), 2500)
+    )
+
+    await Promise.race([
+      supabase.auth.getUser(),
+      timeoutPromise,
+    ])
+  } catch (error) {
+    // Log error in production monitoring without throwing 504 Gateway Timeout to the end user
+    console.warn('Middleware auth refresh skipped or timed out:', error instanceof Error ? error.message : error)
+  }
 
   return supabaseResponse
 }
@@ -48,13 +73,9 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public files with extensions
-     * Feel free to modify this pattern to include more paths.
+     * Exclude static files, assets, images, media, fonts, and favicon from middleware invocation.
      */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|woff|woff2|ttf|eot|mp4|webm|mp3|m3u8|ts|json)$).*)',
   ],
 }
+
