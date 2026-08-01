@@ -82,6 +82,8 @@ export function useOneSignal(): UseOneSignalReturn {
         await OneSignal.init({
           appId,
           allowLocalhostAsSecureOrigin: true,
+          serviceWorkerPath: 'OneSignalSDKWorker.js',
+          serviceWorkerParam: { scope: '/' },
           notifyButton: {
             enable: false, // We use our own UI
           },

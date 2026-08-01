@@ -1,5 +1,6 @@
 // NicholMoviesUg Service Worker
-// Handles caching for PWA offline support
+// Import OneSignal SDK Worker for OS-level Push Notifications when app/tab is closed
+importScripts("https://cdn.onesignal.com/sdks/OneSignalSDKWorker.js");
 
 const CACHE_NAME = 'nicholmoviesug-v1';
 const OFFLINE_URL = '/';
@@ -44,7 +45,7 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET') return;
 
   // Skip cross-origin requests except images
-  if (url.origin !== location.origin && !request.destination === 'image') return;
+  if (url.origin !== location.origin && request.destination !== 'image') return;
 
   // Skip API routes — always network
   if (url.pathname.startsWith('/api/')) return;
@@ -75,58 +76,5 @@ self.addEventListener('fetch', (event) => {
           return new Response('Offline', { status: 503 });
         });
       })
-  );
-});
-
-// Push notification handler (for browsers that don't use OneSignal's worker)
-self.addEventListener('push', (event) => {
-  if (!event.data) return;
-
-  try {
-    const data = event.data.json();
-    const options = {
-      body: data.message || data.body || '',
-      icon: '/logo.png',
-      badge: '/logo.png',
-      image: data.imageUrl || data.big_picture,
-      data: data.data || {},
-      vibrate: [100, 50, 100],
-      requireInteraction: false,
-    };
-
-    event.waitUntil(
-      self.registration.showNotification(data.title || 'NicholMoviesUg', options)
-    );
-  } catch {
-    // Not JSON, skip
-  }
-});
-
-// Notification click handler
-self.addEventListener('notificationclick', (event) => {
-  event.notification.close();
-
-  const notifData = event.notification.data;
-  let targetUrl = '/';
-
-  if (notifData && notifData.type && notifData.id) {
-    targetUrl = `/${notifData.type === 'movie' ? 'movies' : 'series'}/${notifData.id}`;
-  }
-
-  event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      // Focus existing tab if open
-      for (const client of clientList) {
-        if (client.url.includes(location.origin) && 'focus' in client) {
-          client.focus();
-          client.navigate(targetUrl);
-          return;
-        }
-      }
-      // Otherwise open a new window
-      if (clients.openWindow) {
-        return clients.openWindow(targetUrl);
-      }
-    })
   );
 });
