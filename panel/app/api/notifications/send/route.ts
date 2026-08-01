@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const origin = request.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL || 'https://nextfi.vercel.app';
+    const origin = request.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL || 'https://www.nicholmoviesug.com';
     const defaultIconUrl = `${origin.replace(/\/$/, '')}/icon.jpeg`;
 
     let finalImageUrl = imageUrl;
@@ -75,10 +75,11 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Error in push notification API:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
       { 
-        error: 'Failed to send push notification',
-        details: error instanceof Error ? error.message : 'Unknown error'
+        error: errorMessage,
+        details: errorMessage
       },
       { status: 500 }
     );

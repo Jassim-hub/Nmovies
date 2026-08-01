@@ -131,7 +131,7 @@ export default function PushNotificationDialog({
           show: true,
           type: 'error',
           title: '❌ Failed to send notification',
-          message: result.error || 'Unknown error occurred'
+          message: result.details || result.error || 'Unknown error occurred'
         });
       }
     } catch (error) {
