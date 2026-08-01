@@ -78,18 +78,29 @@ export default function DiagnosticsPage() {
         const sub = await reg.pushManager.getSubscription();
         if (sub) {
           result.endpoint = sub.endpoint;
-          // The subscription ID is the last part of the endpoint URL for most push services
-          const parts = sub.endpoint.split('/');
-          result.subscriptionId = parts[parts.length - 1];
-        }
-
-        // Check OneSignal subscription ID
-        if ((window as any).OneSignal?.User?.PushSubscription?.id) {
-          result.subscriptionId = (window as any).OneSignal.User.PushSubscription.id;
         }
       }
-    } catch (e) {
+    } catch {
       // ignore
+    }
+
+    if (typeof window !== 'undefined') {
+      const win = window as any;
+      // Try immediately first
+      if (win.OneSignal?.User?.PushSubscription?.id) {
+        result.subscriptionId = win.OneSignal.User.PushSubscription.id;
+        setSpecificSubId(win.OneSignal.User.PushSubscription.id);
+      } else {
+        // Push into deferred queue — fires once SDK is ready
+        win.OneSignalDeferred = win.OneSignalDeferred || [];
+        win.OneSignalDeferred.push((OneSignal: any) => {
+          const id = OneSignal?.User?.PushSubscription?.id;
+          if (id) {
+            setBrowserSub(prev => prev ? { ...prev, subscriptionId: id } : { ...result, subscriptionId: id });
+            setSpecificSubId(id);
+          }
+        });
+      }
     }
 
     setBrowserSub(result);
