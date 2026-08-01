@@ -101,31 +101,41 @@ export default function PushNotificationDialog({
 
         // Extract useful info from OneSignal response
         const onesignalData = result.data || {};
-        const recipients = onesignalData.recipients ?? 1;
-        const notificationId = onesignalData.id || 'Sent';
-        
-        const successMessage = `📱 Push notification delivered! Recipients: ${recipients} | ID: ${notificationId}`;
-        
-        setNotification({
-          show: true,
-          type: 'success',
-          title: '🎉 Push notification sent successfully!',
-          message: successMessage
-        });
-        
-        // Close modal immediately so user can see the success notification
-        onOpenChange(false);
-        
-        // Auto-hide success notification after 5 seconds
-        setTimeout(() => {
-          setNotification(prev => ({ ...prev, show: false }));
-        }, 5000);
+        const recipients = onesignalData.recipients;
+        const notificationId = onesignalData.id || '';
+        const onesignalErrors = onesignalData.errors;
 
-        // Reset form
-        setTitle(contentTitle ? `New ${contentType}: ${contentTitle}` : '');
-        setMessage(contentTitle ? `Check out the new ${contentType} "${contentTitle}" now available on NicholMovies!` : '');
-        setTargetType('all');
-        setSegments(['Subscribers']);
+        // Warn if OneSignal returned errors or 0 recipients
+        if (onesignalErrors?.length || recipients === 0) {
+          setNotification({
+            show: true,
+            type: 'error',
+            title: '⚠️ Notification saved but push delivery failed',
+            message: onesignalErrors?.[0] || 'Recipients: 0 — no subscribed devices received the push. Check the diagnostics page.'
+          });
+        } else {
+          const successMessage = `📱 Push delivered to ${recipients ?? 'unknown'} device(s) | ID: ${notificationId}`;
+          setNotification({
+            show: true,
+            type: 'success',
+            title: '🎉 Push notification sent!',
+            message: successMessage
+          });
+
+          // Close modal immediately so user can see the success notification
+          onOpenChange(false);
+
+          // Auto-hide success notification after 5 seconds
+          setTimeout(() => {
+            setNotification(prev => ({ ...prev, show: false }));
+          }, 5000);
+
+          // Reset form
+          setTitle(contentTitle ? `New ${contentType}: ${contentTitle}` : '');
+          setMessage(contentTitle ? `Check out the new ${contentType} "${contentTitle}" now available on NicholMovies!` : '');
+          setTargetType('all');
+          setSegments(['Subscribed Users']);
+        }
       } else {
         setNotification({
           show: true,

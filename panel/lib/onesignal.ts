@@ -57,10 +57,15 @@ export class OneSignalService {
    */
   private static normalizeSegments(segments?: string[]): string[] {
     if (!segments || segments.length === 0) {
-      return ['Subscribers'];
+      return ['Subscribed Users'];
     }
-    
-    return segments.map(seg => seg.toLowerCase() === 'all' ? 'Subscribers' : seg);
+    return segments.map(seg => {
+      const lower = seg.toLowerCase();
+      if (lower === 'all' || lower === 'subscribers' || lower === 'total subscriptions') {
+        return 'Subscribed Users';
+      }
+      return seg;
+    });
   }
 
   private static formatPayload(
