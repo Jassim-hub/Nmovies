@@ -95,8 +95,14 @@ export class OneSignalService {
       payload.chrome_web_icon = notificationData.iconUrl;
       payload.firefox_icon = notificationData.iconUrl;
       payload.chrome_web_badge = notificationData.iconUrl;
+    } else {
+      // Default to the NicholMoviesUg logo for all push notifications
+      const defaultIcon = 'https://www.nicholmoviesug.com/logo.png';
+      payload.chrome_web_icon = defaultIcon;
+      payload.firefox_icon = defaultIcon;
+      payload.chrome_web_badge = defaultIcon;
     }
-    
+
     if (notificationData.imageUrl) {
       payload.big_picture = notificationData.imageUrl;
       payload.large_icon = notificationData.imageUrl;

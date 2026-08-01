@@ -55,7 +55,7 @@ export async function middleware(request: NextRequest) {
   // This prevents Supabase 503/latency spikes from triggering Vercel 504 MIDDLEWARE_INVOCATION_TIMEOUT.
   try {
     const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Supabase Auth timeout in middleware')), 2500)
+      setTimeout(() => reject(new Error('Supabase Auth timeout in middleware')), 5000)
     )
 
     await Promise.race([
