@@ -7,6 +7,7 @@ import "swiper/css/pagination";
 import { AuthProvider } from "@/components/AuthProvider";
 import ConditionalLayout from "../components/ConditionalLayout";
 import WhatsAppFloat from "../components/WhatsAppFloat";
+import NotificationPrompt from "../components/NotificationPrompt";
 import Script from "next/script";
 
 const roboto = Roboto({
@@ -158,6 +159,30 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
           strategy="afterInteractive"
         />
+        {/* OneSignal Web SDK v16 */}
+        <Script
+          id="onesignal-sdk"
+          src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js"
+          strategy="afterInteractive"
+          defer
+        />
+        <Script
+          id="onesignal-init"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.OneSignalDeferred = window.OneSignalDeferred || [];
+              OneSignalDeferred.push(async function(OneSignal) {
+                await OneSignal.init({
+                  appId: '30e1c461-bc97-4079-aa3d-874150082a38',
+                  serviceWorkerPath: 'OneSignalSDKWorker.js',
+                  serviceWorkerParam: { scope: '/' },
+                  notifyButton: { enable: false },
+                });
+              });
+            `,
+          }}
+        />
         {/* Register PWA service worker */}
         <Script
           id="register-sw"
@@ -177,6 +202,7 @@ export default function RootLayout({
         <AuthProvider>
           <ConditionalLayout>{children}</ConditionalLayout>
           <WhatsAppFloat />
+          <NotificationPrompt />
         </AuthProvider>
       </body>
     </html>
