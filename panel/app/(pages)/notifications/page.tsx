@@ -32,6 +32,7 @@ export default function NotificationsPage() {
   // Form states
   const [newTitle, setNewTitle] = useState("");
   const [newMessage, setNewMessage] = useState("");
+  const [sendImmediately, setSendImmediately] = useState(true);
 
   // Edit modal states
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -60,7 +61,6 @@ export default function NotificationsPage() {
       setNotifications(data || []);
     } catch (error) {
       console.error('Error loading notifications:', error);
-      alert('Failed to load notifications');
     } finally {
       setLoading(false);
     }
@@ -88,9 +88,7 @@ export default function NotificationsPage() {
       const notificationData = {
         title: newTitle.trim(),
         message: newMessage.trim(),
-        status: 'draft' as const,
-        // user_id will be NULL (broadcast to all users)
-        // read will default to false
+        status: (sendImmediately ? 'sent' : 'draft') as 'draft' | 'sent',
       };
 
       const { data, error } = await supabase
@@ -101,11 +99,41 @@ export default function NotificationsPage() {
 
       if (error) throw error;
 
+      // If send immediately is checked, trigger OneSignal Push
+      if (sendImmediately && data) {
+        try {
+          await fetch('/panel/api/notifications/send', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              title: data.title,
+              message: data.message,
+              imageUrl: data.image_url,
+              targetType: 'segments',
+              targetSegments: ['Subscribers'],
+              data: {
+                type: 'admin_notification',
+                notification_id: data.id,
+              },
+            }),
+          });
+        } catch (pushErr) {
+          console.error('Push notification trigger error:', pushErr);
+        }
+      }
+
       setNotifications([data, ...notifications]);
       setNewTitle("");
       setNewMessage("");
       setOpen(false);
-      setMessage({ type: 'success', text: 'Notification saved successfully!' });
+      setMessage({
+        type: 'success',
+        text: sendImmediately
+          ? 'Notification created & push sent successfully!'
+          : 'Notification saved as draft successfully!'
+      });
     } catch (error) {
       console.error('Error saving notification:', error);
       setMessage({ type: 'error', text: 'Failed to save notification' });
@@ -126,7 +154,7 @@ export default function NotificationsPage() {
           message: notification.message,
           imageUrl: notification.image_url,
           targetType: 'segments',
-          targetSegments: ['All'],
+          targetSegments: ['Subscribers'],
           data: {
             type: 'admin_notification',
             notification_id: notification.id,
@@ -155,7 +183,8 @@ export default function NotificationsPage() {
         n.id === notification.id ? { ...n, status: 'sent' as const } : n
       ));
 
-      setMessage({ type: 'success', text: 'Notification sent successfully!' });
+      const recipients = result.data?.recipients ?? 'subscribers';
+      setMessage({ type: 'success', text: `Push notification sent to ${recipients} users!` });
     } catch (error) {
       console.error('Error sending notification:', error);
       setMessage({ 
@@ -262,7 +291,10 @@ export default function NotificationsPage() {
       )}
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <h1 className="text-2xl font-bold text-white uppercase tracking-wider">Notifications</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-white uppercase tracking-wider">Notifications</h1>
+          <p className="text-xs text-gray-400 mt-1">Manage and send push notifications to website users</p>
+        </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button className="bg-[#E50914] hover:bg-[#b80710] text-white px-6 py-2 rounded-lg font-bold uppercase tracking-wider transition-all shadow-[0_0_15px_rgba(229,9,20,0.3)] w-full sm:w-auto">
@@ -294,13 +326,22 @@ export default function NotificationsPage() {
                   className="bg-black border border-gray-800 rounded-lg px-4 py-3 w-full text-white focus:outline-none focus:ring-1 focus:ring-[#E50914] placeholder-gray-600 min-h-[100px] resize-y transition-all"
                 />
               </div>
+              <label className="flex items-center space-x-2 text-sm text-gray-300">
+                <input
+                  type="checkbox"
+                  checked={sendImmediately}
+                  onChange={e => setSendImmediately(e.target.checked)}
+                  className="accent-[#E50914] w-4 h-4"
+                />
+                <span>Send push notification immediately to all subscribers</span>
+              </label>
             </div>
             <DialogFooter className="flex-col sm:flex-row gap-3 pt-4 border-t border-gray-800">
               <DialogClose asChild>
                 <Button variant="outline" className="w-full sm:w-auto bg-transparent border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white uppercase tracking-wider font-bold">Cancel</Button>
               </DialogClose>
               <Button className="w-full sm:w-auto bg-[#E50914] hover:bg-[#b80710] text-white uppercase tracking-wider font-bold shadow-[0_0_10px_rgba(229,9,20,0.2)]" onClick={handleAddNotification}>
-                Add Notification
+                {sendImmediately ? 'Send & Save' : 'Save as Draft'}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -346,19 +387,18 @@ export default function NotificationsPage() {
                     <Button 
                       className={`text-xs uppercase tracking-wider font-bold transition-all px-3 py-1.5 h-auto ${
                         n.status === 'sent' 
-                          ? 'bg-gray-800 text-gray-500 cursor-not-allowed' 
+                          ? 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white' 
                           : 'bg-[#141414] border border-[#E50914] text-[#E50914] hover:bg-[#E50914] hover:text-white'
                       }`}
                       onClick={() => handleSendNotification(n)}
-                      disabled={sending === n.id || n.status === 'sent'}
+                      disabled={sending === n.id}
                     >
-                      {sending === n.id ? 'Sending...' : 'Send'}
+                      {sending === n.id ? 'Sending...' : n.status === 'sent' ? 'Resend Push' : 'Send Push'}
                     </Button>
                     <Button 
                       variant="outline"
                       className="bg-transparent border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white text-xs uppercase tracking-wider font-bold px-3 py-1.5 h-auto"
                       onClick={() => handleEditClick(n)}
-                      disabled={n.status === 'sent'}
                     >
                       Edit
                     </Button>
@@ -410,22 +450,21 @@ export default function NotificationsPage() {
               </div>
               <div className="flex flex-col gap-2 pt-4 border-t border-gray-800">
                 <Button 
-                  className={`w-full text-xs uppercase tracking-wider font-bold transition-all py-5 ${
+                  className={`w-full text-xs uppercase tracking-wider font-bold transition-all py-3 ${
                     n.status === 'sent' 
-                      ? 'bg-gray-800 text-gray-500 cursor-not-allowed' 
+                      ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' 
                       : 'bg-[#141414] border border-[#E50914] text-[#E50914] hover:bg-[#E50914] hover:text-white shadow-[0_0_10px_rgba(229,9,20,0.1)]'
                   }`}
                   onClick={() => handleSendNotification(n)}
-                  disabled={sending === n.id || n.status === 'sent'}
+                  disabled={sending === n.id}
                 >
-                  {sending === n.id ? 'Sending...' : 'Broadcast Notification'}
+                  {sending === n.id ? 'Sending...' : n.status === 'sent' ? 'Resend Push Notification' : 'Broadcast Push Notification'}
                 </Button>
                 <div className="flex gap-2">
                   <Button 
                     variant="outline"
                     className="flex-1 bg-transparent border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white text-xs uppercase tracking-wider font-bold"
                     onClick={() => handleEditClick(n)}
-                    disabled={n.status === 'sent'}
                   >
                     Edit
                   </Button>

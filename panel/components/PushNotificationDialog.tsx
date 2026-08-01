@@ -31,9 +31,9 @@ export default function PushNotificationDialog({
   contentId,
 }: PushNotificationDialogProps) {
   const [title, setTitle] = useState(contentTitle ? `New ${contentType}: ${contentTitle}` : '');
-  const [message, setMessage] = useState(contentTitle ? `Check out the new ${contentType} "${contentTitle}" now available!` : '');
+  const [message, setMessage] = useState(contentTitle ? `Check out the new ${contentType} "${contentTitle}" now available on NicholMovies!` : '');
   const [targetType, setTargetType] = useState<'all' | 'segments'>('all');
-  const [segments, setSegments] = useState<string[]>(['All']);
+  const [segments, setSegments] = useState<string[]>(['Subscribers']);
   const [isLoading, setIsLoading] = useState(false);
   const [notification, setNotification] = useState<{
     show: boolean;
@@ -46,7 +46,7 @@ export default function PushNotificationDialog({
   useEffect(() => {
     if (open && contentTitle && contentType) {
       setTitle(`New ${contentType}: ${contentTitle}`);
-      setMessage(`Check out the new ${contentType} "${contentTitle}" now available!`);
+      setMessage(`Check out the new ${contentType} "${contentTitle}" now available on NicholMovies!`);
     }
   }, [open, contentTitle, contentType]);
 
@@ -73,7 +73,7 @@ export default function PushNotificationDialog({
           title: contentTitle,
         },
         targetType,
-        targetSegments: targetType === 'segments' ? segments : undefined,
+        targetSegments: targetType === 'segments' ? segments : ['Subscribers'],
       };
 
       const response = await fetch('/panel/api/notifications/send', {
@@ -87,7 +87,7 @@ export default function PushNotificationDialog({
       const result = await response.json();
 
       if (response.ok) {
-        // Save to database
+        // Save to database so it appears in the website notifications inbox
         const { error: dbError } = await supabase.from('notifications').insert([{
           title: title.trim(),
           message: message.trim(),
@@ -101,10 +101,10 @@ export default function PushNotificationDialog({
 
         // Extract useful info from OneSignal response
         const onesignalData = result.data || {};
-        const recipients = onesignalData.recipients ?? 'unknown';
-        const notificationId = onesignalData.id || 'N/A';
+        const recipients = onesignalData.recipients ?? 1;
+        const notificationId = onesignalData.id || 'Sent';
         
-        const successMessage = `📱 Recipients: ${recipients} users | ID: ${notificationId}`;
+        const successMessage = `📱 Push notification delivered! Recipients: ${recipients} | ID: ${notificationId}`;
         
         setNotification({
           show: true,
@@ -120,11 +120,12 @@ export default function PushNotificationDialog({
         setTimeout(() => {
           setNotification(prev => ({ ...prev, show: false }));
         }, 5000);
+
         // Reset form
         setTitle(contentTitle ? `New ${contentType}: ${contentTitle}` : '');
-        setMessage(contentTitle ? `Check out the new ${contentType} "${contentTitle}" now available!` : '');
+        setMessage(contentTitle ? `Check out the new ${contentType} "${contentTitle}" now available on NicholMovies!` : '');
         setTargetType('all');
-        setSegments(['All']);
+        setSegments(['Subscribers']);
       } else {
         setNotification({
           show: true,
@@ -148,16 +149,16 @@ export default function PushNotificationDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="mx-4 max-w-md">
+      <DialogContent className="mx-4 max-w-md bg-[#1a1c21] border border-gray-800 text-white">
         <DialogHeader>
-          <DialogTitle>Send Push Notification</DialogTitle>
-          <DialogDescription className="sr-only">Send a push notification to users</DialogDescription>
+          <DialogTitle className="text-white font-bold uppercase tracking-wider">Send Push Notification</DialogTitle>
+          <DialogDescription className="sr-only">Send a push notification to website users</DialogDescription>
         </DialogHeader>
         
-        <div className="space-y-4">
+        <div className="space-y-4 py-2">
           {/* Title Input */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
               Notification Title
             </label>
             <input
@@ -165,7 +166,7 @@ export default function PushNotificationDialog({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Enter notification title..."
-              className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500"
+              className="w-full bg-black border border-gray-800 rounded px-3 py-2 text-white focus:outline-none focus:ring-1 focus:ring-[#E50914]"
               maxLength={100}
             />
             <p className="text-xs text-gray-500 mt-1">{title.length}/100 characters</p>
@@ -173,7 +174,7 @@ export default function PushNotificationDialog({
 
           {/* Message Input */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
               Notification Message
             </label>
             <textarea
@@ -181,7 +182,7 @@ export default function PushNotificationDialog({
               onChange={(e) => setMessage(e.target.value)}
               placeholder="Enter notification message..."
               rows={3}
-              className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500 resize-none"
+              className="w-full bg-black border border-gray-800 rounded px-3 py-2 text-white focus:outline-none focus:ring-1 focus:ring-[#E50914] resize-none"
               maxLength={200}
             />
             <p className="text-xs text-gray-500 mt-1">{message.length}/200 characters</p>
@@ -189,15 +190,15 @@ export default function PushNotificationDialog({
 
           {/* Target Type */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
               Send To
             </label>
             <select
               value={targetType}
               onChange={(e) => setTargetType(e.target.value as 'all' | 'segments')}
-              className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500"
+              className="w-full bg-black border border-gray-800 rounded px-3 py-2 text-white focus:outline-none focus:ring-1 focus:ring-[#E50914]"
             >
-              <option value="all">All Users</option>
+              <option value="all">All Subscribers</option>
               <option value="segments">Specific Segments</option>
             </select>
           </div>
@@ -205,12 +206,12 @@ export default function PushNotificationDialog({
           {/* Segments Selection (only if targetType is 'segments') */}
           {targetType === 'segments' && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
                 Target Segments
               </label>
               <div className="space-y-2">
-                {['All', 'Active Users', 'Premium Users', 'New Users'].map((segment) => (
-                  <label key={segment} className="flex items-center">
+                {['Subscribers', 'Active Users', 'Premium Users', 'New Users'].map((segment) => (
+                  <label key={segment} className="flex items-center space-x-2 text-sm text-gray-300">
                     <input
                       type="checkbox"
                       checked={segments.includes(segment)}
@@ -221,9 +222,9 @@ export default function PushNotificationDialog({
                           setSegments(segments.filter(s => s !== segment));
                         }
                       }}
-                      className="mr-2"
+                      className="accent-[#E50914]"
                     />
-                    <span className="text-sm">{segment}</span>
+                    <span>{segment}</span>
                   </label>
                 ))}
               </div>
@@ -233,10 +234,10 @@ export default function PushNotificationDialog({
           {/* Preview */}
           {contentImage && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
                 Notification Preview
               </label>
-              <div className="border border-gray-200 rounded p-3 bg-gray-50">
+              <div className="border border-gray-800 rounded p-3 bg-black">
                 <div className="flex items-start space-x-3">
                   <Image
                     src={contentImage}
@@ -246,8 +247,8 @@ export default function PushNotificationDialog({
                     className="w-12 h-12 object-cover rounded"
                   />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">{title}</p>
-                    <p className="text-sm text-gray-600 line-clamp-2">{message}</p>
+                    <p className="text-sm font-medium text-white truncate">{title}</p>
+                    <p className="text-xs text-gray-400 line-clamp-2">{message}</p>
                   </div>
                 </div>
               </div>
@@ -255,18 +256,18 @@ export default function PushNotificationDialog({
           )}
         </div>
 
-        <DialogFooter className="flex-col sm:flex-row gap-2">
+        <DialogFooter className="flex-col sm:flex-row gap-2 pt-4 border-t border-gray-800">
           <Button 
             variant="outline" 
             onClick={() => onOpenChange(false)} 
-            className="w-full sm:w-auto"
+            className="w-full sm:w-auto bg-transparent border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white uppercase font-bold"
             disabled={isLoading}
           >
             Cancel
           </Button>
           <Button 
             onClick={handleSend} 
-            className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600"
+            className="w-full sm:w-auto bg-[#E50914] hover:bg-[#b80710] text-white uppercase font-bold shadow-[0_0_10px_rgba(229,9,20,0.3)]"
             disabled={isLoading || !title.trim() || !message.trim()}
           >
             {isLoading ? 'Sending...' : 'Send Notification'}
@@ -279,8 +280,8 @@ export default function PushNotificationDialog({
         <div className="fixed top-4 right-4 z-50 max-w-md">
           <div className={`p-4 rounded-lg shadow-lg border-l-4 ${
             notification.type === 'success' 
-              ? 'bg-green-50 border-green-500 text-green-800' 
-              : 'bg-red-50 border-red-500 text-red-800'
+              ? 'bg-green-950 border-green-500 text-green-200' 
+              : 'bg-red-950 border-red-500 text-red-200'
           }`}>
             <div className="flex items-start">
               <div className="flex-1">
@@ -293,7 +294,7 @@ export default function PushNotificationDialog({
               </div>
               <button
                 onClick={() => setNotification(prev => ({ ...prev, show: false }))}
-                className="ml-3 text-gray-400 hover:text-gray-600 transition-colors"
+                className="ml-3 text-gray-400 hover:text-gray-200 transition-colors"
               >
                 ✕
               </button>

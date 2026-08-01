@@ -1,252 +1,208 @@
-'use client'
+'use client';
+
 import AdminPanelLayout from "@/app/components/layout";
 import { Button } from "@/components/ui/button";
-import { useEffect, useState, useMemo } from "react";
-import { supabase } from "@/lib/supabaseClient";
 import Image from "next/image";
-import Link from "next/link";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from "@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { useEffect, useState, useCallback } from "react";
 import PushNotificationDialog from "@/components/PushNotificationDialog";
+import { getReelplexiSeries, searchReelplexiSeries, getReelplexiGenres } from "@/lib/reelplexi";
+
 interface Series {
   id: string;
   title: string;
   description: string;
+  cover_image_url: string;
   thumbnail_url: string;
   published: boolean;
-  recommend: boolean;
-  popular: boolean;
-  latest: boolean;
-  remakes: boolean;
-  exclusive_from_kilax: boolean;
-  created_at: string;
+  premium: boolean;
+  release_date?: string;
+  vjs?: { name: string } | null;
+  genre_ids?: string[];
+}
+
+interface Genre {
+  id: string;
+  name: string;
 }
 
 export default function SeriesPage() {
-  const [series, setSeries] = useState<Series[]>([]);
+  const [seriesList, setSeriesList] = useState<Series[]>([]);
+  const [genres, setGenres] = useState<Genre[]>([]);
+  const [selectedGenre, setSelectedGenre] = useState<string>('all');
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<'all' | 'published' | 'unpublished'>('all');
-  const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [showPushDialog, setShowPushDialog] = useState(false);
   const [selectedSeries, setSelectedSeries] = useState<Series | null>(null);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const pageSize = 20;
 
+  // Load available genres
   useEffect(() => {
-    async function fetchSeries() {
-      const { data } = await supabase
-        .from("series")
-        .select("id, title, description, thumbnail_url, published, recommend, popular, latest, remakes, exclusive_from_kilax, created_at", { count: "exact" })
-        .order('created_at', { ascending: false });
-      setSeries(data || []);
+    async function loadGenres() {
+      const g = await getReelplexiGenres();
+      setGenres(g);
     }
-    fetchSeries();
+    loadGenres();
   }, []);
 
-  const filteredSeries = useMemo(() => {
-    return series.filter(s => {
-      const matchesSearch = s.title.toLowerCase().includes(search.toLowerCase());
-      const matchesFilter =
-        filter === 'all' ? true : filter === 'published' ? s.published : !s.published;
-      return matchesSearch && matchesFilter;
-    });
-  }, [series, search, filter]);
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [search]);
 
-  const handleDelete = (id: string) => {
-    setDeleteId(id);
-    setShowDeleteModal(true);
-  };
+  // Fetch series from Reelplexi API
+  const fetchSeries = useCallback(async () => {
+    setLoading(true);
+    try {
+      const genreFilter = selectedGenre !== 'all' ? selectedGenre : undefined;
+      const res = debouncedSearch.trim()
+        ? await searchReelplexiSeries(debouncedSearch.trim(), page, pageSize, undefined, genreFilter)
+        : await getReelplexiSeries(page, pageSize, genreFilter);
+
+      setSeriesList(res.data || []);
+      setTotal(res.total || 0);
+    } catch (err) {
+      console.error('Error fetching series from Reelplexi:', err);
+      setSeriesList([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [page, debouncedSearch, selectedGenre]);
+
+  useEffect(() => {
+    fetchSeries();
+  }, [fetchSeries]);
 
   const handleSendPushNotification = (series: Series) => {
     setSelectedSeries(series);
     setShowPushDialog(true);
   };
 
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
   return (
     <AdminPanelLayout>
-      <div className="flex flex-col gap-4 mb-6">
-        {/* Header and Search */}
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <h1 className="text-2xl font-bold text-white uppercase tracking-wider">TV Series</h1>
-            <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
-              <input
-                type="text"
-                placeholder="Search series..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                className="bg-black border border-gray-800 text-white rounded-lg px-4 py-2 w-full sm:w-64 focus:outline-none focus:ring-1 focus:ring-[#E50914] placeholder-gray-600"
-              />
-              <Button asChild className="bg-[#E50914] hover:bg-[#b80710] text-white px-4 py-2 rounded-lg font-bold uppercase tracking-wider transition whitespace-nowrap shadow-[0_0_10px_rgba(229,9,20,0.2)] border-none">
-                <Link href="/series/add">+ Add Series</Link>
-              </Button>
-            </div>
+      <div className="flex flex-col gap-4 mb-6 px-4 sm:px-0">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-white uppercase tracking-wider">TV Series (Reelplaxi Catalog)</h1>
+            <p className="text-xs text-gray-400 mt-1">Live series catalog synced with Reelplaxi API</p>
           </div>
-          
-          {/* Filter Buttons */}
-          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-            <Button
-              className={`px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-wider whitespace-nowrap border ${filter === 'all' ? 'bg-[#E50914] text-white border-transparent shadow-[0_0_10px_rgba(229,9,20,0.3)]' : 'bg-transparent text-gray-400 border-gray-800 hover:border-[#E50914]'}`}
-              onClick={() => setFilter('all')}
-            >
-              All ({series.length})
-            </Button>
-            <Button
-              className={`px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-wider whitespace-nowrap border ${filter === 'published' ? 'bg-[#E50914] text-white border-transparent shadow-[0_0_10px_rgba(229,9,20,0.3)]' : 'bg-transparent text-gray-400 border-gray-800 hover:border-[#E50914]'}`}
-              onClick={() => setFilter('published')}
-            >
-              Published ({series.filter(s => s.published).length})
-            </Button>
-            <Button
-              className={`px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-wider whitespace-nowrap border ${filter === 'unpublished' ? 'bg-[#E50914] text-white border-transparent shadow-[0_0_10px_rgba(229,9,20,0.3)]' : 'bg-transparent text-gray-400 border-gray-800 hover:border-[#E50914]'}`}
-              onClick={() => setFilter('unpublished')}
-            >
-              Unpublished ({series.filter(s => !s.published).length})
-            </Button>
+          <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+            <input
+              type="text"
+              placeholder="Search series by title..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="bg-black border border-gray-800 text-white rounded-lg px-4 py-2 w-full sm:w-72 focus:outline-none focus:ring-1 focus:ring-[#E50914] placeholder-gray-600"
+            />
           </div>
+        </div>
+
+        {/* Genre Filter Pills */}
+        <div className="flex flex-wrap gap-2 overflow-x-auto pb-2 scrollbar-hide">
+          <Button
+            className={`px-4 py-1.5 rounded-lg font-bold text-xs uppercase tracking-wider border ${
+              selectedGenre === 'all'
+                ? 'bg-[#E50914] text-white border-transparent shadow-[0_0_10px_rgba(229,9,20,0.3)]'
+                : 'bg-transparent text-gray-400 border-gray-800 hover:border-[#E50914]'
+            }`}
+            onClick={() => { setSelectedGenre('all'); setPage(1); }}
+          >
+            All Genres
+          </Button>
+          {genres.map((g) => (
+            <Button
+              key={g.id}
+              className={`px-4 py-1.5 rounded-lg font-bold text-xs uppercase tracking-wider border ${
+                selectedGenre === g.id
+                  ? 'bg-[#E50914] text-white border-transparent shadow-[0_0_10px_rgba(229,9,20,0.3)]'
+                  : 'bg-transparent text-gray-400 border-gray-800 hover:border-[#E50914]'
+              }`}
+              onClick={() => { setSelectedGenre(g.id); setPage(1); }}
+            >
+              {g.name}
+            </Button>
+          ))}
         </div>
       </div>
 
-      {/* Mobile Card View (visible on small screens) */}
-      <div className="block lg:hidden">
-        <div className="space-y-4">
-          {filteredSeries.length === 0 ? (
-            <div className="bg-[#1a1c21] rounded-2xl p-8 border border-gray-800 shadow-xl text-center">
-              <p className="text-gray-500 italic">No series found.</p>
-            </div>
-          ) : (
-            filteredSeries.map((s, idx) => (
-              <div key={s.id} className="bg-[#1a1c21] rounded-2xl border border-gray-800 shadow-xl p-5">
-                <div className="flex gap-4">
-                  <div className="flex-shrink-0">
-                    <Image 
-                      src={s.thumbnail_url || "/assets/images/placeholder.png"} 
-                      alt={s.title} 
-                      width={300} 
-                      height={300} 
-                      className="w-24 h-36 object-cover rounded-lg border border-gray-800"
-                    />
-                  </div>
-                  <div className="flex-1 min-w-0 flex flex-col justify-between">
-                    <div>
-                      <div className="flex justify-between items-start mb-2">
-                        <h3 className="font-bold text-white text-lg truncate pr-2">{s.title}</h3>
-                        <span className="text-xs text-[#E50914] font-bold uppercase">#{idx + 1}</span>
-                      </div>
-                      <p className="text-gray-400 text-xs line-clamp-3 mb-3">{s.description}</p>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border ${
-                          s.published 
-                            ? 'bg-green-900/20 text-green-500 border-green-900' 
-                            : 'bg-gray-800 text-gray-400 border-gray-700'
-                        }`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${s.published ? 'bg-green-500' : 'bg-gray-400'}`}></span>
-                          {s.published ? 'Published' : 'Unpublished'}
-                        </span>
-                      </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button className="bg-[#E50914] hover:bg-[#b80710] text-white px-3 py-1 text-xs font-bold uppercase tracking-wider border-none shadow-[0_0_10px_rgba(229,9,20,0.2)]">Actions</Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-[#1a1c21] border-gray-800 text-white">
-                          <DropdownMenuItem asChild className="hover:bg-[#141414] focus:bg-[#141414] focus:text-white cursor-pointer">
-                            <Link href={`/series/manage_seasons/${s.id}`}>Manage Episodes</Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild className="hover:bg-[#141414] focus:bg-[#141414] focus:text-white cursor-pointer">
-                            <Link href={`/series/edit/${s.id}`}>Edit Details</Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="hover:bg-[#141414] focus:bg-[#141414] focus:text-white cursor-pointer" onClick={() => handleSendPushNotification(s)}>
-                            Send Push Notification
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleDelete(s.id)} className="text-[#E50914] focus:bg-red-900/20 focus:text-[#E50914] cursor-pointer font-bold">
-                            Delete Series
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-
-      {/* Desktop Table View (hidden on small screens) */}
+      {/* Desktop Table View */}
       <div className="hidden lg:block bg-[#1a1c21] rounded-2xl p-0 border border-gray-800 shadow-xl overflow-x-auto">
         <table className="min-w-full text-left">
           <thead>
             <tr className="border-b border-gray-800 bg-[#141414]/50">
               <th className="px-6 py-4 text-[#E50914] font-bold uppercase tracking-wider text-xs">#</th>
-              <th className="px-6 py-4 text-[#E50914] font-bold uppercase tracking-wider text-xs">Thumbnail</th>
+              <th className="px-6 py-4 text-[#E50914] font-bold uppercase tracking-wider text-xs">Poster</th>
               <th className="px-6 py-4 text-[#E50914] font-bold uppercase tracking-wider text-xs">Title</th>
-              <th className="px-6 py-4 text-[#E50914] font-bold uppercase tracking-wider text-xs">Description</th>
-              <th className="px-6 py-4 text-[#E50914] font-bold uppercase tracking-wider text-xs">Status</th>
-              <th className="px-6 py-4 text-[#E50914] font-bold uppercase tracking-wider text-xs">Actions</th>
+              <th className="px-6 py-4 text-[#E50914] font-bold uppercase tracking-wider text-xs">Overview</th>
+              <th className="px-6 py-4 text-[#E50914] font-bold uppercase tracking-wider text-xs">VJ / Status</th>
+              <th className="px-6 py-4 text-[#E50914] font-bold uppercase tracking-wider text-xs">Push Action</th>
             </tr>
           </thead>
           <tbody>
-            {filteredSeries.length === 0 ? (
+            {loading ? (
               <tr>
-                <td colSpan={6} className="px-6 py-8 text-center text-gray-500 italic">No series found.</td>
+                <td colSpan={6} className="px-6 py-12 text-center text-gray-400 font-bold uppercase tracking-wider">
+                  Loading series from Reelplaxi...
+                </td>
+              </tr>
+            ) : seriesList.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="px-6 py-12 text-center text-gray-500 italic">
+                  No TV series found.
+                </td>
               </tr>
             ) : (
-              filteredSeries.map((s, idx) => (
-                <tr key={s.id} className="border-b border-gray-800 hover:bg-[#141414] transition-colors">
-                  <td className="px-6 py-4 text-gray-400 font-medium">{idx + 1}</td>
+              seriesList.map((s, idx) => (
+                <tr key={s.id || idx} className="border-b border-gray-800 hover:bg-[#141414] transition-colors">
+                  <td className="px-6 py-4 text-gray-400 font-medium">{(page - 1) * pageSize + idx + 1}</td>
                   <td className="px-6 py-4">
                     <Image 
-                      src={s.thumbnail_url || "/assets/images/placeholder.png"} 
+                      src={s.thumbnail_url || s.cover_image_url || "/assets/images/placeholder.png"} 
                       alt={s.title} 
-                      width={160} 
-                      height={90} 
-                      className="w-24 h-auto object-cover rounded-lg border border-gray-800"
+                      width={96} 
+                      height={144} 
+                      className="w-16 h-24 object-cover rounded-lg border border-gray-800"
                     />
                   </td>
-                  <td className="px-6 py-4 text-white font-bold">{s.title}</td>
-                  <td className="px-6 py-4 text-gray-400 max-w-xs"><p className="line-clamp-2 text-xs leading-relaxed">{s.description}</p></td>
-                  <td className="px-6 py-4">
-                    <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border ${
-                      s.published 
-                        ? 'bg-green-900/20 text-green-500 border-green-900' 
-                        : 'bg-gray-800 text-gray-400 border-gray-700'
-                    }`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${s.published ? 'bg-green-500' : 'bg-gray-400'}`}></span>
-                      {s.published ? 'Published' : 'Unpublished'}
-                    </span>
+                  <td className="px-6 py-4 text-white font-bold max-w-[200px]">
+                    <p className="truncate text-sm">{s.title}</p>
+                    {s.release_date && (
+                      <span className="text-[10px] text-gray-500 block font-normal mt-0.5">
+                        Air Date: {s.release_date.split('T')[0]}
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 text-gray-400 max-w-xs">
+                    <p className="line-clamp-2 text-xs leading-relaxed">{s.description || 'No overview available.'}</p>
                   </td>
                   <td className="px-6 py-4">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button className="bg-[#E50914] hover:bg-[#b80710] text-white px-4 py-2 text-xs font-bold uppercase tracking-wider border-none shadow-[0_0_10px_rgba(229,9,20,0.2)]">Actions</Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-[#1a1c21] border-gray-800 text-white min-w-[180px]">
-                        <DropdownMenuItem asChild className="hover:bg-[#141414] focus:bg-[#141414] focus:text-white cursor-pointer py-2">
-                          <Link href={`/series/manage_seasons/${s.id}`}>Manage Episodes</Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild className="hover:bg-[#141414] focus:bg-[#141414] focus:text-white cursor-pointer py-2">
-                          <Link href={`/series/edit/${s.id}`}>Edit Details</Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="hover:bg-[#141414] focus:bg-[#141414] focus:text-white cursor-pointer py-2" onClick={() => handleSendPushNotification(s)}>
-                          Send Push Notification
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleDelete(s.id)} className="text-[#E50914] focus:bg-red-900/20 focus:text-[#E50914] cursor-pointer font-bold py-2">
-                          Delete Series
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <div className="flex flex-col gap-1.5">
+                      {s.vjs?.name && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider bg-orange-950/40 text-orange-400 border border-orange-800/40 w-fit">
+                          VJ {s.vjs.name}
+                        </span>
+                      )}
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider bg-green-950/40 text-green-400 border border-green-800/40 w-fit">
+                        <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                        Published
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <Button 
+                      onClick={() => handleSendPushNotification(s)}
+                      className="bg-[#E50914] hover:bg-[#b80710] text-white px-4 py-2 text-xs font-bold uppercase tracking-wider border-none shadow-[0_0_10px_rgba(229,9,20,0.3)] transition-all flex items-center gap-1.5"
+                    >
+                      <span>🔔</span> Send Push
+                    </Button>
                   </td>
                 </tr>
               ))
@@ -255,39 +211,87 @@ export default function SeriesPage() {
         </table>
       </div>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
-        <DialogContent className="mx-4 max-w-md sm:max-w-lg bg-[#1a1c21] border-gray-800 text-white shadow-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-[#E50914] font-bold uppercase tracking-wider text-xl">Delete Series</DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            <p className="text-gray-300">Are you absolutely sure you want to delete this series? This action cannot be undone and will remove all seasons and episodes.</p>
+      {/* Mobile Card View */}
+      <div className="lg:hidden px-4 sm:px-0">
+        {loading ? (
+          <div className="bg-[#1a1c21] rounded-2xl border border-gray-800 shadow-xl p-8 text-center text-gray-400 font-bold uppercase tracking-wider">
+            Loading series...
           </div>
-          <DialogFooter className="flex-col sm:flex-row gap-3">
-            <Button variant="outline" onClick={() => setShowDeleteModal(false)} className="w-full sm:w-auto bg-transparent border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white uppercase tracking-wider font-bold">
-              Cancel
-            </Button>
-            <Button onClick={async () => {
-              if (deleteId) {
-                await supabase.from("series").delete().eq("id", deleteId);
-                setSeries(series => series.filter(s => s.id !== deleteId));
-                setShowDeleteModal(false);
-                setDeleteId(null);
-              }
-            }} className="bg-[#E50914] text-white hover:bg-[#b80710] w-full sm:w-auto uppercase tracking-wider font-bold border-none">
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        ) : seriesList.length === 0 ? (
+          <div className="bg-[#1a1c21] rounded-2xl border border-gray-800 shadow-xl p-8 text-center text-gray-500 italic">
+            No series found.
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {seriesList.map((s, idx) => (
+              <div key={s.id || idx} className="bg-[#1a1c21] rounded-2xl border border-gray-800 shadow-xl p-5">
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0">
+                    <Image 
+                      src={s.thumbnail_url || s.cover_image_url || "/assets/images/placeholder.png"} 
+                      alt={s.title} 
+                      width={120} 
+                      height={180} 
+                      className="w-20 h-28 object-cover rounded-lg border border-gray-800"
+                    />
+                  </div>
+                  <div className="flex-grow min-w-0 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs text-[#E50914] font-bold uppercase">#{(page - 1) * pageSize + idx + 1}</span>
+                        {s.vjs?.name && (
+                          <span className="text-[10px] uppercase font-bold text-orange-400 bg-orange-950/40 px-2 py-0.5 rounded border border-orange-800/40">
+                            VJ {s.vjs.name}
+                          </span>
+                        )}
+                      </div>
+                      <h3 className="text-base font-bold text-white mb-1 line-clamp-1">{s.title}</h3>
+                      <p className="text-xs text-gray-400 mb-3 line-clamp-2">{s.description || 'No overview available.'}</p>
+                    </div>
+
+                    <Button
+                      onClick={() => handleSendPushNotification(s)}
+                      className="w-full bg-[#E50914] hover:bg-[#b80710] text-white py-2 text-xs font-bold uppercase tracking-wider border-none shadow-[0_0_10px_rgba(229,9,20,0.3)]"
+                    >
+                      🔔 Send Push Notification
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Pagination Controls */}
+      <div className="flex flex-col sm:flex-row justify-center items-center gap-4 my-8 px-4 sm:px-0">
+        <div className="flex items-center gap-2">
+          <Button 
+            disabled={page === 1 || loading} 
+            onClick={() => setPage(p => Math.max(1, p - 1))} 
+            className="px-4 py-2 text-xs font-bold uppercase tracking-wider bg-transparent border border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white disabled:opacity-50"
+          >
+            Previous
+          </Button>
+          <span className="text-xs font-bold text-gray-400 uppercase tracking-wider px-2">
+            Page {page} of {totalPages}
+          </span>
+          <Button 
+            disabled={page >= totalPages || loading} 
+            onClick={() => setPage(p => p + 1)} 
+            className="px-4 py-2 text-xs font-bold uppercase tracking-wider bg-transparent border border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white disabled:opacity-50"
+          >
+            Next
+          </Button>
+        </div>
+      </div>
 
       {/* Push Notification Dialog */}
       <PushNotificationDialog
         open={showPushDialog}
         onOpenChange={setShowPushDialog}
         contentTitle={selectedSeries?.title}
-        contentImage={selectedSeries?.thumbnail_url}
+        contentImage={selectedSeries?.thumbnail_url || selectedSeries?.cover_image_url}
         contentType="series"
         contentId={selectedSeries?.id}
       />

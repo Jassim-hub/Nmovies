@@ -4,10 +4,26 @@ import { useState, useEffect, useCallback } from 'react';
 
 interface OneSignalInstance {
   init: (options: Record<string, unknown>) => Promise<void>;
-  isPushNotificationsEnabled: () => Promise<boolean>;
-  showNativePrompt: () => Promise<void>;
-  setExternalUserId: (id: string) => Promise<void>;
-  on: (event: string, handler: (...args: unknown[]) => void) => void;
+  isPushNotificationsEnabled?: () => Promise<boolean>;
+  showNativePrompt?: () => Promise<void>;
+  setExternalUserId?: (id: string) => Promise<void>;
+  login?: (id: string) => Promise<void>;
+  on?: (event: string, handler: (...args: unknown[]) => void) => void;
+  User?: {
+    PushSubscription?: {
+      optedIn?: boolean;
+      id?: string;
+      addEventListener?: (event: string, handler: (event: any) => void) => void;
+    };
+  };
+  Notifications?: {
+    permission?: boolean;
+    requestPermission?: () => Promise<void>;
+    addEventListener?: (event: string, handler: (event: any) => void) => void;
+  };
+  Slidedown?: {
+    promptPush?: () => Promise<void>;
+  };
 }
 
 declare global {
@@ -78,25 +94,45 @@ export function useOneSignal(): UseOneSignalReturn {
 
         setIsInitialized(true);
 
-        // Check current permission & subscription state
-        const enabled = await OneSignal.isPushNotificationsEnabled();
+        // Check current permission & subscription state (v16 vs v15 safe check)
+        let enabled = false;
+        if (OneSignal.User?.PushSubscription?.optedIn !== undefined) {
+          enabled = Boolean(OneSignal.User.PushSubscription.optedIn);
+        } else if (typeof OneSignal.isPushNotificationsEnabled === 'function') {
+          try {
+            enabled = await OneSignal.isPushNotificationsEnabled();
+          } catch {
+            enabled = Notification.permission === 'granted';
+          }
+        } else {
+          enabled = Notification.permission === 'granted';
+        }
+
         setIsSubscribed(enabled);
 
         const nativePerm = Notification.permission;
         if (nativePerm === 'granted') {
-          setPermission(enabled ? 'granted' : 'default');
+          setPermission('granted');
         } else if (nativePerm === 'denied') {
           setPermission('denied');
         } else {
           setPermission('default');
         }
 
-        // React to subscription changes
-        OneSignal.on('subscriptionChange', (isSubscribedNow: unknown) => {
-          const subbed = Boolean(isSubscribedNow);
-          setIsSubscribed(subbed);
-          setPermission(subbed ? 'granted' : 'default');
-        });
+        // Listen for change events safely
+        if (OneSignal.User?.PushSubscription?.addEventListener) {
+          OneSignal.User.PushSubscription.addEventListener('change', (event: any) => {
+            const subbed = Boolean(event?.current?.optedIn);
+            setIsSubscribed(subbed);
+            setPermission(subbed ? 'granted' : Notification.permission === 'denied' ? 'denied' : 'default');
+          });
+        } else if (typeof OneSignal.on === 'function') {
+          OneSignal.on('subscriptionChange', (isSubscribedNow: unknown) => {
+            const subbed = Boolean(isSubscribedNow);
+            setIsSubscribed(subbed);
+            setPermission(subbed ? 'granted' : Notification.permission === 'denied' ? 'denied' : 'default');
+          });
+        }
       } catch (err) {
         console.error('[OneSignal] Init error:', err);
         setPermission('default');
@@ -105,9 +141,17 @@ export function useOneSignal(): UseOneSignalReturn {
   }, [appId]);
 
   const promptForNotifications = useCallback(async () => {
-    if (typeof window === 'undefined' || !window.OneSignal) return;
+    if (typeof window === 'undefined') return;
     try {
-      await window.OneSignal.showNativePrompt();
+      if (window.OneSignal?.Notifications?.requestPermission) {
+        await window.OneSignal.Notifications.requestPermission();
+      } else if (window.OneSignal?.Slidedown?.promptPush) {
+        await window.OneSignal.Slidedown.promptPush();
+      } else if (window.OneSignal?.showNativePrompt) {
+        await window.OneSignal.showNativePrompt();
+      } else if ('Notification' in window) {
+        await Notification.requestPermission();
+      }
     } catch (err) {
       console.error('[OneSignal] Prompt error:', err);
     }
@@ -116,7 +160,11 @@ export function useOneSignal(): UseOneSignalReturn {
   const linkUserId = useCallback(async (userId: string) => {
     if (typeof window === 'undefined' || !window.OneSignal) return;
     try {
-      await window.OneSignal.setExternalUserId(userId);
+      if (typeof window.OneSignal.login === 'function') {
+        await window.OneSignal.login(userId);
+      } else if (typeof window.OneSignal.setExternalUserId === 'function') {
+        await window.OneSignal.setExternalUserId(userId);
+      }
     } catch (err) {
       console.error('[OneSignal] Link user error:', err);
     }

@@ -1,6 +1,6 @@
 // OneSignal configuration
 // Ensure we don't throw at build time, only when actually sending notifications
-const getOneSignalAppId = () => process.env.ONESIGNAL_APP_ID;
+const getOneSignalAppId = () => process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID || process.env.ONESIGNAL_APP_ID;
 const getOneSignalApiKey = () => process.env.ONESIGNAL_REST_API_KEY;
 const ONESIGNAL_API_URL = 'https://onesignal.com/api/v1/notifications';
 
@@ -37,6 +37,29 @@ interface OneSignalResponse {
 
 export class OneSignalService {
   /**
+   * Helper to normalize segment names for OneSignal REST API.
+   * "Subscribers" is the standard segment name for all Web Push subscribers.
+   */
+  private static normalizeSegments(segments?: string[]): string[] {
+    if (!segments || segments.length === 0) {
+      return ['Subscribers', 'Total Subscriptions'];
+    }
+    
+    // Map 'All' or 'all' to standard subscriber segments
+    const normalized: string[] = [];
+    for (const seg of segments) {
+      if (seg.toLowerCase() === 'all') {
+        if (!normalized.includes('Subscribers')) normalized.push('Subscribers');
+        if (!normalized.includes('Total Subscriptions')) normalized.push('Total Subscriptions');
+      } else {
+        if (!normalized.includes(seg)) normalized.push(seg);
+      }
+    }
+    
+    return normalized.length > 0 ? normalized : ['Subscribers'];
+  }
+
+  /**
    * Send HTTP request to OneSignal API
    */
   private static async sendNotification(payload: OneSignalNotificationPayload): Promise<OneSignalResponse> {
@@ -68,9 +91,11 @@ export class OneSignalService {
       const appId = getOneSignalAppId();
       if (!appId) throw new Error('OneSignal App ID is not set');
 
+      const segments = this.normalizeSegments(notificationData.targetSegments);
+
       const payload: OneSignalNotificationPayload = {
         app_id: appId,
-        included_segments: notificationData.targetSegments || ['All'],
+        included_segments: segments,
         headings: { en: notificationData.title },
         contents: { en: notificationData.message },
       };
@@ -148,9 +173,11 @@ export class OneSignalService {
       const appId = getOneSignalAppId();
       if (!appId) throw new Error('OneSignal App ID is not set');
 
+      const normalizedSegments = this.normalizeSegments(segments);
+
       const payload: OneSignalNotificationPayload = {
         app_id: appId,
-        included_segments: segments,
+        included_segments: normalizedSegments,
         headings: { en: notificationData.title },
         contents: { en: notificationData.message },
       };
