@@ -71,11 +71,11 @@ export async function POST(request: NextRequest) {
     };
 
     if (sendToAll) {
-      payload.included_segments = ['Subscribed Users'];
+      payload.included_segments = ['All'];
     } else if (subscriptionId) {
       payload.include_subscription_ids = [subscriptionId];
     } else {
-      payload.included_segments = ['Subscribed Users'];
+      payload.included_segments = ['All'];
     }
 
     const res = await fetch('https://api.onesignal.com/notifications', {

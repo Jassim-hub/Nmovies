@@ -57,12 +57,14 @@ export class OneSignalService {
    */
   private static normalizeSegments(segments?: string[]): string[] {
     if (!segments || segments.length === 0) {
-      return ['Subscribed Users'];
+      return ['All'];
     }
     return segments.map(seg => {
       const lower = seg.toLowerCase();
-      if (lower === 'all' || lower === 'subscribers' || lower === 'total subscriptions') {
-        return 'Subscribed Users';
+      // Map any subscriber-like segment to 'All' to avoid v1/v16 subscription
+      // model mismatch where v16 subscriptions show as unsubscribed in v1 API
+      if (lower === 'subscribed users' || lower === 'subscribers' || lower === 'total subscriptions') {
+        return 'All';
       }
       return seg;
     });

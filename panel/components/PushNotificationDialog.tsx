@@ -134,7 +134,7 @@ export default function PushNotificationDialog({
           setTitle(contentTitle ? `New ${contentType}: ${contentTitle}` : '');
           setMessage(contentTitle ? `Check out the new ${contentType} "${contentTitle}" now available on NicholMovies!` : '');
           setTargetType('all');
-          setSegments(['Subscribed Users']);
+          setSegments(['All']);
         }
       } else {
         setNotification({
