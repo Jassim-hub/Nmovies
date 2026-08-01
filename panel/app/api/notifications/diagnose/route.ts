@@ -65,7 +65,6 @@ export async function POST(request: NextRequest) {
       target_channel: 'push',
       headings: { en: '🔔 NicholMoviesUg Test Notification' },
       contents: { en: 'This is a diagnostic test push. If you see this, push is working! ✅' },
-      url: 'https://www.nicholmoviesug.com/notifications',
       web_url: 'https://www.nicholmoviesug.com/notifications',
       priority: 10,
     };

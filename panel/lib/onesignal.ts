@@ -31,7 +31,6 @@ interface OneSignalNotificationPayload {
   include_external_user_ids?: string[];
   headings: { en: string };
   contents: { en: string };
-  url?: string;
   web_url?: string;
   big_picture?: string;
   large_icon?: string;
@@ -87,8 +86,7 @@ export class OneSignalService {
       ...targetOptions,
       headings: { en: notificationData.title },
       contents: { en: notificationData.message },
-      url: targetUrl,
-      web_url: targetUrl,
+      web_url: targetUrl, // web_url only — cannot combine with url field
       ttl: 259200, // 3 days Time-To-Live
       priority: 10, // High priority for OS popups
     };
