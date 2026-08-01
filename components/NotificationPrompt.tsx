@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react';
 import { Bell, BellOff, X } from 'lucide-react';
 import { useOneSignal } from '@/lib/hooks/useOneSignal';
 
-const DISMISSED_KEY = 'nicholmoviesug-notif-dismissed';
-const PROMPT_DELAY_MS = 8000; // Show after 8 seconds
+const DISMISSED_KEY = 'nicholmoviesug-notif-dismissed-until';
+const PROMPT_DELAY_MS = 5000; // Show after 5 seconds
+const DISMISS_COOLDOWN_MS = 60 * 60 * 1000; // Re-show after 1 hour if dismissed
 
 export default function NotificationPrompt() {
   const { permission, isInitialized, promptForNotifications } = useOneSignal();
@@ -15,19 +16,15 @@ export default function NotificationPrompt() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    // Don't show if already granted or denied
+    // Don't show if already granted or denied (browser-level)
     if (permission === 'granted' || permission === 'denied' || permission === 'unsupported') return;
 
-    // Don't show if loading yet
+    // Don't show until SDK is initialised
     if (permission === 'loading' || !isInitialized) return;
 
-    // Don't show if user already dismissed within 14 days
-    const raw = localStorage.getItem(DISMISSED_KEY);
-    if (raw) {
-      const dismissedAt = parseInt(raw, 10);
-      const fourteenDays = 14 * 24 * 60 * 60 * 1000;
-      if (Date.now() - dismissedAt < fourteenDays) return;
-    }
+    // Check if we're in a temporary cooldown from last dismiss
+    const dismissedUntil = parseInt(localStorage.getItem(DISMISSED_KEY) || '0', 10);
+    if (Date.now() < dismissedUntil) return;
 
     const timer = setTimeout(() => setVisible(true), PROMPT_DELAY_MS);
     return () => clearTimeout(timer);
@@ -35,7 +32,8 @@ export default function NotificationPrompt() {
 
   const handleDismiss = () => {
     setVisible(false);
-    localStorage.setItem(DISMISSED_KEY, Date.now().toString());
+    // Re-show after 1 hour
+    localStorage.setItem(DISMISSED_KEY, (Date.now() + DISMISS_COOLDOWN_MS).toString());
   };
 
   const handleEnable = async () => {

@@ -26,6 +26,7 @@ export interface PushNotificationData {
 
 interface OneSignalNotificationPayload {
   app_id: string;
+  target_channel: 'push';
   included_segments?: string[];
   include_external_user_ids?: string[];
   headings: { en: string };
@@ -75,6 +76,7 @@ export class OneSignalService {
 
     const payload: OneSignalNotificationPayload = {
       app_id: appId,
+      target_channel: 'push',
       ...targetOptions,
       headings: { en: notificationData.title },
       contents: { en: notificationData.message },
