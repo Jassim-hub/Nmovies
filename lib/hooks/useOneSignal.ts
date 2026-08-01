@@ -2,6 +2,12 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
+interface OneSignalPushSubscription {
+  optedIn?: boolean;
+  id?: string;
+  addEventListener?: (event: string, handler: (event: any) => void) => void;
+}
+
 interface OneSignalInstance {
   init: (options: Record<string, unknown>) => Promise<void>;
   isPushNotificationsEnabled?: () => Promise<boolean>;
@@ -10,11 +16,7 @@ interface OneSignalInstance {
   login?: (id: string) => Promise<void>;
   on?: (event: string, handler: (...args: unknown[]) => void) => void;
   User?: {
-    PushSubscription?: {
-      optedIn?: boolean;
-      id?: string;
-      addEventListener?: (event: string, handler: (event: any) => void) => void;
-    };
+    PushSubscription?: OneSignalPushSubscription;
   };
   Notifications?: {
     permission?: boolean;
@@ -48,8 +50,6 @@ export function useOneSignal(): UseOneSignalReturn {
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  const appId = process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID || '30e1c461-bc97-4079-aa3d-874150082a38';
-
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -59,63 +59,38 @@ export function useOneSignal(): UseOneSignalReturn {
       return;
     }
 
-    // Initialise via the deferred queue pattern OneSignal recommends
+    // OneSignal SDK is initialized globally in layout.tsx.
+    // This hook just reads state from the already-initialized SDK.
+    // We poll via OneSignalDeferred so we run after the SDK is ready.
     window.OneSignalDeferred = window.OneSignalDeferred || [];
 
-    // Load the OneSignal SDK v16 script
-    if (!document.getElementById('onesignal-sdk')) {
-      const script = document.createElement('script');
-      script.id = 'onesignal-sdk';
-      script.src = 'https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js';
-      script.defer = true;
-      document.head.appendChild(script);
-    }
-
-    window.OneSignalDeferred.push(async (OneSignal) => {
+    window.OneSignalDeferred.push((OneSignal) => {
       try {
-        await OneSignal.init({
-          appId,
-          allowLocalhostAsSecureOrigin: true,
-          serviceWorkerPath: 'OneSignalSDKWorker.js',
-          serviceWorkerParam: { scope: '/' },
-          notifyButton: {
-            enable: false, // We use our own UI
-          },
-          welcomeNotification: {
-            disable: false,
-            title: 'NicholMoviesUg',
-            message: 'Welcome! You\'ll now get notified about new movies and series.',
-          },
-        });
-
         setIsInitialized(true);
 
-        // Check current permission & subscription state (v16 vs v15 safe check)
-        let enabled = false;
-        if (OneSignal.User?.PushSubscription?.optedIn !== undefined) {
-          enabled = Boolean(OneSignal.User.PushSubscription.optedIn);
-        } else if (typeof OneSignal.isPushNotificationsEnabled === 'function') {
-          try {
-            enabled = await OneSignal.isPushNotificationsEnabled();
-          } catch {
-            enabled = Notification.permission === 'granted';
+        const readState = () => {
+          // Read subscription state (v16 API)
+          let opted = false;
+          if (OneSignal.User?.PushSubscription?.optedIn !== undefined) {
+            opted = Boolean(OneSignal.User.PushSubscription.optedIn);
+          } else {
+            opted = Notification.permission === 'granted';
           }
-        } else {
-          enabled = Notification.permission === 'granted';
-        }
+          setIsSubscribed(opted);
 
-        setIsSubscribed(enabled);
+          const nativePerm = Notification.permission;
+          if (nativePerm === 'granted') {
+            setPermission('granted');
+          } else if (nativePerm === 'denied') {
+            setPermission('denied');
+          } else {
+            setPermission('default');
+          }
+        };
 
-        const nativePerm = Notification.permission;
-        if (nativePerm === 'granted') {
-          setPermission('granted');
-        } else if (nativePerm === 'denied') {
-          setPermission('denied');
-        } else {
-          setPermission('default');
-        }
+        readState();
 
-        // Listen for change events safely
+        // Listen for subscription changes (v16)
         if (OneSignal.User?.PushSubscription?.addEventListener) {
           OneSignal.User.PushSubscription.addEventListener('change', (event: any) => {
             const subbed = Boolean(event?.current?.optedIn);
@@ -130,11 +105,11 @@ export function useOneSignal(): UseOneSignalReturn {
           });
         }
       } catch (err) {
-        console.error('[OneSignal] Init error:', err);
+        console.error('[OneSignal] State read error:', err);
         setPermission('default');
       }
     });
-  }, [appId]);
+  }, []);
 
   const promptForNotifications = useCallback(async () => {
     if (typeof window === 'undefined') return;
