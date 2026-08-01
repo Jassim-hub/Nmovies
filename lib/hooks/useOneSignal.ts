@@ -48,7 +48,7 @@ export function useOneSignal(): UseOneSignalReturn {
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  const appId = process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID;
+  const appId = process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID || '30e1c461-bc97-4079-aa3d-874150082a38';
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -59,21 +59,15 @@ export function useOneSignal(): UseOneSignalReturn {
       return;
     }
 
-    // No app ID configured — don't init
-    if (!appId) {
-      setPermission('unsupported');
-      return;
-    }
-
     // Initialise via the deferred queue pattern OneSignal recommends
     window.OneSignalDeferred = window.OneSignalDeferred || [];
 
-    // Load the OneSignal SDK script
+    // Load the OneSignal SDK v16 script
     if (!document.getElementById('onesignal-sdk')) {
       const script = document.createElement('script');
       script.id = 'onesignal-sdk';
-      script.src = 'https://cdn.onesignal.com/sdks/OneSignalSDK.js';
-      script.async = true;
+      script.src = 'https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js';
+      script.defer = true;
       document.head.appendChild(script);
     }
 

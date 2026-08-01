@@ -1,6 +1,6 @@
 // NicholMoviesUg Service Worker
-// Import OneSignal SDK Worker for OS-level Push Notifications when app/tab is closed
-importScripts("https://cdn.onesignal.com/sdks/OneSignalSDKWorker.js");
+// Import OneSignal Web SDK v16 Worker for OS-level Push Notifications
+importScripts("https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js");
 
 const CACHE_NAME = 'nicholmoviesug-v1';
 const OFFLINE_URL = '/';

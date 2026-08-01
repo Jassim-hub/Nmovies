@@ -1,14 +1,17 @@
 // OneSignal configuration
-// Ensure we don't throw at build time, only when actually sending notifications
+const DEFAULT_APP_ID = '30e1c461-bc97-4079-aa3d-874150082a38';
+
 const getOneSignalAppId = () => 
   process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID || 
-  process.env.ONESIGNAL_APP_ID;
+  process.env.ONESIGNAL_APP_ID || 
+  DEFAULT_APP_ID;
 
 const getOneSignalApiKey = () => 
   process.env.ONESIGNAL_REST_API_KEY || 
-  process.env.NEXT_PUBLIC_ONESIGNAL_REST_API_KEY;
+  process.env.NEXT_PUBLIC_ONESIGNAL_REST_API_KEY || 
+  '';
 
-const ONESIGNAL_API_URL = 'https://onesignal.com/api/v1/notifications';
+const ONESIGNAL_API_URL = 'https://api.onesignal.com/notifications';
 
 export interface PushNotificationData {
   title: string;
@@ -107,13 +110,16 @@ export class OneSignalService {
    */
   private static async sendNotification(payload: OneSignalNotificationPayload): Promise<OneSignalResponse> {
     const apiKey = getOneSignalApiKey();
-    if (!apiKey) throw new Error('OneSignal REST API key (ONESIGNAL_REST_API_KEY) is not configured in environment variables.');
+    if (!apiKey) throw new Error('OneSignal REST API key is not set');
+
+    // Use 'Key <api_key>' format for v2 API keys (e.g. os_v2_app_...)
+    const authHeader = apiKey.startsWith('os_v2_') ? `Key ${apiKey}` : `Basic ${apiKey}`;
 
     const response = await fetch(ONESIGNAL_API_URL, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Basic ${apiKey}`,
+        'Content-Type': 'application/json; charset=utf-8',
+        'Authorization': authHeader,
       },
       body: JSON.stringify(payload),
     });
@@ -151,7 +157,7 @@ export class OneSignalService {
   static async sendToAll(notificationData: PushNotificationData) {
     try {
       const appId = getOneSignalAppId();
-      if (!appId) throw new Error('OneSignal App ID (NEXT_PUBLIC_ONESIGNAL_APP_ID / ONESIGNAL_APP_ID) is not set.');
+      if (!appId) throw new Error('OneSignal App ID is not set.');
 
       const segments = this.normalizeSegments(notificationData.targetSegments);
       const payload = this.formatPayload(appId, notificationData, { included_segments: segments });
@@ -169,7 +175,7 @@ export class OneSignalService {
   static async sendToUsers(userIds: string[], notificationData: PushNotificationData) {
     try {
       const appId = getOneSignalAppId();
-      if (!appId) throw new Error('OneSignal App ID (NEXT_PUBLIC_ONESIGNAL_APP_ID / ONESIGNAL_APP_ID) is not set.');
+      if (!appId) throw new Error('OneSignal App ID is not set.');
 
       const payload = this.formatPayload(appId, notificationData, { include_external_user_ids: userIds });
 
@@ -186,7 +192,7 @@ export class OneSignalService {
   static async sendToSegments(segments: string[], notificationData: PushNotificationData) {
     try {
       const appId = getOneSignalAppId();
-      if (!appId) throw new Error('OneSignal App ID (NEXT_PUBLIC_ONESIGNAL_APP_ID / ONESIGNAL_APP_ID) is not set.');
+      if (!appId) throw new Error('OneSignal App ID is not set.');
 
       const normalizedSegments = this.normalizeSegments(segments);
       const payload = this.formatPayload(appId, notificationData, { included_segments: normalizedSegments });
