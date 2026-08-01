@@ -179,6 +179,17 @@ export default function RootLayout({
                   serviceWorkerParam: { scope: '/' },
                   notifyButton: { enable: false },
                 });
+                // If the user already granted permission, opt them into OneSignal's
+                // push subscription. This is required in v16 SDK — permission alone
+                // is not enough; optIn() creates the active push token in OneSignal.
+                try {
+                  if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+                    await OneSignal.User.PushSubscription.optIn();
+                    console.log('[OneSignal] optIn() called. Subscription ID:', OneSignal.User.PushSubscription.id);
+                  }
+                } catch(e) {
+                  console.warn('[OneSignal] optIn error:', e);
+                }
               });
             `,
           }}
