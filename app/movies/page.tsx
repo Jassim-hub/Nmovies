@@ -95,21 +95,20 @@ export default function MoviesPage() {
   return (
     <div className="min-h-screen bg-black text-white py-8">
       <div className="container mx-auto px-4 sm:px-6">
-        <h1 className="text-3xl md:text-4xl font-bold mb-8 flex items-center">
+        <h1 className="text-3xl md:text-4xl font-bold mb-8">
           Movies
-          <span className="text-sm text-gray-400 ml-2">({totalMovies} total)</span>
         </h1>
 
         {/* Search and Filter */}
         <div className="mb-8 flex flex-col md:flex-row gap-4">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5" />
             <input
               type="text"
               placeholder="Search movies..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-[#E50914]"
+              className="w-full pl-10 pr-4 py-3 bg-[#1a1a1a] border-2 border-[#2a2a2a] rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#E50914] focus:bg-[#0f0f0f] transition-all duration-200 hover:border-[#3a3a3a]"
             />
           </div>
           <div className="flex gap-2 flex-wrap">
@@ -117,7 +116,7 @@ export default function MoviesPage() {
             <div className="relative">
               <Button
                 variant="outline"
-                className={`border-gray-600 text-gray-300 hover:bg-gray-800 ${selectedVJ ? 'bg-[#E50914] border-[#E50914] text-white hover:bg-[#b80710]' : ''}`}
+                className={`border-2 transition-all duration-200 ${selectedVJ ? 'bg-[#E50914] border-[#E50914] text-white hover:bg-[#b80710] hover:border-[#b80710]' : 'border-[#2a2a2a] bg-[#1a1a1a] text-gray-300 hover:bg-[#252525] hover:border-[#3a3a3a]'}`}
                 onClick={() => setShowVJDropdown(!showVJDropdown)}
               >
                 <Filter className="w-4 h-4 mr-2" />
@@ -126,14 +125,14 @@ export default function MoviesPage() {
               </Button>
 
               {showVJDropdown && (
-                <div className="absolute top-full left-0 mt-1 w-48 bg-gray-900 border border-gray-700 rounded-lg shadow-2xl z-50 max-h-[50vh] overflow-y-auto overscroll-contain scrollbar-hide">
+                <div className="absolute top-full left-0 mt-2 w-48 bg-[#1a1a1a] border-2 border-[#2a2a2a] rounded-lg shadow-2xl z-50 max-h-[50vh] overflow-y-auto overscroll-contain scrollbar-hide">
                   <div className="p-2">
                     <button
                       onClick={() => {
                         setSelectedVJ("");
                         setShowVJDropdown(false);
                       }}
-                      className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 rounded"
+                      className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-[#252525] hover:text-white rounded transition-colors"
                     >
                       All VJs
                     </button>
@@ -144,7 +143,7 @@ export default function MoviesPage() {
                           setSelectedVJ(vj.id);
                           setShowVJDropdown(false);
                         }}
-                        className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-700 rounded ${selectedVJ === vj.id ? 'text-[#E50914] font-semibold' : 'text-gray-300'}`}
+                        className={`w-full text-left px-3 py-2 text-sm hover:bg-[#252525] rounded transition-colors ${selectedVJ === vj.id ? 'text-[#E50914] font-semibold bg-[#252525]' : 'text-gray-300'}`}
                       >
                         {vj.name}
                       </button>
@@ -157,7 +156,7 @@ export default function MoviesPage() {
             {(selectedVJ || searchQuery) && (
               <Button
                 variant="outline"
-                className="border-red-600 text-red-400 hover:bg-red-600 hover:text-white"
+                className="border-2 border-[#E50914] bg-transparent text-[#E50914] hover:bg-[#E50914] hover:text-white transition-all duration-200"
                 onClick={clearFilters}
               >
                 Clear Filters
